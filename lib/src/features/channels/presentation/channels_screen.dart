@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../application/channels_providers.dart';
+import '../data/channel.dart';
+
+class ChannelsScreen extends ConsumerStatefulWidget {
+  const ChannelsScreen({super.key});
+
+  @override
+  ConsumerState<ChannelsScreen> createState() => _ChannelsScreenState();
+}
+
+class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final channelsAsync = ref.watch(channelsNotifierProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Channels')),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(channelsNotifierProvider.notifier).refresh(),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Search channels',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => _query = value.toLowerCase()),
+              ),
+            ),
+            Expanded(
+              child: channelsAsync.when(
+                data: (channels) {
+                  final filtered = _query.isEmpty
+                      ? channels
+                      : channels
+                          .where((c) =>
+                              c.name.toLowerCase().contains(_query) ||
+                              c.description.toLowerCase().contains(_query))
+                          .toList();
+                  if (filtered.isEmpty) {
+                    return const Center(child: Text('No channels found'));
+                  }
+                  return ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) =>
+                        _ChannelTile(channel: filtered[index]),
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) => Center(child: Text('Could not load channels:\n$error')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChannelTile extends ConsumerWidget {
+  const _ChannelTile({required this.channel});
+
+  final Channel channel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final color = AppColors.channelColor(channel.name);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Text(
+          channel.name.isNotEmpty ? channel.name[0] : '?',
+          style: TextStyle(color: color, fontWeight: FontWeight.bold),
+        ),
+      ),
+      title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(channel.description),
+      trailing: FilledButton.tonal(
+        onPressed: () async {
+          try {
+            await ref.read(channelsNotifierProvider.notifier).toggleSubscription(channel);
+          } catch (_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not update subscription')),
+              );
+            }
+          }
+        },
+        child: Text(channel.isSubscribed ? 'Joined' : 'Join'),
+      ),
+    );
+  }
+}
