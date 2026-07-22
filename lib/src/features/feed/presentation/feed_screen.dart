@@ -81,7 +81,10 @@ class FeedScreen extends ConsumerWidget {
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: posts.length,
-                    itemBuilder: (context, index) => PostCard(post: posts[index]),
+                    itemBuilder: (context, index) => PostCard(
+                      key: ValueKey(posts[index].id),
+                      post: posts[index],
+                    ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -110,15 +113,21 @@ class _ChannelChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final outline = color ?? Theme.of(context).colorScheme.outlineVariant;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         onSelected: (_) => onTap(),
-        avatar: color != null
-            ? CircleAvatar(backgroundColor: color, radius: 6)
-            : null,
+        // Hide the check mark: it reserves leading space only when selected,
+        // which shifts the label off-centre. The colored border + selected
+        // fill signal selection instead.
+        showCheckmark: false,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 10),
+        // Fully rounded (pill) tags with the channel color as the border.
+        shape: const StadiumBorder(),
+        side: BorderSide(color: outline),
       ),
     );
   }

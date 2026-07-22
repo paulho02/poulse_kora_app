@@ -8,6 +8,7 @@ import '../../channels/data/channel.dart';
 import '../../feed/application/feed_providers.dart';
 import '../../feed/data/feed_repository.dart';
 import '../../stats/application/stats_providers.dart';
+import 'channel_picker_sheet.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -37,7 +38,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
     final text = _textController.text.trim();
-    if (channelId == null || text.isEmpty) return;
+    if (channelId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a channel to post to.')),
+      );
+      return;
+    }
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Write something before relaying.')),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -63,8 +75,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   String _messageFor(RelayApiException e) {
     switch (e.error) {
-      case 'not_subscribed':
-        return 'Join this channel before posting to it.';
       case 'review_gate_locked':
         return 'Review more posts before you can create one.';
       default:
@@ -72,9 +82,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
   }
 
+  Future<void> _pickChannel(List<Channel> channels) async {
+    final selected = await showChannelPickerSheet(
+      context,
+      channels: channels,
+      selectedId: _selectedChannelId,
+    );
+    if (selected != null) {
+      setState(() => _selectedChannelId = selected.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final subscribedChannels = ref.watch(subscribedChannelsProvider);
+    final channelsAsync = ref.watch(channelsNotifierProvider);
     final gateStatus = ref.watch(reviewGateStatusProvider);
 
     return Scaffold(
@@ -91,7 +112,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       body: gateStatus == null
           ? const Center(child: CircularProgressIndicator())
           : gateStatus.unlocked
-              ? _buildEditor(context, subscribedChannels)
+              ? channelsAsync.when(
+                  data: (channels) => _buildEditor(context, channels),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, _) =>
+                      Center(child: Text('Could not load channels:\n$error')),
+                )
               : _buildLockedState(context, gateStatus),
     );
   }
@@ -126,47 +152,35 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
-  Widget _buildEditor(BuildContext context, List<Channel> subscribedChannels) {
-    if (subscribedChannels.isEmpty) {
-      return Center(
+  Widget _buildEditor(BuildContext context, List<Channel> channels) {
+    if (channels.isEmpty) {
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Join a channel before you can post.'),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => context.go('/channels'),
-                child: const Text('Browse channels'),
-              ),
-            ],
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'No channels are available to post to yet.',
+            textAlign: TextAlign.center,
           ),
         ),
       );
     }
 
-    _selectedChannelId ??= subscribedChannels.first.id;
+    Channel? selectedChannel;
+    for (final c in channels) {
+      if (c.id == _selectedChannelId) {
+        selectedChannel = c;
+        break;
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final channel in subscribedChannels)
-                ChoiceChip(
-                  label: Text(channel.name),
-                  avatar: CircleAvatar(
-                    backgroundColor: AppColors.channelColor(channel.name),
-                    radius: 6,
-                  ),
-                  selected: _selectedChannelId == channel.id,
-                  onSelected: (_) => setState(() => _selectedChannelId = channel.id),
-                ),
-            ],
+          _ChannelSelectorButton(
+            channel: selectedChannel,
+            onTap: () => _pickChannel(channels),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -195,6 +209,53 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tappable field that shows the currently selected channel (or a prompt) and
+/// opens the searchable channel picker.
+class _ChannelSelectorButton extends StatelessWidget {
+  const _ChannelSelectorButton({required this.channel, required this.onTap});
+
+  final Channel? channel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasSelection = channel != null;
+    final color = hasSelection ? AppColors.channelColor(channel!.name) : null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Channel',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
+        child: Row(
+          children: [
+            if (color != null) ...[
+              CircleAvatar(backgroundColor: color, radius: 7),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(
+                hasSelection ? channel!.name : 'Select a channel',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: hasSelection
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Icon(Icons.expand_more, color: theme.colorScheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }
