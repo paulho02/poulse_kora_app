@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../data/global_stats.dart';
 import '../data/stats_repository.dart';
 import '../data/user_stats.dart';
 
@@ -10,6 +11,10 @@ final statsRepositoryProvider = Provider<StatsRepository>((ref) {
 
 final statsProvider = FutureProvider.autoDispose<UserStats>((ref) {
   return ref.watch(statsRepositoryProvider).fetchStats();
+});
+
+final globalStatsProvider = FutureProvider.autoDispose<GlobalStats>((ref) {
+  return ref.watch(statsRepositoryProvider).fetchGlobalStats();
 });
 
 class ReviewGateStatus {

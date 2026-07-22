@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/stats_providers.dart';
+import '../data/global_stats.dart';
 import '../data/user_stats.dart';
+import 'forwarding_distribution_chart.dart';
 import 'weekly_activity_chart.dart';
 
 class StatsScreen extends ConsumerWidget {
@@ -16,13 +18,18 @@ class StatsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Statistics')),
       body: statsAsync.when(
         data: (stats) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(statsProvider),
+          onRefresh: () async {
+            ref.invalidate(statsProvider);
+            ref.invalidate(globalStatsProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _TrustScoreCard(stats: stats),
               const SizedBox(height: 12),
               _MetricsGrid(stats: stats),
+              const SizedBox(height: 12),
+              const _GlobalStatsCard(),
               const SizedBox(height: 12),
               Card(
                 child: Padding(
@@ -115,6 +122,72 @@ class _TrustScoreCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// App-wide stats (not tied to the current user). Loads independently so a
+/// failure here doesn't blank out the personal stats above it.
+class _GlobalStatsCard extends ConsumerWidget {
+  const _GlobalStatsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final globalAsync = ref.watch(globalStatsProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ACROSS POULSE KORA', style: theme.textTheme.labelSmall),
+            const SizedBox(height: 4),
+            Text('Forwarding distribution', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 16),
+            globalAsync.when(
+              data: (global) => _GlobalStatsBody(global: global),
+              loading: () => const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => const SizedBox(
+                height: 60,
+                child: Center(child: Text('Could not load global stats')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlobalStatsBody extends StatelessWidget {
+  const _GlobalStatsBody({required this.global});
+
+  final GlobalStats global;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (global.totalPosts == 0) {
+      return const SizedBox(
+        height: 60,
+        child: Center(child: Text('No posts yet')),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ForwardingDistributionChart(buckets: global.forwardingDistribution),
+        const SizedBox(height: 12),
+        Text(
+          '${global.totalPosts} post${global.totalPosts == 1 ? '' : 's'} total',
+          style: theme.textTheme.labelSmall,
+        ),
+      ],
     );
   }
 }
