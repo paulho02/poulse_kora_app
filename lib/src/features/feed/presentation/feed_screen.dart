@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
+import '../../economy/application/economy_providers.dart';
+import '../../economy/presentation/economy_status_bar.dart';
 import '../application/feed_providers.dart';
 import 'post_card.dart';
 import 'post_detail_sheet.dart';
@@ -17,24 +19,33 @@ class FeedScreen extends ConsumerWidget {
     final subscribedChannels = ref.watch(subscribedChannelsProvider);
     final selectedChannel = ref.watch(selectedChannelFilterProvider);
 
+    // Seed the token/price header once; refreshed on pull-to-refresh below.
     ref.listen(expandedPostIdProvider, (previous, next) {
       if (next == null) return;
       final matches = feedAsync.value?.where((p) => p.id == next) ?? const [];
       if (matches.isNotEmpty) showPostDetailSheet(context, ref, matches.first);
     });
+    Future.microtask(() => ref.read(economyProvider.notifier).ensureLoaded());
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(feedAsync.when(
-          data: (posts) => 'Feed · ${posts.length} open posts',
-          loading: () => 'Feed',
-          error: (_, _) => 'Feed',
-        )),
+        title: Text(
+          feedAsync.when(
+            data: (posts) => 'Feed · ${posts.length} open posts',
+            loading: () => 'Feed',
+            error: (_, _) => 'Feed',
+          ),
+        ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(feedNotifierProvider.notifier).refresh(),
+        // Pull-to-refresh (scroll up) also fetches the latest token balance/price.
+        onRefresh: () => Future.wait([
+          ref.read(feedNotifierProvider.notifier).refresh(),
+          ref.read(economyProvider.notifier).refresh(),
+        ]),
         child: Column(
           children: [
+            const EconomyStatusBar(),
             if (subscribedChannels.isNotEmpty)
               SizedBox(
                 height: 44,
@@ -45,7 +56,9 @@ class FeedScreen extends ConsumerWidget {
                     _ChannelChip(
                       label: 'All',
                       selected: selectedChannel == null,
-                      onTap: () => ref.read(selectedChannelFilterProvider.notifier).set(null),
+                      onTap: () => ref
+                          .read(selectedChannelFilterProvider.notifier)
+                          .set(null),
                     ),
                     for (final channel in subscribedChannels)
                       _ChannelChip(
@@ -66,7 +79,8 @@ class FeedScreen extends ConsumerWidget {
                     return _EmptyState(
                       icon: Icons.forum_outlined,
                       title: 'Join a channel to get started',
-                      subtitle: 'Subscribe to channels to start seeing posts in your feed.',
+                      subtitle:
+                          'Subscribe to channels to start seeing posts in your feed.',
                       actionLabel: 'Browse channels',
                       onAction: () => context.go('/channels'),
                     );
@@ -88,7 +102,8 @@ class FeedScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text('Could not load feed:\n$error')),
+                error: (error, _) =>
+                    Center(child: Text('Could not load feed:\n$error')),
               ),
             ),
           ],
@@ -159,9 +174,17 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: theme.colorScheme.outline),
             const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text(subtitle, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
               FilledButton(onPressed: onAction, child: Text(actionLabel!)),

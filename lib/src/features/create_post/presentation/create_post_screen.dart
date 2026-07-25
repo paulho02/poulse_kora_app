@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
+import '../../economy/application/economy_providers.dart';
+import '../../economy/data/economy.dart';
+import '../../economy/presentation/economy_status_bar.dart';
 import '../../feed/application/feed_providers.dart';
 import '../../feed/data/feed_repository.dart';
-import '../../stats/application/stats_providers.dart';
 import 'channel_picker_sheet.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -26,7 +28,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(reviewGateStatusProvider.notifier).ensureLoaded());
+    // Refresh so the price reflects current congestion when opening the composer.
+    Future.microtask(() => ref.read(economyProvider.notifier).refresh());
   }
 
   @override
@@ -53,21 +56,26 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(feedRepositoryProvider).createPost(
+      final result = await ref
+          .read(feedRepositoryProvider)
+          .createPost(
             channelId: channelId,
             text: text,
             isAnonymous: _isAnonymous,
           );
+      // Posting spent tokens; sync the balance and refresh the (now higher) price.
+      ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
+      await ref.read(economyProvider.notifier).refresh();
+      ref.invalidate(feedNotifierProvider);
       if (!mounted) return;
       _textController.clear();
       setState(() => _isAnonymous = false);
-      ref.invalidate(feedNotifierProvider);
       context.go('/feed');
     } on RelayApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_messageFor(e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_messageFor(e))));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -75,8 +83,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   String _messageFor(RelayApiException e) {
     switch (e.error) {
-      case 'review_gate_locked':
-        return 'Review more posts before you can create one.';
+      case 'insufficient_tokens':
+        final price = e.detail['price'];
+        final balance = e.detail['balance'];
+        return 'Not enough tokens to post (need $price, you have $balance). '
+            'Review posts in your feed to earn more.';
       default:
         return 'Could not create the post.';
     }
@@ -96,63 +107,77 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   Widget build(BuildContext context) {
     final channelsAsync = ref.watch(channelsNotifierProvider);
-    final gateStatus = ref.watch(reviewGateStatusProvider);
+    final economy = ref.watch(economyProvider);
+    final canAfford = economy?.canAffordPost ?? false;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Post'),
         actions: [
-          if (gateStatus?.unlocked ?? false)
-            TextButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: const Text('Relay'),
-            ),
+          TextButton(
+            onPressed: (_isSubmitting || !canAfford) ? null : _submit,
+            child: const Text('Relay'),
+          ),
         ],
       ),
-      body: gateStatus == null
+      body: economy == null
           ? const Center(child: CircularProgressIndicator())
-          : gateStatus.unlocked
-              ? channelsAsync.when(
-                  data: (channels) => _buildEditor(context, channels),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) =>
-                      Center(child: Text('Could not load channels:\n$error')),
-                )
-              : _buildLockedState(context, gateStatus),
+          : channelsAsync.when(
+              data: (channels) => _buildEditor(context, channels, economy),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) =>
+                  Center(child: Text('Could not load channels:\n$error')),
+            ),
     );
   }
 
-  Widget _buildLockedState(BuildContext context, ReviewGateStatus gate) {
+  /// Shown above the composer when the user can't yet afford the current price:
+  /// posting is admission-priced in tokens, earned by reviewing.
+  Widget _buildAffordabilityBanner(BuildContext context, Economy economy) {
     final theme = Theme.of(context);
-    final remaining = (gate.reviewGate - gate.reviewedCount).clamp(0, gate.reviewGate);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_outline, size: 48, color: theme.colorScheme.outline),
-            const SizedBox(height: 20),
-            Text('Review to unlock posting', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Forward or drop $remaining more post${remaining == 1 ? '' : 's'} in your '
-              'feed before you can publish.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
+    final needed = (economy.postPrice - economy.tokenBalance).clamp(
+      0,
+      economy.postPrice,
+    );
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.toll_outlined,
+            size: 18,
+            color: theme.colorScheme.onErrorContainer,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Need $needed more token${needed == 1 ? '' : 's'} to post at the current '
+              'price of ${economy.postPrice}. Review posts in your feed to earn more.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onErrorContainer,
+              ),
             ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => context.go('/feed'),
-              child: const Text('Go to Feed'),
-            ),
-          ],
-        ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/feed'),
+            child: const Text('Feed'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEditor(BuildContext context, List<Channel> channels) {
+  Widget _buildEditor(
+    BuildContext context,
+    List<Channel> channels,
+    Economy economy,
+  ) {
     if (channels.isEmpty) {
       return const Center(
         child: Padding(
@@ -173,43 +198,58 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _ChannelSelectorButton(
-            channel: selectedChannel,
-            onTap: () => _pickChannel(channels),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              maxLines: null,
-              expands: true,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                hintText: "What's worth sharing?",
-                border: InputBorder.none,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const EconomyStatusBar(),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!economy.canAffordPost)
+                  _buildAffordabilityBanner(context, economy),
+                _ChannelSelectorButton(
+                  channel: selectedChannel,
+                  onTap: () => _pickChannel(channels),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: const InputDecoration(
+                      hintText: "What's worth sharing?",
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const Divider(),
+                Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('Anonymous'),
+                      avatar: Icon(
+                        _isAnonymous ? Icons.visibility_off : Icons.visibility,
+                        size: 16,
+                      ),
+                      selected: _isAnonymous,
+                      onSelected: (value) =>
+                          setState(() => _isAnonymous = value),
+                    ),
+                    const Spacer(),
+                    if (_isSubmitting)
+                      const CircularProgressIndicator(strokeWidth: 2),
+                  ],
+                ),
+              ],
             ),
           ),
-          const Divider(),
-          Row(
-            children: [
-              FilterChip(
-                label: const Text('Anonymous'),
-                avatar: Icon(_isAnonymous ? Icons.visibility_off : Icons.visibility, size: 16),
-                selected: _isAnonymous,
-                onSelected: (value) => setState(() => _isAnonymous = value),
-              ),
-              const Spacer(),
-              if (_isSubmitting) const CircularProgressIndicator(strokeWidth: 2),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

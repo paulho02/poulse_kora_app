@@ -23,7 +23,9 @@ class _PostDetailSheet extends ConsumerWidget {
   Future<void> _review(BuildContext context, WidgetRef ref, String kind) async {
     Navigator.of(context).pop();
     try {
-      await ref.read(feedNotifierProvider.notifier).reviewAndRemove(post.id, kind);
+      await ref
+          .read(feedNotifierProvider.notifier)
+          .reviewAndRemove(post.id, kind);
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,17 +52,24 @@ class _PostDetailSheet extends ConsumerWidget {
             Row(
               children: [
                 CircleAvatar(
-                  child: Icon(post.isAnonymous ? Icons.person_outline : Icons.person),
+                  child: Icon(
+                    post.isAnonymous ? Icons.person_outline : Icons.person,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post.isAnonymous ? 'Anonymous' : (post.author.username ?? 'Unknown'),
+                      post.isAnonymous
+                          ? 'Anonymous'
+                          : (post.author.username ?? 'Unknown'),
                       style: theme.textTheme.titleSmall,
                     ),
-                    Text('${post.channelName} · $hoursLeft h left', style: theme.textTheme.labelSmall),
+                    Text(
+                      '${post.channelName} · $hoursLeft h left',
+                      style: theme.textTheme.labelSmall,
+                    ),
                   ],
                 ),
               ],
@@ -83,7 +92,10 @@ class _PostDetailSheet extends ConsumerWidget {
             const SizedBox(height: 24),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(value: post.deadlineProgress, minHeight: 4),
+              child: LinearProgressIndicator(
+                value: post.deadlineProgress,
+                minHeight: 4,
+              ),
             ),
             const SizedBox(height: 20),
             Row(

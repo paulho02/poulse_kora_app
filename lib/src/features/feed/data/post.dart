@@ -2,9 +2,9 @@ class PostAuthor {
   PostAuthor({required this.id, required this.username});
 
   factory PostAuthor.fromJson(Map<String, dynamic> json) => PostAuthor(
-        id: json['id'] as String?,
-        username: json['username'] as String?,
-      );
+    id: json['id'] as String?,
+    username: json['username'] as String?,
+  );
 
   final String? id;
   final String? username;
@@ -25,17 +25,17 @@ class Post {
   });
 
   factory Post.fromJson(Map<String, dynamic> json) => Post(
-        id: json['id'] as int,
-        channelId: json['channel_id'] as int,
-        channelName: json['channel_name'] as String,
-        text: json['text'] as String,
-        hasImage: json['has_image'] as bool,
-        isAnonymous: json['is_anonymous'] as bool,
-        author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
-        forwardedCount: json['forwarded_count'] as int,
-        droppedCount: json['dropped_count'] as int,
-        created: DateTime.parse(json['created'] as String),
-      );
+    id: json['id'] as int,
+    channelId: json['channel_id'] as int,
+    channelName: json['channel_name'] as String,
+    text: json['text'] as String,
+    hasImage: json['has_image'] as bool,
+    isAnonymous: json['is_anonymous'] as bool,
+    author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
+    forwardedCount: json['forwarded_count'] as int,
+    droppedCount: json['dropped_count'] as int,
+    created: DateTime.parse(json['created'] as String),
+  );
 
   final int id;
   final int channelId;

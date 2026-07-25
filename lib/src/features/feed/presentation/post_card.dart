@@ -71,10 +71,12 @@ class _PostCardState extends ConsumerState<PostCard>
       builder: (context, child) {
         // First ~60% of the timeline slides + fades the card away; the last
         // ~40% collapses its height so the list smoothly closes the gap.
-        final slide =
-            Curves.easeIn.transform((_exit.value / 0.6).clamp(0.0, 1.0));
-        final collapse = Curves.easeInOut
-            .transform(((_exit.value - 0.6) / 0.4).clamp(0.0, 1.0));
+        final slide = Curves.easeIn.transform(
+          (_exit.value / 0.6).clamp(0.0, 1.0),
+        );
+        final collapse = Curves.easeInOut.transform(
+          ((_exit.value - 0.6) / 0.4).clamp(0.0, 1.0),
+        );
 
         return Align(
           alignment: Alignment.topCenter,
@@ -115,15 +117,18 @@ class _PostCardState extends ConsumerState<PostCard>
                         : (post.author.username ?? 'Unknown'),
                     style: theme.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontStyle:
-                          post.isAnonymous ? FontStyle.italic : FontStyle.normal,
+                      fontStyle: post.isAnonymous
+                          ? FontStyle.italic
+                          : FontStyle.normal,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text('·', style: theme.textTheme.labelSmall),
                   const SizedBox(width: 6),
-                  Text(post.channelName,
-                      style: theme.textTheme.labelSmall?.copyWith(color: color)),
+                  Text(
+                    post.channelName,
+                    style: theme.textTheme.labelSmall?.copyWith(color: color),
+                  ),
                   const Spacer(),
                   Text(
                     _timeAgo(post.created),
@@ -241,7 +246,11 @@ class _DropButton extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.close, size: 16, color: colorScheme.onSurface),
+                        Icon(
+                          Icons.close,
+                          size: 16,
+                          color: colorScheme.onSurface,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Drop',
@@ -281,7 +290,10 @@ class _AuthorAvatar extends StatelessWidget {
       child: Text(
         username.isNotEmpty ? username[0].toUpperCase() : '?',
         style: const TextStyle(
-            fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+          fontSize: 10,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

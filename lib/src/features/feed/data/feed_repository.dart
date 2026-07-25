@@ -9,14 +9,17 @@ class PostReviewResult {
     required this.reviewedCount,
     required this.reviewGate,
     required this.unlocked,
+    required this.tokenBalance,
   });
 
-  factory PostReviewResult.fromJson(Map<String, dynamic> json) => PostReviewResult(
+  factory PostReviewResult.fromJson(Map<String, dynamic> json) =>
+      PostReviewResult(
         postId: json['post_id'] as int,
         kind: json['kind'] as String,
         reviewedCount: json['reviewed_count'] as int,
         reviewGate: json['review_gate'] as int,
         unlocked: json['unlocked'] as bool,
+        tokenBalance: json['token_balance'] as int,
       );
 
   final int postId;
@@ -24,6 +27,31 @@ class PostReviewResult {
   final int reviewedCount;
   final int reviewGate;
   final bool unlocked;
+
+  /// Spendable balance after earning one token for this review.
+  final int tokenBalance;
+}
+
+/// Result of publishing an original post: the created post plus what it cost.
+class CreatePostResult {
+  CreatePostResult({
+    required this.post,
+    required this.price,
+    required this.tokenBalance,
+  });
+
+  factory CreatePostResult.fromJson(Map<String, dynamic> json) =>
+      CreatePostResult(
+        post: Post.fromJson(json['post'] as Map<String, dynamic>),
+        price: json['price'] as int,
+        tokenBalance: json['token_balance'] as int,
+      );
+
+  final Post post;
+  final int price;
+
+  /// Spendable balance after paying the post's price.
+  final int tokenBalance;
 }
 
 /// Thrown when the backend rejects a request with a structured `detail`
@@ -40,7 +68,8 @@ class RelayApiException implements Exception {
 
   static RelayApiException fromDioException(DioException e) {
     final data = e.response?.data;
-    if (data is Map<String, dynamic> && data['detail'] is Map<String, dynamic>) {
+    if (data is Map<String, dynamic> &&
+        data['detail'] is Map<String, dynamic>) {
       final detail = data['detail'] as Map<String, dynamic>;
       return RelayApiException(
         e.response?.statusCode ?? 0,
@@ -59,21 +88,21 @@ class FeedRepository {
 
   final Dio _dio;
 
-  Future<List<Post>> fetchFeed({int? channelId, int skip = 0, int limit = 20}) async {
+  Future<List<Post>> fetchFeed({
+    int? channelId,
+    int skip = 0,
+    int limit = 20,
+  }) async {
     final response = await _dio.get<List<dynamic>>(
       '/posts/feed',
-      queryParameters: {
-        'channel_id': ?channelId,
-        'skip': skip,
-        'limit': limit,
-      },
+      queryParameters: {'channel_id': ?channelId, 'skip': skip, 'limit': limit},
     );
     return response.data!
         .map((json) => Post.fromJson(json as Map<String, dynamic>))
         .toList();
   }
 
-  Future<Post> createPost({
+  Future<CreatePostResult> createPost({
     required int channelId,
     required String text,
     bool hasImage = false,
@@ -89,7 +118,7 @@ class FeedRepository {
           'is_anonymous': isAnonymous,
         },
       );
-      return Post.fromJson(response.data!);
+      return CreatePostResult.fromJson(response.data!);
     } on DioException catch (e) {
       throw RelayApiException.fromDioException(e);
     }

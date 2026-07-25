@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../economy/application/economy_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../data/feed_repository.dart';
 import '../data/post.dart';
@@ -19,8 +20,8 @@ class SelectedChannelFilterNotifier extends Notifier<int?> {
 
 final selectedChannelFilterProvider =
     NotifierProvider<SelectedChannelFilterNotifier, int?>(
-  SelectedChannelFilterNotifier.new,
-);
+      SelectedChannelFilterNotifier.new,
+    );
 
 class FeedNotifier extends AsyncNotifier<List<Post>> {
   @override
@@ -46,12 +47,18 @@ class FeedNotifier extends AsyncNotifier<List<Post>> {
     state = AsyncData(current.where((p) => p.id != postId).toList());
 
     try {
-      final result = await ref.read(feedRepositoryProvider).reviewPost(postId, kind);
-      ref.read(reviewGateStatusProvider.notifier).updateFromReviewResult(
+      final result = await ref
+          .read(feedRepositoryProvider)
+          .reviewPost(postId, kind);
+      ref
+          .read(reviewGateStatusProvider.notifier)
+          .updateFromReviewResult(
             reviewedCount: result.reviewedCount,
             reviewGate: result.reviewGate,
             unlocked: result.unlocked,
           );
+      // Reviewing earns a token — keep the economy header current without a refetch.
+      ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
     } catch (_) {
       state = AsyncData(current);
       rethrow;

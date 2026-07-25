@@ -17,10 +17,8 @@ Future<Channel?> showChannelPickerSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (context) => _ChannelPickerSheet(
-      channels: channels,
-      selectedId: selectedId,
-    ),
+    builder: (context) =>
+        _ChannelPickerSheet(channels: channels, selectedId: selectedId),
   );
 }
 
@@ -50,17 +48,21 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
     final filtered = _query.isEmpty
         ? widget.channels
         : widget.channels
-            .where((c) =>
-                c.name.toLowerCase().contains(_query) ||
-                c.description.toLowerCase().contains(_query))
-            .toList();
+              .where(
+                (c) =>
+                    c.name.toLowerCase().contains(_query) ||
+                    c.description.toLowerCase().contains(_query),
+              )
+              .toList();
 
     // Cap the sheet just below full screen so it feels like a sheet, not a page.
     final maxHeight = MediaQuery.of(context).size.height * 0.85;
 
     return Padding(
       // Lift the content above the keyboard when the search field is focused.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Column(
@@ -107,7 +109,9 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
                             child: Text(
                               channel.name.isNotEmpty ? channel.name[0] : '?',
                               style: TextStyle(
-                                  color: color, fontWeight: FontWeight.bold),
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           title: Text(channel.name),
@@ -117,7 +121,10 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           trailing: channel.id == widget.selectedId
-                              ? Icon(Icons.check, color: theme.colorScheme.primary)
+                              ? Icon(
+                                  Icons.check,
+                                  color: theme.colorScheme.primary,
+                                )
                               : null,
                           onTap: () => Navigator.of(context).pop(channel),
                         );
