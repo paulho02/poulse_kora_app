@@ -36,6 +36,18 @@ class FeedScreen extends ConsumerWidget {
             error: (_, _) => 'Feed',
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reload feed',
+            onPressed: feedAsync.isLoading
+                ? null
+                : () => Future.wait([
+                    ref.read(feedNotifierProvider.notifier).refresh(),
+                    ref.read(economyProvider.notifier).refresh(),
+                  ]),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         // Pull-to-refresh (scroll up) also fetches the latest token balance/price.
