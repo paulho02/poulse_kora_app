@@ -81,7 +81,6 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
                 controller: _searchController,
-                autofocus: true,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search),
                   hintText: 'Search channels',

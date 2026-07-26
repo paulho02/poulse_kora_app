@@ -88,7 +88,7 @@ class FeedScreen extends ConsumerWidget {
               child: feedAsync.when(
                 data: (posts) {
                   if (subscribedChannels.isEmpty) {
-                    return _EmptyState(
+                    return _ScrollableEmptyState(
                       icon: Icons.forum_outlined,
                       title: 'Join a channel to get started',
                       subtitle:
@@ -98,7 +98,7 @@ class FeedScreen extends ConsumerWidget {
                     );
                   }
                   if (posts.isEmpty) {
-                    return const _EmptyState(
+                    return const _ScrollableEmptyState(
                       icon: Icons.check_circle_outline,
                       title: 'All caught up',
                       subtitle: 'No posts to review right now.',
@@ -155,6 +155,43 @@ class _ChannelChip extends StatelessWidget {
         // Fully rounded (pill) tags with the channel color as the border.
         shape: const StadiumBorder(),
         side: BorderSide(color: outline),
+      ),
+    );
+  }
+}
+
+/// Wraps [_EmptyState] in a scrollable so `RefreshIndicator` still picks up
+/// the pull-down gesture when there's no list to scroll (empty feed).
+class _ScrollableEmptyState extends StatelessWidget {
+  const _ScrollableEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: _EmptyState(
+            icon: icon,
+            title: title,
+            subtitle: subtitle,
+            actionLabel: actionLabel,
+            onAction: onAction,
+          ),
+        ),
       ),
     );
   }

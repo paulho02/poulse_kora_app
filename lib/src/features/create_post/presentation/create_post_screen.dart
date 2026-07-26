@@ -108,18 +108,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Widget build(BuildContext context) {
     final channelsAsync = ref.watch(channelsNotifierProvider);
     final economy = ref.watch(economyProvider);
-    final canAfford = economy?.canAffordPost ?? false;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('New Post'),
-        actions: [
-          TextButton(
-            onPressed: (_isSubmitting || !canAfford) ? null : _submit,
-            child: const Text('Relay'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('New Post')),
       body: economy == null
           ? const Center(child: CircularProgressIndicator())
           : channelsAsync.when(
@@ -242,7 +233,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                     const Spacer(),
                     if (_isSubmitting)
-                      const CircularProgressIndicator(strokeWidth: 2),
+                      const Padding(
+                        padding: EdgeInsets.only(right: 12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    TextButton(
+                      onPressed: (_isSubmitting || !economy.canAffordPost)
+                          ? null
+                          : _submit,
+                      child: const Text('Relay'),
+                    ),
                   ],
                 ),
               ],
