@@ -26,6 +26,17 @@ Override the backend URL at run/build time:
 flutter run --dart-define=API_BASE_URL=https://api.example.com
 ```
 
+For local dev (e.g. running on a real Android device on your LAN, where neither `localhost` nor
+`10.0.2.2` reaches the host machine), copy `env.example.json` to `env.json` and set your machine's
+LAN IP:
+
+```bash
+cp env.example.json env.json   # then edit API_BASE_URL to your machine's LAN IP
+flutter run --dart-define-from-file=env.json
+```
+
+`env.json` is gitignored since the right IP is per-machine/per-network.
+
 ## Commands
 
 ```bash
