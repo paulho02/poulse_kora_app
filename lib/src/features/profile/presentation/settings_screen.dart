@@ -58,11 +58,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 ListTile(
                   title: const Text('Username'),
-                  trailing: Text(profile.username ?? '—'),
+                  trailing: Text(profile.data.username ?? '—'),
                 ),
                 ListTile(
                   title: const Text('Email'),
-                  trailing: Text(profile.email),
+                  trailing: Text(profile.data.email),
                 ),
               ],
             ),

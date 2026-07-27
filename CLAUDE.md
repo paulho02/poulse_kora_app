@@ -49,7 +49,10 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   on every outgoing request. Any new repository should take this `Dio` instance rather than
   creating its own.
 - `core/storage/token_storage.dart` — `flutter_secure_storage` wrapper, currently just the access
-  token (`fastapi-users` issues a single JWT bearer token, no refresh token flow).
+  token (`fastapi-users` issues a single JWT bearer token, no refresh token flow). It **caches the
+  token in memory** after the first read and dedupes concurrent cold reads, because the interceptor
+  attaches it to every request and each keystore read is a native round trip plus a decrypt. Keep
+  `saveAccessToken`/`clear` as the only writers, so the cache can't go stale.
 - `core/providers.dart` — top-level Riverpod providers (`tokenStorageProvider`, `dioClientProvider`)
   that feature-level providers build on top of.
 - `routing/app_router.dart` — `go_router` config as a Riverpod provider (`routerProvider`), so
@@ -57,6 +60,36 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.
+
+### Offline behaviour
+
+The app stays usable without a connection. Four rules that new code must not break:
+
+- **Preferences render from `core/settings/app_settings.dart`, never from the server profile.**
+  `appSettingsProvider` is the source of truth for `themeMode`; `profileProvider` is only a *sync
+  input* to it. Deriving the theme from a network call is what used to break dark mode offline.
+  Reconciliation is `decideSettingsSync` — it branches on a local `dirty` flag, not on comparing
+  timestamps, and on a genuine two-device conflict the local value wins. The server's
+  `settings_revision` (bumped only by settings PATCHes) is what detects that conflict.
+- **Reads fall back to cache; writes do not queue.** `core/cache/cached_fetch.dart` wraps each
+  read: write-through on success, serve the last good copy on a *connection* failure only — never
+  on a 4xx, which is a real answer and must surface. Writes fail with a message instead of being
+  replayed later, because reviews are guarded server-side by the Redis queue and posts are priced
+  at request time. Controls are never disabled by connectivity.
+- **All errors go through `core/errors/`.** `asRelayException` unwraps the `DioException` Dio
+  rethrows (`AsyncValue.guard` hands widgets the wrapper, not the failure inside it); `messageFor`
+  maps the backend's `detail.error` code to copy. Never render an exception's `toString()`.
+  When reporting an error after an await that may unmount the widget — an optimistic review
+  unmounts its `PostCard` — capture the `ScaffoldMessenger` first and use `showErrorSnackBarOn`.
+- **Session boundaries are handled centrally**, in `PoulseKoraApp`'s `authNotifierProvider`
+  listener. Logging out clears the token, the cache and local settings, but the providers holding
+  fetched data are keep-alive and survive it — so they're invalidated there. Signing in then warms
+  `profileProvider` to pull the new account's preferences; without that, `ref.read` on a provider
+  that still held state was a no-op and the theme silently stayed on defaults.
+- **Riverpod's auto-retry is disabled for connectivity failures** (`_retryPolicy` in `main.dart`).
+  Left on, a provider offline with no cache retries for minutes while pinned in `loading`, so the
+  screen never reaches its error state. `ConnectivityNotifier` owns recovery instead: it polls
+  `/api/v1/health` on a backoff, and `PoulseKoraApp` re-runs whatever failed on reconnect.
 
 State management is plain Riverpod (`Provider`, `FutureProvider`, `ConsumerWidget`) — no
 `riverpod_generator`/`build_runner` code generation is wired up. If a feature needs mutable state

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/feed_providers.dart';
@@ -37,6 +38,11 @@ class _PostCardState extends ConsumerState<PostCard>
 
   Future<void> _review(String kind) async {
     if (_leaving) return;
+    // Captured up front: the optimistic removal inside `reviewAndRemove` unmounts
+    // this card, so by the time a failure comes back `context` is dead. Reading
+    // the messenger now is what lets the error still reach the user.
+    final messenger = ScaffoldMessenger.of(context);
+
     setState(() {
       _leaving = true;
       _direction = kind == 'forward' ? 1 : -1;
@@ -50,14 +56,16 @@ class _PostCardState extends ConsumerState<PostCard>
       await ref
           .read(feedNotifierProvider.notifier)
           .reviewAndRemove(widget.post.id, kind);
-    } catch (_) {
+    } catch (error) {
+      // Say why. Offline is just another error code here — the card returns
+      // rather than the review being queued, since the server decides whether a
+      // review is still valid (the post may have left this user's queue).
+      showErrorSnackBarOn(messenger, error);
+      // Roll the card back into view — but only if this state object survived;
+      // the rollback in the notifier may have rebuilt a fresh one.
       if (!mounted) return;
-      // Roll the card back into view and report the failure.
       setState(() => _leaving = false);
       _exit.reset();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not update this post')),
-      );
     }
   }
 

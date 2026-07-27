@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_exception.dart';
+import '../../../core/network/connectivity.dart';
+import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
@@ -9,7 +12,6 @@ import '../../economy/application/economy_providers.dart';
 import '../../economy/data/economy.dart';
 import '../../economy/presentation/economy_status_bar.dart';
 import '../../feed/application/feed_providers.dart';
-import '../../feed/data/feed_repository.dart';
 import 'channel_picker_sheet.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -71,25 +73,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       _textController.clear();
       setState(() => _isAnonymous = false);
       context.go('/feed');
-    } on RelayApiException catch (e) {
+    } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_messageFor(e))));
+      // Includes the offline case: publishing is priced at request time from live
+      // queue congestion, so it can't be deferred to a replay at an unknown price.
+      showErrorSnackBar(context, error);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  String _messageFor(RelayApiException e) {
-    switch (e.error) {
-      case 'insufficient_tokens':
-        final price = e.detail['price'];
-        final balance = e.detail['balance'];
-        return 'Not enough tokens to post (need $price, you have $balance). '
-            'Review posts in your feed to earn more.';
-      default:
-        return 'Could not create the post.';
     }
   }
 
@@ -108,17 +98,35 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Widget build(BuildContext context) {
     final channelsAsync = ref.watch(channelsNotifierProvider);
     final economy = ref.watch(economyProvider);
+    final isOffline = ref.watch(connectivityProvider).isOffline;
 
     return Scaffold(
       appBar: AppBar(title: const Text('New Post')),
-      body: economy == null
-          ? const Center(child: CircularProgressIndicator())
-          : channelsAsync.when(
-              data: (channels) => _buildEditor(context, channels, economy),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) =>
-                  Center(child: Text('Could not load channels:\n$error')),
+      body: Builder(
+        builder: (context) {
+          if (economy == null) {
+            // `EconomyNotifier.refresh` swallows connectivity failures, so an
+            // offline first launch would otherwise spin here forever.
+            if (isOffline) {
+              return ErrorStateView(
+                error: RelayApiException(0, 'offline', const {},
+                    kind: ApiErrorKind.offline),
+                onRetry: () => ref.read(economyProvider.notifier).refresh(),
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
+          }
+          return channelsAsync.when(
+            data: (cached) => _buildEditor(context, cached.data, economy.data),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => ErrorStateView(
+              error: error,
+              onRetry: () =>
+                  ref.read(channelsNotifierProvider.notifier).refresh(),
             ),
+          );
+        },
+      ),
     );
   }
 

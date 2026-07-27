@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/presentation/error_state_view.dart';
 import '../application/feed_providers.dart';
 import '../data/post.dart';
 
@@ -21,17 +22,16 @@ class _PostDetailSheet extends ConsumerWidget {
   final Post post;
 
   Future<void> _review(BuildContext context, WidgetRef ref, String kind) async {
+    // Grab the messenger before popping: afterwards this sheet's context is
+    // defunct, and a `context.mounted` check would just swallow the error.
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     try {
       await ref
           .read(feedNotifierProvider.notifier)
           .reviewAndRemove(post.id, kind);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update this post')),
-        );
-      }
+    } catch (error) {
+      showErrorSnackBarOn(messenger, error);
     }
   }
 

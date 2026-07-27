@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/cache/cached.dart';
+import '../../../core/cache/cached_fetch.dart';
+import '../../../core/cache/json_cache.dart';
 import 'post.dart';
 
 class PostReviewResult {
@@ -54,52 +57,42 @@ class CreatePostResult {
   final int tokenBalance;
 }
 
-/// Thrown when the backend rejects a request with a structured `detail`
-/// error body (e.g. `not_subscribed`, `review_gate_locked`).
-class RelayApiException implements Exception {
-  RelayApiException(this.statusCode, this.error, this.detail);
-
-  final int statusCode;
-  final String error;
-  final Map<String, dynamic> detail;
-
-  @override
-  String toString() => 'RelayApiException($statusCode, $error)';
-
-  static RelayApiException fromDioException(DioException e) {
-    final data = e.response?.data;
-    if (data is Map<String, dynamic> &&
-        data['detail'] is Map<String, dynamic>) {
-      final detail = data['detail'] as Map<String, dynamic>;
-      return RelayApiException(
-        e.response?.statusCode ?? 0,
-        detail['error'] as String? ?? 'unknown',
-        detail,
-      );
-    }
-    return RelayApiException(e.response?.statusCode ?? 0, 'unknown', {});
-  }
-}
-
 /// Shared between the Feed and Create-Post features — both operate on the
 /// same `/posts` resource.
 class FeedRepository {
-  FeedRepository(this._dio);
+  FeedRepository(this._dio, this._cache);
 
   final Dio _dio;
+  final JsonCache _cache;
 
-  Future<List<Post>> fetchFeed({
+  /// Reads fall back to the last cached queue when the backend is unreachable, so
+  /// an offline user can still read what they had. Writes below deliberately do
+  /// not queue: reviewing is guarded server-side by the Redis queue and posting is
+  /// priced at request time, so a deferred replay could fail or overcharge long
+  /// after the user believed it succeeded.
+  Future<Cached<List<Post>>> fetchFeed({
     int? channelId,
     int skip = 0,
     int limit = 20,
-  }) async {
-    final response = await _dio.get<List<dynamic>>(
-      '/posts/feed',
-      queryParameters: {'channel_id': ?channelId, 'skip': skip, 'limit': limit},
+  }) {
+    return fetchCached<List<Post>>(
+      cache: _cache,
+      key: CacheKeys.feed(channelId),
+      fetchJson: () async {
+        final response = await _dio.get<List<dynamic>>(
+          '/posts/feed',
+          queryParameters: {
+            'channel_id': ?channelId,
+            'skip': skip,
+            'limit': limit,
+          },
+        );
+        return response.data!;
+      },
+      parse: (json) => (json as List<dynamic>)
+          .map((e) => Post.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
-    return response.data!
-        .map((json) => Post.fromJson(json as Map<String, dynamic>))
-        .toList();
   }
 
   Future<CreatePostResult> createPost({
@@ -108,31 +101,23 @@ class FeedRepository {
     bool hasImage = false,
     bool isAnonymous = false,
   }) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/posts',
-        data: {
-          'channel_id': channelId,
-          'text': text,
-          'has_image': hasImage,
-          'is_anonymous': isAnonymous,
-        },
-      );
-      return CreatePostResult.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw RelayApiException.fromDioException(e);
-    }
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/posts',
+      data: {
+        'channel_id': channelId,
+        'text': text,
+        'has_image': hasImage,
+        'is_anonymous': isAnonymous,
+      },
+    );
+    return CreatePostResult.fromJson(response.data!);
   }
 
   Future<PostReviewResult> reviewPost(int postId, String kind) async {
-    try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/posts/$postId/review',
-        data: {'kind': kind},
-      );
-      return PostReviewResult.fromJson(response.data!);
-    } on DioException catch (e) {
-      throw RelayApiException.fromDioException(e);
-    }
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/posts/$postId/review',
+      data: {'kind': kind},
+    );
+    return PostReviewResult.fromJson(response.data!);
   }
 }

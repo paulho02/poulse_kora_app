@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_messages.dart';
+import '../../../core/presentation/error_state_view.dart';
 import '../application/stats_providers.dart';
 import '../data/global_stats.dart';
 import '../data/user_stats.dart';
@@ -17,14 +19,20 @@ class StatsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Statistics')),
       body: statsAsync.when(
-        data: (stats) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(statsProvider);
-            ref.invalidate(globalStatsProvider);
-          },
-          child: ListView(
+        data: (cached) {
+          final stats = cached.data;
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(statsProvider);
+              ref.invalidate(globalStatsProvider);
+            },
+            child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (cached.staleLabel != null) ...[
+                StaleDataNotice(label: cached.staleLabel!),
+                const SizedBox(height: 12),
+              ],
               _TrustScoreCard(stats: stats),
               const SizedBox(height: 12),
               _MetricsGrid(stats: stats),
@@ -76,11 +84,15 @@ class StatsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Could not load stats:\n$error')),
+        error: (error, _) => ErrorStateView(
+          error: error,
+          onRetry: () => ref.invalidate(statsProvider),
+        ),
       ),
     );
   }
@@ -147,14 +159,22 @@ class _GlobalStatsCard extends ConsumerWidget {
             Text('Forwarding distribution', style: theme.textTheme.titleSmall),
             const SizedBox(height: 16),
             globalAsync.when(
-              data: (global) => _GlobalStatsBody(global: global),
+              data: (cached) => _GlobalStatsBody(global: cached.data),
               loading: () => const SizedBox(
                 height: 100,
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (_, _) => const SizedBox(
+              // One card inside a working screen — a full error state would be
+              // out of proportion, so it degrades to a quiet line.
+              error: (error, _) => SizedBox(
                 height: 60,
-                child: Center(child: Text('Could not load global stats')),
+                child: Center(
+                  child: Text(
+                    messageFor(error),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
               ),
             ),
           ],

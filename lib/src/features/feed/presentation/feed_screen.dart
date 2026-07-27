@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../economy/application/economy_providers.dart';
@@ -22,7 +23,8 @@ class FeedScreen extends ConsumerWidget {
     // Seed the token/price header once; refreshed on pull-to-refresh below.
     ref.listen(expandedPostIdProvider, (previous, next) {
       if (next == null) return;
-      final matches = feedAsync.value?.where((p) => p.id == next) ?? const [];
+      final matches =
+          feedAsync.value?.data.where((p) => p.id == next) ?? const [];
       if (matches.isNotEmpty) showPostDetailSheet(context, ref, matches.first);
     });
     Future.microtask(() => ref.read(economyProvider.notifier).ensureLoaded());
@@ -31,7 +33,7 @@ class FeedScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           feedAsync.when(
-            data: (posts) => 'Feed · ${posts.length} open posts',
+            data: (feed) => 'Feed · ${feed.data.length} open posts',
             loading: () => 'Feed',
             error: (_, _) => 'Feed',
           ),
@@ -86,7 +88,8 @@ class FeedScreen extends ConsumerWidget {
               ),
             Expanded(
               child: feedAsync.when(
-                data: (posts) {
+                data: (feed) {
+                  final posts = feed.data;
                   if (subscribedChannels.isEmpty) {
                     return _ScrollableEmptyState(
                       icon: Icons.forum_outlined,
@@ -104,18 +107,33 @@ class FeedScreen extends ConsumerWidget {
                       subtitle: 'No posts to review right now.',
                     );
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: posts.length,
-                    itemBuilder: (context, index) => PostCard(
-                      key: ValueKey(posts[index].id),
-                      post: posts[index],
-                    ),
+                  return Column(
+                    children: [
+                      // Says so when these posts came off disk, so nobody acts on
+                      // a queue that may have moved on without them.
+                      if (feed.staleLabel != null)
+                        StaleDataNotice(label: feed.staleLabel!),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: posts.length,
+                          itemBuilder: (context, index) => PostCard(
+                            key: ValueKey(posts[index].id),
+                            post: posts[index],
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) =>
-                    Center(child: Text('Could not load feed:\n$error')),
+                // Only reached with no cached feed at all — otherwise the
+                // repository served the saved copy above.
+                error: (error, _) => ErrorStateView(
+                  error: error,
+                  onRetry: () =>
+                      ref.read(feedNotifierProvider.notifier).refresh(),
+                ),
               ),
             ),
           ],

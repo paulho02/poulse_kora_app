@@ -1,19 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cached.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../data/global_stats.dart';
 import '../data/stats_repository.dart';
 import '../data/user_stats.dart';
 
 final statsRepositoryProvider = Provider<StatsRepository>((ref) {
-  return StatsRepository(ref.watch(dioClientProvider).dio);
+  return StatsRepository(
+    ref.watch(dioClientProvider).dio,
+    ref.watch(jsonCacheProvider),
+  );
 });
 
-final statsProvider = FutureProvider.autoDispose<UserStats>((ref) {
+final statsProvider = FutureProvider.autoDispose<Cached<UserStats>>((ref) {
   return ref.watch(statsRepositoryProvider).fetchStats();
 });
 
-final globalStatsProvider = FutureProvider.autoDispose<GlobalStats>((ref) {
+final globalStatsProvider = FutureProvider.autoDispose<Cached<GlobalStats>>((ref) {
   return ref.watch(statsRepositoryProvider).fetchGlobalStats();
 });
 
@@ -43,13 +48,21 @@ class ReviewGateStatusNotifier extends Notifier<ReviewGateStatus?> {
     await refresh();
   }
 
+  /// Swallows connectivity failures: this is seeded opportunistically from screen
+  /// `initState`s, where an uncaught rejection would surface as an unhandled
+  /// error rather than anything the user can act on. Offline, the gate simply
+  /// stays at its last known value (or `—` if never loaded).
   Future<void> refresh() async {
-    final stats = await ref.read(statsRepositoryProvider).fetchStats();
-    state = ReviewGateStatus(
-      reviewedCount: stats.reviewedCount,
-      reviewGate: stats.reviewGate,
-      unlocked: stats.unlocked,
-    );
+    try {
+      final stats = await ref.read(statsRepositoryProvider).fetchStats();
+      state = ReviewGateStatus(
+        reviewedCount: stats.data.reviewedCount,
+        reviewGate: stats.data.reviewGate,
+        unlocked: stats.data.unlocked,
+      );
+    } catch (e) {
+      if (!asRelayException(e).isConnectivityFailure) rethrow;
+    }
   }
 
   void updateFromReviewResult({

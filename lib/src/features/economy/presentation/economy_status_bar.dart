@@ -12,8 +12,9 @@ class EconomyStatusBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final economy = ref.watch(economyProvider);
-    if (economy == null) return const SizedBox.shrink();
+    final cached = ref.watch(economyProvider);
+    if (cached == null) return const SizedBox.shrink();
+    final economy = cached.data;
 
     final theme = Theme.of(context);
     return Container(
@@ -37,7 +38,12 @@ class EconomyStatusBar extends ConsumerWidget {
           const SizedBox(width: 20),
           _Stat(
             icon: Icons.sell_outlined,
-            label: '${economy.postPrice} to post',
+            // The price tracks live operation-queue congestion, so a cached one
+            // is an indication rather than a quote — mark it instead of
+            // presenting a stale number as the current cost.
+            label: cached.isStale
+                ? '~${economy.postPrice} to post'
+                : '${economy.postPrice} to post',
             color: economy.canAffordPost
                 ? theme.colorScheme.onSurfaceVariant
                 : theme.colorScheme.error,

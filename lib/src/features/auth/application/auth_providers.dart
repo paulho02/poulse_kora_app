@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/settings/app_settings.dart';
 import '../data/auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -23,6 +24,7 @@ class AuthNotifier extends AsyncNotifier<bool> {
           .read(authRepositoryProvider)
           .login(email: email, password: password);
       await ref.read(tokenStorageProvider).saveAccessToken(token);
+      await _startCleanSession();
       return true;
     });
   }
@@ -41,12 +43,27 @@ class AuthNotifier extends AsyncNotifier<bool> {
           .read(authRepositoryProvider)
           .login(email: email, password: password);
       await ref.read(tokenStorageProvider).saveAccessToken(token);
+      await _startCleanSession();
       return true;
     });
   }
 
+  /// Wipe anything the previous session left behind. Signing in is the one moment
+  /// we know a different account may be taking over the device, and unlike logout
+  /// it always runs — a session that ended by token expiry or by the app being
+  /// killed never got to clean up after itself.
+  Future<void> _startCleanSession() async {
+    await ref.read(jsonCacheProvider).clearAll();
+    await ref.read(appSettingsProvider.notifier).reset();
+  }
+
+  /// Clears everything account-scoped, not just the token: cached API responses
+  /// and local settings would otherwise carry over and show the previous user's
+  /// feed and theme to whoever signs in next on this device.
   Future<void> logout() async {
     await ref.read(tokenStorageProvider).clear();
+    await ref.read(jsonCacheProvider).clearAll();
+    await ref.read(appSettingsProvider.notifier).reset();
     state = const AsyncData(false);
   }
 }

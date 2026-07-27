@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/error_state_view.dart';
+import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../stats/application/stats_providers.dart';
@@ -14,6 +16,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
     final statsAsync = ref.watch(statsProvider);
+    // Read the toggle from the local store, not the server profile — that's what
+    // keeps it correct and usable with no connection.
+    final darkMode = ref.watch(appSettingsProvider).darkMode;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -27,7 +32,8 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
       body: profileAsync.when(
-        data: (profile) {
+        data: (cached) {
+          final profile = cached.data;
           final username = profile.username ?? profile.email;
           final avatarColor = AppColors.avatarColor(username);
           return RefreshIndicator(
@@ -35,6 +41,10 @@ class ProfileScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (cached.staleLabel != null) ...[
+                  StaleDataNotice(label: cached.staleLabel!),
+                  const SizedBox(height: 12),
+                ],
                 Center(
                   child: Column(
                     children: [
@@ -63,9 +73,9 @@ class ProfileScreen extends ConsumerWidget {
                 statsAsync.when(
                   data: (stats) => Row(
                     children: [
-                      _StatTile(label: 'Created', value: stats.createdPostCount),
-                      _StatTile(label: 'Reviewed', value: stats.reviewedCount),
-                      _StatTile(label: 'Trust', value: stats.trustScore),
+                      _StatTile(label: 'Created', value: stats.data.createdPostCount),
+                      _StatTile(label: 'Reviewed', value: stats.data.reviewedCount),
+                      _StatTile(label: 'Trust', value: stats.data.trustScore),
                     ],
                   ),
                   loading: () => const SizedBox(
@@ -79,18 +89,12 @@ class ProfileScreen extends ConsumerWidget {
                   child: SwitchListTile(
                     title: const Text('Dark Mode'),
                     secondary: const Icon(Icons.dark_mode_outlined),
-                    value: profile.darkMode,
-                    onChanged: (_) async {
-                      try {
-                        await ref.read(profileProvider.notifier).toggleDarkMode();
-                      } catch (_) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Could not update dark mode')),
-                          );
-                        }
-                      }
-                    },
+                    value: darkMode,
+                    // No try/catch and no error message on purpose: the theme has
+                    // already changed locally, and a push that fails offline is
+                    // retried on reconnect. There's nothing for the user to do.
+                    onChanged: (value) =>
+                        ref.read(profileProvider.notifier).setDarkMode(value),
                   ),
                 ),
                 const SizedBox(height: 16),
