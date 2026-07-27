@@ -38,6 +38,17 @@ String messageFor(Object? rawError) {
     case 'post_not_found':
       return 'That post is no longer available.';
 
+    // ---- pacing -------------------------------------------------------------
+    // One budget covers posting, forwarding and dropping, so the copy has to work
+    // for all three. `retry_after` is whole seconds, and never below 1.
+    case 'rate_limited':
+      final retryAfter = error.detail['retry_after'];
+      final wait = retryAfter is int ? retryAfter : null;
+      return wait == null
+          ? "You're going a bit fast. Take a moment, then try again."
+          : "You're going a bit fast. Try again in $wait "
+              "${wait == 1 ? 'second' : 'seconds'}.";
+
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':
       return 'Your session has expired. Please sign in again.';

@@ -94,6 +94,25 @@ void main() {
           contains('refresh'));
     });
 
+    test('tells a throttled user how long to wait', () {
+      final msg = messageFor(
+          RelayApiException(429, 'rate_limited', const {'retry_after': 7}));
+      expect(msg, contains('7 seconds'));
+    });
+
+    test('singularizes a one-second wait', () {
+      expect(
+          messageFor(
+              RelayApiException(429, 'rate_limited', const {'retry_after': 1})),
+          contains('1 second.'));
+    });
+
+    test('stays readable when rate_limited carries no retry_after', () {
+      final msg = messageFor(RelayApiException(429, 'rate_limited', const {}));
+      expect(msg, contains('going a bit fast'));
+      expect(msg, isNot(contains('null')));
+    });
+
     test('falls back to generic copy for an unrecognized code', () {
       expect(messageFor(RelayApiException(400, 'some_new_code', const {})),
           'Something went wrong. Please try again.');
