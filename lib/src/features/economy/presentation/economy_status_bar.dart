@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +19,7 @@ class EconomyStatusBar extends ConsumerWidget {
     final economy = cached.data;
 
     final theme = Theme.of(context);
+    final expiresAt = economy.postPriceExpiresAt;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -48,6 +51,10 @@ class EconomyStatusBar extends ConsumerWidget {
                 ? theme.colorScheme.onSurfaceVariant
                 : theme.colorScheme.error,
           ),
+          if (expiresAt != null) ...[
+            const SizedBox(width: 20),
+            _PriceCountdown(expiresAt: expiresAt),
+          ],
         ],
       ),
     );
@@ -76,6 +83,84 @@ class _Stat extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Ticking countdown to `expiresAt`, tap-to-reveal a tooltip explaining what it
+/// means. Renders nothing once expired rather than showing a stuck "0:00" —
+/// that also covers a stale cached economy, whose `expiresAt` is already in
+/// the past the moment it loads.
+class _PriceCountdown extends StatefulWidget {
+  const _PriceCountdown({required this.expiresAt});
+
+  final DateTime expiresAt;
+
+  @override
+  State<_PriceCountdown> createState() => _PriceCountdownState();
+}
+
+class _PriceCountdownState extends State<_PriceCountdown> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _remaining = _timeLeft();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PriceCountdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expiresAt != widget.expiresAt) {
+      _remaining = _timeLeft();
+      _startTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Duration _timeLeft() {
+    final left = widget.expiresAt.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (_remaining <= Duration.zero) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final left = _timeLeft();
+      if (!mounted) return;
+      setState(() => _remaining = left);
+      if (left <= Duration.zero) _timer?.cancel();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_remaining <= Duration.zero) return const SizedBox.shrink();
+    final minutes = _remaining.inMinutes;
+    final seconds = _remaining.inSeconds % 60;
+    final label = '$minutes:${seconds.toString().padLeft(2, '0')}';
+
+    return Tooltip(
+      // Default Tooltip only shows on long-press on mobile; this is meant to be
+      // discoverable with a plain tap, since nothing else hints it's tappable.
+      triggerMode: TooltipTriggerMode.tap,
+      message:
+          'The price to post rises when the app is busy. '
+          "It's locked in for $label — after that it may change.",
+      child: _Stat(
+        icon: Icons.timer_outlined,
+        label: label,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }
