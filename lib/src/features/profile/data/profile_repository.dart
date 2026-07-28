@@ -23,12 +23,17 @@ class ProfileRepository {
     );
   }
 
-  Future<UserProfile> updateMe({String? bio, bool? darkMode}) async {
+  Future<UserProfile> updateMe({
+    String? bio,
+    bool? darkMode,
+    bool? onboardingCompleted,
+  }) async {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/users/me',
       data: {
         'bio': ?bio,
         'dark_mode': ?darkMode,
+        'onboarding_completed': ?onboardingCompleted,
       },
     );
     // Keep the cache in step so a subsequent offline read doesn't resurrect the

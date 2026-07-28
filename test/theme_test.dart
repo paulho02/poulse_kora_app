@@ -9,8 +9,9 @@ import 'package:poulse_kora_app/src/core/theme/app_theme.dart';
 void main() {
   int channel(double v) => (v * 255).round();
 
-  testWidgets('dark surfaces are neutral grey, not tinted green',
-      (tester) async {
+  testWidgets('dark surfaces are neutral grey, not tinted green', (
+    tester,
+  ) async {
     final scheme = AppTheme.dark().colorScheme;
 
     // A truly neutral grey has near-equal R/G/B channels. The bug we're
@@ -31,10 +32,10 @@ void main() {
     expect(channel(primary.g), greaterThan(channel(primary.b)));
   });
 
-  testWidgets('buttons use a rounded rectangle, not a stadium shape',
-      (tester) async {
-    final shape =
-        AppTheme.light().filledButtonTheme.style?.shape?.resolve({});
+  testWidgets('buttons use a rounded rectangle, not a stadium shape', (
+    tester,
+  ) async {
+    final shape = AppTheme.light().filledButtonTheme.style?.shape?.resolve({});
     expect(shape, isA<RoundedRectangleBorder>());
   });
 }

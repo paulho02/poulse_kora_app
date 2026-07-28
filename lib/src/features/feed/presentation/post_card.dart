@@ -138,10 +138,7 @@ class _PostCardState extends ConsumerState<PostCard>
                     style: theme.textTheme.labelSmall?.copyWith(color: color),
                   ),
                   const Spacer(),
-                  Text(
-                    _timeAgo(post.created),
-                    style: theme.textTheme.labelSmall,
-                  ),
+                  Text(post.timeAgo, style: theme.textTheme.labelSmall),
                 ],
               ),
               const SizedBox(height: 10),
@@ -305,12 +302,4 @@ class _AuthorAvatar extends StatelessWidget {
       ),
     );
   }
-}
-
-String _timeAgo(DateTime created) {
-  final diff = DateTime.now().toUtc().difference(created.toUtc());
-  if (diff.inMinutes < 1) return 'now';
-  if (diff.inHours < 1) return '${diff.inMinutes}m';
-  if (diff.inDays < 1) return '${diff.inHours}h';
-  return '${diff.inDays}d';
 }

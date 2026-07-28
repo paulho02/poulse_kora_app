@@ -9,7 +9,10 @@ class AuthRepository {
   /// `POST /auth/jwt/login` expects `application/x-www-form-urlencoded` with
   /// `username`/`password` fields (fastapi-users' stock
   /// `OAuth2PasswordRequestForm` contract) — not JSON.
-  Future<String> login({required String email, required String password}) async {
+  Future<String> login({
+    required String email,
+    required String password,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/jwt/login',
       data: FormData.fromMap({'username': email, 'password': password}),

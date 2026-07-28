@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tips/application/tip_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../application/profile_providers.dart';
 
@@ -20,7 +21,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(reviewGateStatusProvider.notifier).ensureLoaded());
+    Future.microtask(
+      () => ref.read(reviewGateStatusProvider.notifier).ensureLoaded(),
+    );
   }
 
   @override
@@ -35,7 +38,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const _SectionHeader('Algorithm'),
           ListTile(
             title: const Text('Review gate'),
-            trailing: Text(gateStatus == null ? '—' : '${gateStatus.reviewGate} posts'),
+            trailing: Text(
+              gateStatus == null ? '—' : '${gateStatus.reviewGate} posts',
+            ),
           ),
           const ListTile(
             title: Text('Queue priority'),
@@ -50,7 +55,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             title: const Text('Weekly stats digest'),
             value: _weeklyDigestNotification,
-            onChanged: (value) => setState(() => _weeklyDigestNotification = value),
+            onChanged: (value) =>
+                setState(() => _weeklyDigestNotification = value),
+          ),
+          const _SectionHeader('Help'),
+          ListTile(
+            leading: const Icon(Icons.lightbulb_outline),
+            title: const Text('Reset tutorial hints'),
+            subtitle: const Text(
+              "Bring back the tips you've dismissed on each tab.",
+            ),
+            onTap: () {
+              resetAllTips(ref);
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Tutorial hints will show again as you open each tab.",
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+            },
           ),
           const _SectionHeader('Account'),
           profileAsync.when(
@@ -89,7 +116,9 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         label.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.5),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(letterSpacing: 0.5),
       ),
     );
   }

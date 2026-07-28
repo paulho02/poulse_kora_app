@@ -21,12 +21,12 @@ class DioClient {
     required ConnectivityNotifier connectivity,
     required Future<void> Function() onUnauthorized,
   }) : dio = Dio(
-          BaseOptions(
-            baseUrl: '${AppConfig.apiBaseUrl}${AppConfig.apiPath}',
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
-          ),
-        ) {
+         BaseOptions(
+           baseUrl: '${AppConfig.apiBaseUrl}${AppConfig.apiPath}',
+           connectTimeout: const Duration(seconds: 10),
+           receiveTimeout: const Duration(seconds: 10),
+         ),
+       ) {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {

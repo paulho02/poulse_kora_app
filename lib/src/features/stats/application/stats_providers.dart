@@ -18,7 +18,9 @@ final statsProvider = FutureProvider.autoDispose<Cached<UserStats>>((ref) {
   return ref.watch(statsRepositoryProvider).fetchStats();
 });
 
-final globalStatsProvider = FutureProvider.autoDispose<Cached<GlobalStats>>((ref) {
+final globalStatsProvider = FutureProvider.autoDispose<Cached<GlobalStats>>((
+  ref,
+) {
   return ref.watch(statsRepositoryProvider).fetchGlobalStats();
 });
 
@@ -80,5 +82,5 @@ class ReviewGateStatusNotifier extends Notifier<ReviewGateStatus?> {
 
 final reviewGateStatusProvider =
     NotifierProvider<ReviewGateStatusNotifier, ReviewGateStatus?>(
-  ReviewGateStatusNotifier.new,
-);
+      ReviewGateStatusNotifier.new,
+    );

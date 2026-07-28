@@ -32,7 +32,9 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
   Future<void> updateBio(String bio) async {
     final current = state.value;
     if (current == null) return;
-    final updated = await ref.read(profileRepositoryProvider).updateMe(bio: bio);
+    final updated = await ref
+        .read(profileRepositoryProvider)
+        .updateMe(bio: bio);
     state = AsyncData(Cached.live(updated));
   }
 
@@ -46,8 +48,9 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
   Future<void> setDarkMode(bool value) async {
     await ref.read(appSettingsProvider.notifier).setDarkMode(value);
     try {
-      final updated =
-          await ref.read(profileRepositoryProvider).updateMe(darkMode: value);
+      final updated = await ref
+          .read(profileRepositoryProvider)
+          .updateMe(darkMode: value);
       await ref
           .read(appSettingsProvider.notifier)
           .markPushed(updated.settingsRevision);
@@ -56,6 +59,18 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
       final failure = asRelayException(e);
       if (!failure.isConnectivityFailure) rethrow;
     }
+  }
+
+  /// Confirms the one-time post-registration onboarding flow. Unlike
+  /// `setDarkMode`, this has no offline path: reaching this point already
+  /// required the network (channel subscriptions in the flow's second step),
+  /// so a failure here rethrows and the onboarding screen surfaces it as a
+  /// retryable error rather than softening it.
+  Future<void> completeOnboarding() async {
+    final updated = await ref
+        .read(profileRepositoryProvider)
+        .updateMe(onboardingCompleted: true);
+    state = AsyncData(Cached.live(updated));
   }
 
   /// Reconcile the device's local settings with the server's.
@@ -121,5 +136,5 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
 
 final profileProvider =
     AsyncNotifierProvider<ProfileNotifier, Cached<UserProfile>>(
-  ProfileNotifier.new,
-);
+      ProfileNotifier.new,
+    );

@@ -65,26 +65,46 @@ class RelayApiException implements Exception {
     switch (e.type) {
       case DioExceptionType.connectionError:
       case DioExceptionType.connectionTimeout:
-        return RelayApiException(0, 'offline', const {},
-            kind: ApiErrorKind.offline);
+        return RelayApiException(
+          0,
+          'offline',
+          const {},
+          kind: ApiErrorKind.offline,
+        );
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return RelayApiException(0, 'timeout', const {},
-            kind: ApiErrorKind.timeout);
+        return RelayApiException(
+          0,
+          'timeout',
+          const {},
+          kind: ApiErrorKind.timeout,
+        );
       case DioExceptionType.badCertificate:
-        return RelayApiException(0, 'bad_certificate', const {},
-            kind: ApiErrorKind.unknown);
+        return RelayApiException(
+          0,
+          'bad_certificate',
+          const {},
+          kind: ApiErrorKind.unknown,
+        );
       case DioExceptionType.cancel:
-        return RelayApiException(0, 'cancelled', const {},
-            kind: ApiErrorKind.unknown);
+        return RelayApiException(
+          0,
+          'cancelled',
+          const {},
+          kind: ApiErrorKind.unknown,
+        );
       case DioExceptionType.unknown:
         // Dio reports socket failures as `unknown` on some platforms (notably
         // web, where the browser hides the reason for a failed fetch). Treat a
         // response-less unknown as offline: the alternative is showing a scary
         // generic error for the ordinary case of the server being unreachable.
         if (e.response == null) {
-          return RelayApiException(0, 'offline', const {},
-              kind: ApiErrorKind.offline);
+          return RelayApiException(
+            0,
+            'offline',
+            const {},
+            kind: ApiErrorKind.offline,
+          );
         }
         break;
       case DioExceptionType.badResponse:
@@ -93,8 +113,12 @@ class RelayApiException implements Exception {
         // Newer Dio versions may add cases (e.g. transformTimeout); a
         // response-less failure is still, from the user's side, "didn't land".
         if (e.response == null) {
-          return RelayApiException(0, 'offline', const {},
-              kind: ApiErrorKind.offline);
+          return RelayApiException(
+            0,
+            'offline',
+            const {},
+            kind: ApiErrorKind.offline,
+          );
         }
         break;
     }

@@ -12,7 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// memory the moment it's written into a request header.
 class TokenStorage {
   TokenStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _accessTokenKey = 'access_token';
 

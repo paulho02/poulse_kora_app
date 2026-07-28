@@ -12,9 +12,7 @@ class Cached<T> {
   });
 
   /// Fresh from the network, just now.
-  Cached.live(this.data)
-      : fetchedAt = DateTime.now(),
-        isStale = false;
+  Cached.live(this.data) : fetchedAt = DateTime.now(), isStale = false;
 
   /// Read back from disk after the network was unreachable.
   const Cached.stale(this.data, this.fetchedAt) : isStale = true;
@@ -23,11 +21,8 @@ class Cached<T> {
   final DateTime fetchedAt;
   final bool isStale;
 
-  Cached<R> map<R>(R Function(T) transform) => Cached(
-        data: transform(data),
-        fetchedAt: fetchedAt,
-        isStale: isStale,
-      );
+  Cached<R> map<R>(R Function(T) transform) =>
+      Cached(data: transform(data), fetchedAt: fetchedAt, isStale: isStale);
 
   /// Human-readable age, e.g. "Saved copy from 12 minutes ago". `null` when live.
   String? get staleLabel {

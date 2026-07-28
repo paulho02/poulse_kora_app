@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/announcements/application/announcement_providers.dart';
+import 'core/announcements/presentation/info_banner.dart';
 import 'core/network/connectivity.dart';
 import 'core/presentation/offline_banner.dart';
 import 'core/settings/app_settings.dart';
@@ -22,6 +24,19 @@ class PoulseKoraApp extends ConsumerWidget {
     // profile. Reading it from the network meant a preference the app already
     // knew about was unavailable whenever the backend was.
     final themeMode = ref.watch(appSettingsProvider).themeMode;
+
+    // Public endpoint, checked pre-login too — warm it here rather than
+    // waiting for InfoBanner to mount, since the splash-screen return below
+    // has no builder and would otherwise delay the fetch until it clears.
+    //
+    // `listen`, not `watch`: this widget is the app root, so a `watch` here
+    // would rebuild the entire `MaterialApp.router` — and therefore every
+    // currently-mounted route — the instant the fetch resolves. That collided
+    // with whatever screen happened to be mid-build at that moment (observed:
+    // "setState() or markNeedsBuild() called during build" from FeedScreen).
+    // `InfoBanner` already does its own narrowly-scoped watch for the actual
+    // value; this call exists purely to start the fetch early.
+    ref.listen(announcementProvider, (previous, next) {});
 
     // Session boundaries. Logging out clears the token, the response cache and
     // local settings, but the providers holding already-fetched data are
@@ -102,10 +117,13 @@ class PoulseKoraApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
-      // Wrapping here rather than in AppShell puts the banner over every route,
-      // including login/register, which sit outside the shell.
-      builder: (context, child) =>
-          OfflineBanner(child: child ?? const SizedBox.shrink()),
+      // Wrapping here rather than in AppShell puts the banners over every
+      // route, including login/register, which sit outside the shell.
+      // Connectivity state is the more urgent/certain of the two, so it
+      // renders above the announcement.
+      builder: (context, child) => OfflineBanner(
+        child: InfoBanner(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

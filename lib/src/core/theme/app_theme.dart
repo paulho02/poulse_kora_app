@@ -67,10 +67,7 @@ class AppTheme {
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
       ),
-      cardTheme: CardThemeData(
-        clipBehavior: Clip.antiAlias,
-        shape: shape,
-      ),
+      cardTheme: CardThemeData(clipBehavior: Clip.antiAlias, shape: shape),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(shape: shape),
       ),

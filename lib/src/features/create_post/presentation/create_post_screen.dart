@@ -6,6 +6,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/tips/presentation/view_tip.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
 import '../../economy/application/economy_providers.dart';
@@ -102,30 +103,41 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('New Post')),
-      body: Builder(
-        builder: (context) {
-          if (economy == null) {
-            // `EconomyNotifier.refresh` swallows connectivity failures, so an
-            // offline first launch would otherwise spin here forever.
-            if (isOffline) {
-              return ErrorStateView(
-                error: RelayApiException(0, 'offline', const {},
-                    kind: ApiErrorKind.offline),
-                onRetry: () => ref.read(economyProvider.notifier).refresh(),
-              );
+      body: ViewTip(
+        tipKey: 'tip.create',
+        message:
+            "Posting costs tokens, earned by reviewing others' posts — "
+            'that keeps posting tied to participating.',
+        child: Builder(
+          builder: (context) {
+            if (economy == null) {
+              // `EconomyNotifier.refresh` swallows connectivity failures, so an
+              // offline first launch would otherwise spin here forever.
+              if (isOffline) {
+                return ErrorStateView(
+                  error: RelayApiException(
+                    0,
+                    'offline',
+                    const {},
+                    kind: ApiErrorKind.offline,
+                  ),
+                  onRetry: () => ref.read(economyProvider.notifier).refresh(),
+                );
+              }
+              return const Center(child: CircularProgressIndicator());
             }
-            return const Center(child: CircularProgressIndicator());
-          }
-          return channelsAsync.when(
-            data: (cached) => _buildEditor(context, cached.data, economy.data),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => ErrorStateView(
-              error: error,
-              onRetry: () =>
-                  ref.read(channelsNotifierProvider.notifier).refresh(),
-            ),
-          );
-        },
+            return channelsAsync.when(
+              data: (cached) =>
+                  _buildEditor(context, cached.data, economy.data),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => ErrorStateView(
+                error: error,
+                onRetry: () =>
+                    ref.read(channelsNotifierProvider.notifier).refresh(),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

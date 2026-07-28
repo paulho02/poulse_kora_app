@@ -8,12 +8,12 @@ class Channel {
   });
 
   factory Channel.fromJson(Map<String, dynamic> json) => Channel(
-        id: json['id'] as int,
-        name: json['name'] as String,
-        color: json['color'] as String,
-        description: json['description'] as String,
-        isSubscribed: json['is_subscribed'] as bool,
-      );
+    id: json['id'] as int,
+    name: json['name'] as String,
+    color: json['color'] as String,
+    description: json['description'] as String,
+    isSubscribed: json['is_subscribed'] as bool,
+  );
 
   final int id;
   final String name;
@@ -22,10 +22,10 @@ class Channel {
   final bool isSubscribed;
 
   Channel copyWith({bool? isSubscribed}) => Channel(
-        id: id,
-        name: name,
-        color: color,
-        description: description,
-        isSubscribed: isSubscribed ?? this.isSubscribed,
-      );
+    id: id,
+    name: name,
+    color: color,
+    description: description,
+    isSubscribed: isSubscribed ?? this.isSubscribed,
+  );
 }

@@ -57,7 +57,10 @@ class JsonCache {
 
   /// Drops every cached entry. Called at both ends of a session.
   Future<void> clearAll() async {
-    final keys = _prefs.getKeys().where((k) => k.startsWith('$_prefix:')).toList();
+    final keys = _prefs
+        .getKeys()
+        .where((k) => k.startsWith('$_prefix:'))
+        .toList();
     for (final key in keys) {
       await _prefs.remove(key);
     }

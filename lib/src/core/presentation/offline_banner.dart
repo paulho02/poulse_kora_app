@@ -69,8 +69,11 @@ class _Bar extends StatelessWidget {
                   ),
                 )
               else
-                const Icon(Icons.check_circle_outline,
-                    size: 14, color: Colors.white),
+                const Icon(
+                  Icons.check_circle_outline,
+                  size: 14,
+                  color: Colors.white,
+                ),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(

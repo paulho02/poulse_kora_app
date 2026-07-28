@@ -20,11 +20,31 @@ class AppShell extends StatelessWidget {
           initialLocation: index == navigationShell.currentIndex,
         ),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum), label: 'Feed'),
-          NavigationDestination(icon: Icon(Icons.tag_outlined), selectedIcon: Icon(Icons.tag), label: 'Channels'),
-          NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'Create'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Stats'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.forum_outlined),
+            selectedIcon: Icon(Icons.forum),
+            label: 'Feed',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tag_outlined),
+            selectedIcon: Icon(Icons.tag),
+            label: 'Channels',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_circle_outline),
+            selectedIcon: Icon(Icons.add_circle),
+            label: 'Create',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Stats',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );

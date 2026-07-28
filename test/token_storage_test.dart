@@ -87,8 +87,11 @@ void main() {
     expect(await tokens.readAccessToken(), 'jwt-abc');
     expect(await tokens.readAccessToken(), 'jwt-abc');
 
-    expect(storage.reads, 1,
-        reason: 'the interceptor reads this on every request');
+    expect(
+      storage.reads,
+      1,
+      reason: 'the interceptor reads this on every request',
+    );
   });
 
   test('caches "no token" too, instead of re-asking', () async {
@@ -137,10 +140,17 @@ void main() {
 
     await tokens.clear();
 
-    expect(await tokens.readAccessToken(), isNull,
-        reason: 'a stale cached token would keep signing requests after logout');
+    expect(
+      await tokens.readAccessToken(),
+      isNull,
+      reason: 'a stale cached token would keep signing requests after logout',
+    );
     expect(storage.deletes, 1);
-    expect(storage.reads, 1, reason: 'clear() already knows the answer is null');
+    expect(
+      storage.reads,
+      1,
+      reason: 'clear() already knows the answer is null',
+    );
   });
 
   test('a failed read is retried, not cached as "no token"', () async {
@@ -150,7 +160,10 @@ void main() {
     await expectLater(tokens.readAccessToken(), throwsStateError);
 
     storage.shouldFail = false;
-    expect(await tokens.readAccessToken(), 'jwt-abc',
-        reason: 'caching the failure would silently sign the user out');
+    expect(
+      await tokens.readAccessToken(),
+      'jwt-abc',
+      reason: 'caching the failure would silently sign the user out',
+    );
   });
 }

@@ -19,7 +19,8 @@ class ErrorStateView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isOffline =
-        error is RelayApiException && (error as RelayApiException).isConnectivityFailure;
+        error is RelayApiException &&
+        (error as RelayApiException).isConnectivityFailure;
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -53,7 +54,10 @@ class ErrorStateView extends StatelessWidget {
                   ),
                   if (onRetry != null) ...[
                     const SizedBox(height: 20),
-                    FilledButton(onPressed: onRetry, child: const Text('Try again')),
+                    FilledButton(
+                      onPressed: onRetry,
+                      child: const Text('Try again'),
+                    ),
                   ],
                 ],
               ),
@@ -81,12 +85,17 @@ class StaleDataNotice extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.history, size: 13, color: theme.colorScheme.onSurfaceVariant),
+          Icon(
+            Icons.history,
+            size: 13,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 6),
           Text(
             label,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

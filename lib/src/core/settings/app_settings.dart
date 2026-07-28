@@ -88,10 +88,10 @@ class AppSettingsStore {
   static const _syncedRevision = 'settings.syncedRevision';
 
   AppSettings read() => AppSettings(
-        darkMode: _prefs.getBool(_darkMode) ?? false,
-        dirty: _prefs.getBool(_dirty) ?? false,
-        syncedRevision: _prefs.getInt(_syncedRevision) ?? 0,
-      );
+    darkMode: _prefs.getBool(_darkMode) ?? false,
+    dirty: _prefs.getBool(_dirty) ?? false,
+    syncedRevision: _prefs.getInt(_syncedRevision) ?? 0,
+  );
 
   Future<void> write(AppSettings settings) async {
     await _prefs.setBool(_darkMode, settings.darkMode);
@@ -126,11 +126,9 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     required bool darkMode,
     required int revision,
   }) async {
-    await _persist(AppSettings(
-      darkMode: darkMode,
-      dirty: false,
-      syncedRevision: revision,
-    ));
+    await _persist(
+      AppSettings(darkMode: darkMode, dirty: false, syncedRevision: revision),
+    );
   }
 
   /// Record that our local values reached the server at [revision] (a push).
@@ -153,12 +151,15 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
 /// Overridden in `main()` with the warmed `SharedPreferences` instance.
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferencesProvider must be overridden in main()');
+  throw UnimplementedError(
+    'sharedPreferencesProvider must be overridden in main()',
+  );
 });
 
 final appSettingsStoreProvider = Provider<AppSettingsStore>(
   (ref) => AppSettingsStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final appSettingsProvider =
-    NotifierProvider<AppSettingsNotifier, AppSettings>(AppSettingsNotifier.new);
+final appSettingsProvider = NotifierProvider<AppSettingsNotifier, AppSettings>(
+  AppSettingsNotifier.new,
+);

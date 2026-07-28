@@ -14,7 +14,10 @@ class WeeklyActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxCount = buckets.fold<int>(1, (max, b) => b.count > max ? b.count : max);
+    final maxCount = buckets.fold<int>(
+      1,
+      (max, b) => b.count > max ? b.count : max,
+    );
 
     return Column(
       children: [
@@ -32,8 +35,9 @@ class WeeklyActivityChart extends StatelessWidget {
                       alignment: Alignment.bottomCenter,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: bucket.count == 0 ? 0.2 : 0.8),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: bucket.count == 0 ? 0.2 : 0.8,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

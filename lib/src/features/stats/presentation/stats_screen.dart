@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/error_state_view.dart';
+import '../../../core/tips/presentation/view_tip.dart';
 import '../application/stats_providers.dart';
 import '../data/global_stats.dart';
 import '../data/user_stats.dart';
@@ -18,80 +19,96 @@ class StatsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Statistics')),
-      body: statsAsync.when(
-        data: (cached) {
-          final stats = cached.data;
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(statsProvider);
-              ref.invalidate(globalStatsProvider);
-            },
-            child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (cached.staleLabel != null) ...[
-                StaleDataNotice(label: cached.staleLabel!),
-                const SizedBox(height: 12),
-              ],
-              _TrustScoreCard(stats: stats),
-              const SizedBox(height: 12),
-              _MetricsGrid(stats: stats),
-              const SizedBox(height: 12),
-              const _GlobalStatsCard(),
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('THIS WEEK', style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 16),
-                      WeeklyActivityChart(buckets: stats.weeklyActivity),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('BADGES', style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+      body: ViewTip(
+        tipKey: 'tip.stats',
+        message:
+            'Track your review streak, trust score, and how far your '
+            'forwards have spread.',
+        child: statsAsync.when(
+          data: (cached) {
+            final stats = cached.data;
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(statsProvider);
+                ref.invalidate(globalStatsProvider);
+              },
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (cached.staleLabel != null) ...[
+                    StaleDataNotice(label: cached.staleLabel!),
+                    const SizedBox(height: 12),
+                  ],
+                  _TrustScoreCard(stats: stats),
+                  const SizedBox(height: 12),
+                  _MetricsGrid(stats: stats),
+                  const SizedBox(height: 12),
+                  const _GlobalStatsCard(),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final badge in stats.badges)
-                            Chip(
-                              label: Text(badge.label),
-                              backgroundColor: badge.earned
-                                  ? Theme.of(context).colorScheme.primaryContainer
-                                  : null,
-                              side: badge.earned
-                                  ? null
-                                  : BorderSide(
-                                      color: Theme.of(context).colorScheme.outlineVariant,
-                                      style: BorderStyle.solid,
-                                    ),
-                            ),
+                          Text(
+                            'THIS WEEK',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const SizedBox(height: 16),
+                          WeeklyActivityChart(buckets: stats.weeklyActivity),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'BADGES',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final badge in stats.badges)
+                                Chip(
+                                  label: Text(badge.label),
+                                  backgroundColor: badge.earned
+                                      ? Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer
+                                      : null,
+                                  side: badge.earned
+                                      ? null
+                                      : BorderSide(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.outlineVariant,
+                                          style: BorderStyle.solid,
+                                        ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              ],
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => ErrorStateView(
-          error: error,
-          onRetry: () => ref.invalidate(statsProvider),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => ErrorStateView(
+            error: error,
+            onRetry: () => ref.invalidate(statsProvider),
+          ),
         ),
       ),
     );
@@ -118,7 +135,10 @@ class _TrustScoreCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text('${stats.trustScore}', style: theme.textTheme.displaySmall),
+                Text(
+                  '${stats.trustScore}',
+                  style: theme.textTheme.displaySmall,
+                ),
                 const SizedBox(width: 6),
                 Text('/ 100', style: theme.textTheme.labelMedium),
               ],

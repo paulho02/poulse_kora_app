@@ -24,7 +24,8 @@ Future<void> main() async {
         // the auth feature exists — and so the network client isn't reading the
         // auth state it is itself configured by.
         onUnauthorizedProvider.overrideWith(
-          (ref) => () => ref.read(authNotifierProvider.notifier).logout(),
+          (ref) =>
+              () => ref.read(authNotifierProvider.notifier).logout(),
         ),
       ],
       child: const PoulseKoraApp(),

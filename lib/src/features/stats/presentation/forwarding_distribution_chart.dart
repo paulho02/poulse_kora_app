@@ -13,8 +13,10 @@ class ForwardingDistributionChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxCount =
-        buckets.fold<int>(1, (max, b) => b.postCount > max ? b.postCount : max);
+    final maxCount = buckets.fold<int>(
+      1,
+      (max, b) => b.postCount > max ? b.postCount : max,
+    );
 
     return Column(
       children: [
@@ -38,12 +40,14 @@ class ForwardingDistributionChart extends StatelessWidget {
                         FractionallySizedBox(
                           widthFactor: 1,
                           child: SizedBox(
-                            height: 70 *
+                            height:
+                                70 *
                                 (bucket.postCount / maxCount).clamp(0.03, 1.0),
                             child: Container(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.primary.withValues(
-                                    alpha: bucket.postCount == 0 ? 0.2 : 0.8),
+                                  alpha: bucket.postCount == 0 ? 0.2 : 0.8,
+                                ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),

@@ -15,10 +15,10 @@ class Badge {
   Badge({required this.code, required this.label, required this.earned});
 
   factory Badge.fromJson(Map<String, dynamic> json) => Badge(
-        code: json['code'] as String,
-        label: json['label'] as String,
-        earned: json['earned'] as bool,
-      );
+    code: json['code'] as String,
+    label: json['label'] as String,
+    earned: json['earned'] as bool,
+  );
 
   final String code;
   final String label;
@@ -40,21 +40,21 @@ class UserStats {
   });
 
   factory UserStats.fromJson(Map<String, dynamic> json) => UserStats(
-        reviewedCount: json['reviewed_count'] as int,
-        forwardedCount: json['forwarded_count'] as int,
-        droppedCount: json['dropped_count'] as int,
-        createdPostCount: json['created_post_count'] as int,
-        trustScore: json['trust_score'] as int,
-        avgHops: (json['avg_hops'] as num).toDouble(),
-        weeklyActivity: (json['weekly_activity'] as List<dynamic>)
-            .map((j) => WeeklyActivityBucket.fromJson(j as Map<String, dynamic>))
-            .toList(),
-        badges: (json['badges'] as List<dynamic>)
-            .map((j) => Badge.fromJson(j as Map<String, dynamic>))
-            .toList(),
-        reviewGate: json['review_gate'] as int,
-        unlocked: json['unlocked'] as bool,
-      );
+    reviewedCount: json['reviewed_count'] as int,
+    forwardedCount: json['forwarded_count'] as int,
+    droppedCount: json['dropped_count'] as int,
+    createdPostCount: json['created_post_count'] as int,
+    trustScore: json['trust_score'] as int,
+    avgHops: (json['avg_hops'] as num).toDouble(),
+    weeklyActivity: (json['weekly_activity'] as List<dynamic>)
+        .map((j) => WeeklyActivityBucket.fromJson(j as Map<String, dynamic>))
+        .toList(),
+    badges: (json['badges'] as List<dynamic>)
+        .map((j) => Badge.fromJson(j as Map<String, dynamic>))
+        .toList(),
+    reviewGate: json['review_gate'] as int,
+    unlocked: json['unlocked'] as bool,
+  );
 
   final int reviewedCount;
   final int forwardedCount;

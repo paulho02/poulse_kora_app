@@ -33,8 +33,11 @@ class ChannelsNotifier extends AsyncNotifier<Cached<List<Channel>>> {
     if (current == null) return;
     final optimistic = current.map(
       (channels) => channels
-          .map((c) =>
-              c.id == channel.id ? c.copyWith(isSubscribed: !c.isSubscribed) : c)
+          .map(
+            (c) => c.id == channel.id
+                ? c.copyWith(isSubscribed: !c.isSubscribed)
+                : c,
+          )
           .toList(),
     );
     state = AsyncData(optimistic);
@@ -58,8 +61,8 @@ class ChannelsNotifier extends AsyncNotifier<Cached<List<Channel>>> {
 
 final channelsNotifierProvider =
     AsyncNotifierProvider<ChannelsNotifier, Cached<List<Channel>>>(
-  ChannelsNotifier.new,
-);
+      ChannelsNotifier.new,
+    );
 
 /// Channels the user is currently subscribed to — feeds the Feed screen's
 /// empty state and the Create-Post channel picker.

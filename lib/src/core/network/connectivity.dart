@@ -67,7 +67,9 @@ class ConnectivityNotifier extends Notifier<ConnectionStatus> {
   ConnectionStatus build() {
     // Optimistic start: assume reachable until something says otherwise, so a
     // cold start doesn't flash a red banner before the first request completes.
-    _linkSubscription = Connectivity().onConnectivityChanged.listen(_onLinkChanged);
+    _linkSubscription = Connectivity().onConnectivityChanged.listen(
+      _onLinkChanged,
+    );
     ref.onDispose(() {
       _probeTimer?.cancel();
       _backOnlineTimer?.cancel();
@@ -79,7 +81,8 @@ class ConnectivityNotifier extends Notifier<ConnectionStatus> {
 
   void _onLinkChanged(List<ConnectivityResult> results) {
     final hasLink =
-        results.isNotEmpty && !results.every((r) => r == ConnectivityResult.none);
+        results.isNotEmpty &&
+        !results.every((r) => r == ConnectivityResult.none);
     if (!hasLink) {
       reportFailure();
       return;
@@ -135,5 +138,5 @@ class ConnectivityNotifier extends Notifier<ConnectionStatus> {
 
 final connectivityProvider =
     NotifierProvider<ConnectivityNotifier, ConnectionStatus>(
-  ConnectivityNotifier.new,
-);
+      ConnectivityNotifier.new,
+    );

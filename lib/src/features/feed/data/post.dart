@@ -62,4 +62,15 @@ class Post {
     final remaining = window - elapsed;
     return remaining.isNegative ? Duration.zero : remaining;
   }
+
+  /// Compact relative age (e.g. "3h", "2d") — deliberately not an absolute
+  /// timestamp: nothing else in this app formats calendar dates, and a
+  /// relative label is what a 24h-lifetime feed post actually needs.
+  String get timeAgo {
+    final diff = DateTime.now().toUtc().difference(created.toUtc());
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
 }

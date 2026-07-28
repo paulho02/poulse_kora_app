@@ -47,7 +47,7 @@ String messageFor(Object? rawError) {
       return wait == null
           ? "You're going a bit fast. Take a moment, then try again."
           : "You're going a bit fast. Try again in $wait "
-              "${wait == 1 ? 'second' : 'seconds'}.";
+                "${wait == 1 ? 'second' : 'seconds'}.";
 
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':

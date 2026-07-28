@@ -39,6 +39,9 @@ class _PostDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final hoursLeft = post.timeRemaining.inHours;
+    final postedAgo = post.timeAgo == 'now'
+        ? 'just now'
+        : '${post.timeAgo} ago';
 
     return SafeArea(
       child: Padding(
@@ -67,7 +70,8 @@ class _PostDetailSheet extends ConsumerWidget {
                       style: theme.textTheme.titleSmall,
                     ),
                     Text(
-                      '${post.channelName} · $hoursLeft h left',
+                      '${post.channelName} · Posted $postedAgo · '
+                      '$hoursLeft h left',
                       style: theme.textTheme.labelSmall,
                     ),
                   ],

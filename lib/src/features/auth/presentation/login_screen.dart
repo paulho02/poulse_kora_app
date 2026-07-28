@@ -25,7 +25,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(authNotifierProvider.notifier).login(
+    await ref
+        .read(authNotifierProvider.notifier)
+        .login(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -38,9 +40,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen(authNotifierProvider, (previous, next) {
       if (next.hasError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${next.error}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login failed: ${next.error}')));
       }
     });
 
@@ -55,7 +57,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Relay', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Relay',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailController,

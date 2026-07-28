@@ -43,15 +43,21 @@ void main() {
       expect(settings.syncedRevision, 3);
     });
 
-    test('a local change applies immediately and marks the value dirty',
-        () async {
-      await setUpContainer();
-      await container.read(appSettingsProvider.notifier).setDarkMode(true);
+    test(
+      'a local change applies immediately and marks the value dirty',
+      () async {
+        await setUpContainer();
+        await container.read(appSettingsProvider.notifier).setDarkMode(true);
 
-      final settings = container.read(appSettingsProvider);
-      expect(settings.darkMode, isTrue, reason: 'must not wait on the network');
-      expect(settings.dirty, isTrue, reason: 'needs pushing on reconnect');
-    });
+        final settings = container.read(appSettingsProvider);
+        expect(
+          settings.darkMode,
+          isTrue,
+          reason: 'must not wait on the network',
+        );
+        expect(settings.dirty, isTrue, reason: 'needs pushing on reconnect');
+      },
+    );
 
     test('a local change survives a restart while still pending', () async {
       await setUpContainer();
@@ -77,8 +83,11 @@ void main() {
         'settings.syncedRevision': 2,
       });
       await container.read(appSettingsProvider.notifier).setDarkMode(true);
-      expect(container.read(appSettingsProvider).dirty, isFalse,
-          reason: 'nothing changed, so there is nothing to push');
+      expect(
+        container.read(appSettingsProvider).dirty,
+        isFalse,
+        reason: 'nothing changed, so there is nothing to push',
+      );
     });
 
     test('a pull adopts the server value and clears dirty', () async {
@@ -135,24 +144,32 @@ void main() {
       );
     });
 
-    test('dirty local state that already matches the server needs no request',
-        () {
-      expect(
-        decideSettingsSync(
-          local: const AppSettings(
-              darkMode: true, dirty: true, syncedRevision: 5),
-          serverDarkMode: true,
-          serverRevision: 5,
-        ),
-        SettingsSyncAction.alreadyInSync,
-      );
-    });
+    test(
+      'dirty local state that already matches the server needs no request',
+      () {
+        expect(
+          decideSettingsSync(
+            local: const AppSettings(
+              darkMode: true,
+              dirty: true,
+              syncedRevision: 5,
+            ),
+            serverDarkMode: true,
+            serverRevision: 5,
+          ),
+          SettingsSyncAction.alreadyInSync,
+        );
+      },
+    );
 
     test('dirty local state with matching revisions pushes', () {
       expect(
         decideSettingsSync(
           local: const AppSettings(
-              darkMode: true, dirty: true, syncedRevision: 5),
+            darkMode: true,
+            dirty: true,
+            syncedRevision: 5,
+          ),
           serverDarkMode: false,
           serverRevision: 5,
         ),
@@ -160,20 +177,25 @@ void main() {
       );
     });
 
-    test('dirty local state still pushes when the server is ahead (local wins)',
-        () {
-      // Another device changed the setting while this one was offline. Reverting
-      // the toggle the user just flipped here would be the more surprising
-      // outcome, so the local value wins rather than the newer one.
-      expect(
-        decideSettingsSync(
-          local: const AppSettings(
-              darkMode: true, dirty: true, syncedRevision: 5),
-          serverDarkMode: false,
-          serverRevision: 9,
-        ),
-        SettingsSyncAction.push,
-      );
-    });
+    test(
+      'dirty local state still pushes when the server is ahead (local wins)',
+      () {
+        // Another device changed the setting while this one was offline. Reverting
+        // the toggle the user just flipped here would be the more surprising
+        // outcome, so the local value wins rather than the newer one.
+        expect(
+          decideSettingsSync(
+            local: const AppSettings(
+              darkMode: true,
+              dirty: true,
+              syncedRevision: 5,
+            ),
+            serverDarkMode: false,
+            serverRevision: 9,
+          ),
+          SettingsSyncAction.push,
+        );
+      },
+    );
   });
 }

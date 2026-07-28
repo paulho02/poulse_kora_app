@@ -8,13 +8,16 @@ void main() {
   final req = RequestOptions(path: '/posts/feed');
 
   group('asRelayException', () {
-    test('unwraps the failure the interceptor tucked into DioException.error',
-        () {
+    test('unwraps the failure the interceptor tucked into DioException.error', () {
       // Regression: Dio rethrows its own type, so `AsyncValue.guard` hands the
       // widget a DioException, not the RelayApiException inside it. Before this
       // was unwrapped, every offline screen read "Something went wrong".
-      final inner = RelayApiException(0, 'offline', const {},
-          kind: ApiErrorKind.offline);
+      final inner = RelayApiException(
+        0,
+        'offline',
+        const {},
+        kind: ApiErrorKind.offline,
+      );
       final wrapped = DioException(requestOptions: req, error: inner);
 
       final result = asRelayException(wrapped);
@@ -47,24 +50,35 @@ void main() {
           requestOptions: req,
           statusCode: 402,
           data: {
-            'detail': {'error': 'insufficient_tokens', 'price': 5, 'balance': 2}
+            'detail': {
+              'error': 'insufficient_tokens',
+              'price': 5,
+              'balance': 2,
+            },
           },
         ),
       );
       final result = asRelayException(e);
       expect(result.error, 'insufficient_tokens');
       expect(result.kind, ApiErrorKind.api);
-      expect(result.isConnectivityFailure, isFalse,
-          reason: 'a server rejection must never fall back to cached data');
+      expect(
+        result.isConnectivityFailure,
+        isFalse,
+        reason: 'a server rejection must never fall back to cached data',
+      );
     });
 
     test('maps 401 to unauthorized', () {
       final e = DioException(
         requestOptions: req,
         type: DioExceptionType.badResponse,
-        response: Response(requestOptions: req, statusCode: 401, data: {
-          'detail': {'error': 'unauthorized'}
-        }),
+        response: Response(
+          requestOptions: req,
+          statusCode: 401,
+          data: {
+            'detail': {'error': 'unauthorized'},
+          },
+        ),
       );
       expect(asRelayException(e).kind, ApiErrorKind.unauthorized);
     });
@@ -74,37 +88,48 @@ void main() {
     test('gives offline copy for a wrapped connection failure', () {
       final wrapped = DioException(
         requestOptions: req,
-        error: RelayApiException(0, 'offline', const {},
-            kind: ApiErrorKind.offline),
+        error: RelayApiException(
+          0,
+          'offline',
+          const {},
+          kind: ApiErrorKind.offline,
+        ),
       );
       expect(messageFor(wrapped), contains("You're offline"));
       expect(titleFor(wrapped), "You're offline");
     });
 
     test('renders the price and balance carried on insufficient_tokens', () {
-      final e = RelayApiException(
-          402, 'insufficient_tokens', const {'price': 5, 'balance': 2});
+      final e = RelayApiException(402, 'insufficient_tokens', const {
+        'price': 5,
+        'balance': 2,
+      });
       final msg = messageFor(e);
       expect(msg, contains('need 5'));
       expect(msg, contains('you have 2'));
     });
 
     test('points a stale review at the fix rather than just failing', () {
-      expect(messageFor(RelayApiException(409, 'not_in_queue', const {})),
-          contains('refresh'));
+      expect(
+        messageFor(RelayApiException(409, 'not_in_queue', const {})),
+        contains('refresh'),
+      );
     });
 
     test('tells a throttled user how long to wait', () {
       final msg = messageFor(
-          RelayApiException(429, 'rate_limited', const {'retry_after': 7}));
+        RelayApiException(429, 'rate_limited', const {'retry_after': 7}),
+      );
       expect(msg, contains('7 seconds'));
     });
 
     test('singularizes a one-second wait', () {
       expect(
-          messageFor(
-              RelayApiException(429, 'rate_limited', const {'retry_after': 1})),
-          contains('1 second.'));
+        messageFor(
+          RelayApiException(429, 'rate_limited', const {'retry_after': 1}),
+        ),
+        contains('1 second.'),
+      );
     });
 
     test('stays readable when rate_limited carries no retry_after', () {
@@ -114,8 +139,10 @@ void main() {
     });
 
     test('falls back to generic copy for an unrecognized code', () {
-      expect(messageFor(RelayApiException(400, 'some_new_code', const {})),
-          'Something went wrong. Please try again.');
+      expect(
+        messageFor(RelayApiException(400, 'some_new_code', const {})),
+        'Something went wrong. Please try again.',
+      );
     });
   });
 }
