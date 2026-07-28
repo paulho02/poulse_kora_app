@@ -5,8 +5,9 @@ import '../../theme/app_theme.dart';
 import '../application/tip_providers.dart';
 
 /// A small, dismissible explainer shown the first time a tab is opened in a
-/// session — close it with the "x", or check "Don't show again" to suppress
-/// it for good (persisted via `tipDismissalProvider`).
+/// session — closing it with the "x" suppresses it for good (persisted via
+/// `tipDismissalProvider`); only Settings' "Reset tutorial hints" brings it
+/// back.
 ///
 /// Wraps a screen's body: [child] is the screen's actual content, given the
 /// remaining space below the card. Each tab keeps its own `State` alive
@@ -35,13 +36,9 @@ class ViewTip extends ConsumerStatefulWidget {
 }
 
 class _ViewTipState extends ConsumerState<ViewTip> {
-  bool _dontShowAgain = false;
-
   void _dismiss() {
     ref.read(tipSessionDismissalProvider.notifier).dismiss(widget.tipKey);
-    if (_dontShowAgain) {
-      ref.read(tipDismissalProvider.notifier).dismissForever(widget.tipKey);
-    }
+    ref.read(tipDismissalProvider.notifier).dismissForever(widget.tipKey);
   }
 
   @override
@@ -70,9 +67,6 @@ class _ViewTipState extends ConsumerState<ViewTip> {
                   child: _TipCard(
                     message: widget.message,
                     icon: widget.icon,
-                    dontShowAgain: _dontShowAgain,
-                    onDontShowAgainChanged: (v) =>
-                        setState(() => _dontShowAgain = v),
                     onClose: _dismiss,
                   ),
                 )
@@ -88,15 +82,11 @@ class _TipCard extends StatelessWidget {
   const _TipCard({
     required this.message,
     required this.icon,
-    required this.dontShowAgain,
-    required this.onDontShowAgainChanged,
     required this.onClose,
   });
 
   final String message;
   final IconData icon;
-  final bool dontShowAgain;
-  final ValueChanged<bool> onDontShowAgainChanged;
   final VoidCallback onClose;
 
   @override
@@ -115,41 +105,9 @@ class _TipCard extends StatelessWidget {
             Icon(icon, size: 20, color: theme.colorScheme.primary),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(message, style: theme.textTheme.bodyMedium),
-                  ),
-                  InkWell(
-                    onTap: () => onDontShowAgainChanged(!dontShowAgain),
-                    borderRadius: BorderRadius.circular(6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: Checkbox(
-                            value: dontShowAgain,
-                            onChanged: (v) =>
-                                onDontShowAgainChanged(v ?? false),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Don't show again",
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(message, style: theme.textTheme.bodyMedium),
               ),
             ),
             Semantics(
