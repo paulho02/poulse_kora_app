@@ -71,3 +71,28 @@ class AuthNotifier extends AsyncNotifier<bool> {
 final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, bool>(
   AuthNotifier.new,
 );
+
+/// Whether `authNotifierProvider` has resolved at least once — cold-start
+/// token read done, either way.
+///
+/// Distinct from `authNotifierProvider.isLoading`: that flag is *also* true
+/// during `login`/`register`, which sets `state = AsyncLoading()` again while
+/// a request is in flight. `PoulseKoraApp` used to gate its splash screen on
+/// `isLoading` directly, which meant it swapped `MaterialApp.router` out for
+/// a bare splash `MaterialApp` on *every* login/register attempt, not just
+/// cold start — tearing down the whole route tree (and whatever screen the
+/// user was mid-interaction with) each time. This flips to `true` once and
+/// never back, so it only ever gates the genuine first resolution.
+class AuthReadyNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.listen(authNotifierProvider, (previous, next) {
+      if (!next.isLoading) state = true;
+    });
+    return !ref.read(authNotifierProvider).isLoading;
+  }
+}
+
+final authReadyProvider = NotifierProvider<AuthReadyNotifier, bool>(
+  AuthReadyNotifier.new,
+);

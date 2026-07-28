@@ -53,6 +53,10 @@ class _EmailVerificationScreenState
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    // Otherwise a still-showing error from a previous failed attempt (the
+    // default SnackBar duration is 4s) can outlive this one and linger into
+    // whatever screen a *successful* retry navigates to.
+    ScaffoldMessenger.of(context).clearSnackBars();
     await ref
         .read(emailVerificationProvider.notifier)
         .confirm(_codeController.text.trim());

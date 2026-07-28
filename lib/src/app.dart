@@ -105,9 +105,14 @@ class PoulseKoraApp extends ConsumerWidget {
     });
 
     // Avoid a flash of the login screen while the stored token is still
-    // being read from secure storage on cold start.
-    final authState = ref.watch(authNotifierProvider);
-    if (authState.isLoading) {
+    // being read from secure storage on cold start. Gated on `authReadyProvider`
+    // (has resolved at least once), not `authNotifierProvider.isLoading`
+    // directly — that flag is also true during `login`/`register`, and
+    // swapping `MaterialApp.router` out for a bare splash `MaterialApp` on
+    // every attempt tore down the whole route tree, including whichever
+    // screen the user was mid-interaction with. See `authReadyProvider`.
+    final authReady = ref.watch(authReadyProvider);
+    if (!authReady) {
       return MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
