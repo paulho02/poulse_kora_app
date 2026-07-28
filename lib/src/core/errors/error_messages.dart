@@ -19,6 +19,44 @@ String messageFor(Object? rawError) {
     case 'timeout':
       return 'The server took too long to respond. Check your connection and try again.';
 
+    // ---- auth -----------------------------------------------------------------
+    case 'login_bad_credentials':
+      return "That email or password isn't right. Check both and try again.";
+    case 'register_user_already_exists':
+    case 'update_user_email_already_exists':
+      return 'An account with that email already exists. Try logging in instead.';
+    case 'register_invalid_password':
+    case 'update_user_invalid_password':
+      final reason = error.detail['reason'];
+      return reason is String && reason.isNotEmpty
+          ? reason
+          : "That password isn't strong enough. Try a longer one with a mix of "
+                'letters, numbers, and symbols.';
+
+    // ---- email verification --------------------------------------------------
+    case 'unverified_user':
+      return 'Verify your email to continue.';
+    case 'invalid_verification_code':
+      final remaining = error.detail['attempts_remaining'];
+      if (remaining is int) {
+        return remaining > 0
+            ? "That code isn't right. $remaining "
+                  '${remaining == 1 ? 'try' : 'tries'} left.'
+            : "That code isn't right, and you're out of tries. Request a new code.";
+      }
+      return "That code isn't right. Try again.";
+    case 'verification_code_expired':
+      return 'That code has expired. Request a new one.';
+    case 'too_many_verification_attempts':
+      return "Too many wrong tries. Request a new code and try again.";
+    case 'resend_cooldown':
+      final retryAfter = error.detail['retry_after'];
+      final wait = retryAfter is int ? retryAfter : null;
+      return wait == null
+          ? 'Please wait a moment before requesting another code.'
+          : 'You can request another code in $wait '
+                "${wait == 1 ? 'second' : 'seconds'}.";
+
     // ---- posting ------------------------------------------------------------
     case 'insufficient_tokens':
       final price = error.detail['price'];
@@ -52,6 +90,8 @@ String messageFor(Object? rawError) {
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':
       return 'Your session has expired. Please sign in again.';
+    case 'forbidden':
+      return "You don't have permission to do that.";
     case 'validation_error':
       final fields = error.detail['fields'];
       if (fields is List && fields.isNotEmpty) {

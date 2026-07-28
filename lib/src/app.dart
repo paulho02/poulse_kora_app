@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/announcements/application/announcement_providers.dart';
 import 'core/announcements/presentation/info_banner.dart';
+import 'core/app_config/application/app_config_providers.dart';
 import 'core/network/connectivity.dart';
 import 'core/presentation/offline_banner.dart';
 import 'core/settings/app_settings.dart';
@@ -10,6 +11,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/application/auth_providers.dart';
 import 'features/channels/application/channels_providers.dart';
 import 'features/economy/application/economy_providers.dart';
+import 'features/email_verification/application/email_verification_providers.dart';
 import 'features/feed/application/feed_providers.dart';
 import 'features/profile/application/profile_providers.dart';
 import 'features/stats/application/stats_providers.dart';
@@ -37,6 +39,10 @@ class PoulseKoraApp extends ConsumerWidget {
     // `InfoBanner` already does its own narrowly-scoped watch for the actual
     // value; this call exists purely to start the fetch early.
     ref.listen(announcementProvider, (previous, next) {});
+    // Same reasoning: the router's redirect needs `requireEmailVerification`
+    // before it can decide whether to show `/verify-email`, so start the fetch
+    // now rather than waiting for the router to first `watch` it.
+    ref.listen(appConfigProvider, (previous, next) {});
 
     // Session boundaries. Logging out clears the token, the response cache and
     // local settings, but the providers holding already-fetched data are
@@ -52,6 +58,7 @@ class PoulseKoraApp extends ConsumerWidget {
 
       if (was && now == false) {
         ref.invalidate(profileProvider);
+        ref.invalidate(emailVerificationProvider);
         ref.invalidate(feedNotifierProvider);
         ref.invalidate(channelsNotifierProvider);
         ref.invalidate(selectedChannelFilterProvider);

@@ -1,0 +1,167 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/app_config/application/app_config_providers.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/error_messages.dart';
+import '../../auth/application/auth_providers.dart';
+import '../application/email_verification_providers.dart';
+
+/// Shown after registration (or on a later login) while the account's
+/// `is_verified` flag is still false and the backend has
+/// `REQUIRE_EMAIL_VERIFICATION` on - see the `/verify-email` redirect in
+/// `routing/app_router.dart`. Blocks nothing on its own; the router is what
+/// keeps the user here until `profileProvider` reports verified.
+class EmailVerificationScreen extends ConsumerStatefulWidget {
+  const EmailVerificationScreen({super.key});
+
+  @override
+  ConsumerState<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState
+    extends ConsumerState<EmailVerificationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController();
+  Timer? _cooldownTimer;
+  int _cooldownSecondsRemaining = 0;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _cooldownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startCooldown(int seconds) {
+    _cooldownTimer?.cancel();
+    setState(() => _cooldownSecondsRemaining = seconds);
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _cooldownSecondsRemaining -= 1;
+        if (_cooldownSecondsRemaining <= 0) timer.cancel();
+      });
+    });
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    await ref
+        .read(emailVerificationProvider.notifier)
+        .confirm(_codeController.text.trim());
+  }
+
+  Future<void> _resend() async {
+    final defaultCooldown = ref
+        .read(appConfigProvider)
+        .value
+        ?.emailVerificationResendCooldownSeconds;
+    try {
+      await ref.read(emailVerificationProvider.notifier).resend();
+      if (!mounted) return;
+      _startCooldown(defaultCooldown ?? 60);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('A new code is on its way.')));
+    } catch (error) {
+      if (!mounted) return;
+      final relayError = asRelayException(error);
+      if (relayError.error == 'resend_cooldown') {
+        final retryAfter = relayError.detail['retry_after'];
+        if (retryAfter is int) _startCooldown(retryAfter);
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(messageFor(error))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(emailVerificationProvider);
+    final isSubmitting = state.isLoading;
+
+    ref.listen(emailVerificationProvider, (previous, next) {
+      if (next.hasError) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(messageFor(next.error))));
+      }
+    });
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Verify your email'),
+        automaticallyImplyLeading: false,
+        actions: [
+          TextButton(
+            onPressed: isSubmitting
+                ? null
+                : () => ref.read(authNotifierProvider.notifier).logout(),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  "We've sent a verification code to your email. Enter it "
+                  'below to continue.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                TextFormField(
+                  controller: _codeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Verification code',
+                  ),
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, letterSpacing: 4),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter the code' : null,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: isSubmitting ? null : _submit,
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Verify'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: (isSubmitting || _cooldownSecondsRemaining > 0)
+                      ? null
+                      : _resend,
+                  child: Text(
+                    _cooldownSecondsRemaining > 0
+                        ? 'Resend code in ${_cooldownSecondsRemaining}s'
+                        : "Didn't get a code? Resend",
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

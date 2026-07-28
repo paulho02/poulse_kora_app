@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/error_messages.dart';
 import '../application/auth_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (next.hasError) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Login failed: ${next.error}')));
+        ).showSnackBar(SnackBar(content: Text(messageFor(next.error))));
       }
     });
 

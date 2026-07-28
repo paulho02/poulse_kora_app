@@ -7,6 +7,7 @@ class UserProfile {
     required this.darkMode,
     required this.settingsRevision,
     required this.onboardingCompleted,
+    required this.isVerified,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -22,12 +23,17 @@ class UserProfile {
     // written before this field existed must not be read as "onboarding
     // already done" and skip the flow.
     onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
+    // Defaulted to `true`: a cache entry written before this field existed
+    // belongs to a session that was already using the app normally, so it
+    // must not be read as "unverified" and suddenly force the verify screen.
+    isVerified: json['is_verified'] as bool? ?? true,
   );
 
   final String id;
   final String email;
   final String? username;
   final String? bio;
+  final bool isVerified;
 
   /// The server's copy of the preference. Note this is *not* what the app renders
   /// from — see `core/settings/app_settings.dart`. It is only an input to sync.
@@ -55,5 +61,6 @@ class UserProfile {
     darkMode: darkMode ?? this.darkMode,
     settingsRevision: settingsRevision ?? this.settingsRevision,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+    isVerified: isVerified,
   );
 }

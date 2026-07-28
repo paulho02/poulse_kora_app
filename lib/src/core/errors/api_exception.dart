@@ -17,8 +17,16 @@ enum ApiErrorKind {
   /// the machine-readable code.
   api,
 
-  /// The token is missing, expired or rejected.
+  /// The token is missing, expired or rejected - the only case that should force
+  /// a logout (see `DioClient`'s interceptor). Distinct from [forbidden]: that's
+  /// a valid, logged-in session that just isn't allowed to do this one thing
+  /// (e.g. `unverified_user`), which must NOT log the user out from under them.
   unauthorized,
+
+  /// Authenticated, but not permitted (403) - e.g. an unverified account hitting
+  /// a route that requires verification, or a non-superuser hitting an
+  /// admin-only one. See [error] for which.
+  forbidden,
 
   /// The server blew up (5xx).
   server,
@@ -147,14 +155,16 @@ class RelayApiException implements Exception {
   }
 
   static ApiErrorKind _kindForStatus(int status) {
-    if (status == 401 || status == 403) return ApiErrorKind.unauthorized;
+    if (status == 401) return ApiErrorKind.unauthorized;
+    if (status == 403) return ApiErrorKind.forbidden;
     if (status >= 500) return ApiErrorKind.server;
     if (status >= 400) return ApiErrorKind.api;
     return ApiErrorKind.unknown;
   }
 
   static String _fallbackCodeFor(int status) {
-    if (status == 401 || status == 403) return 'unauthorized';
+    if (status == 401) return 'unauthorized';
+    if (status == 403) return 'forbidden';
     if (status >= 500) return 'internal_error';
     return 'unknown';
   }
