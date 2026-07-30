@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/app_config/application/app_config_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../application/auth_providers.dart';
+import 'server_settings_sheet.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -66,7 +67,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
+      appBar: AppBar(
+        title: const Text('Create account'),
+        actions: const [ServerSettingsButton()],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
