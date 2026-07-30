@@ -18,11 +18,12 @@ import 'connectivity.dart';
 class DioClient {
   DioClient(
     this._tokenStorage, {
+    required String baseUrl,
     required ConnectivityNotifier connectivity,
     required Future<void> Function() onUnauthorized,
   }) : dio = Dio(
          BaseOptions(
-           baseUrl: '${AppConfig.apiBaseUrl}${AppConfig.apiPath}',
+           baseUrl: '$baseUrl${AppConfig.apiPath}',
            connectTimeout: const Duration(seconds: 10),
            receiveTimeout: const Duration(seconds: 10),
          ),

@@ -22,4 +22,12 @@ class AppConfig {
     if (Platform.isAndroid) return 'http://10.0.2.2:8000';
     return 'http://localhost:8000';
   }
+
+  /// Toggle the persistent "beta version" strip on/off. Override in
+  /// `env.json` with `"BETA_DISCLAIMER_ENABLED": false` to switch it off,
+  /// e.g. once the app leaves beta.
+  static const bool betaDisclaimerEnabled = bool.fromEnvironment(
+    'BETA_DISCLAIMER_ENABLED',
+    defaultValue: true,
+  );
 }

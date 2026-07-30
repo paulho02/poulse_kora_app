@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'cache/json_cache.dart';
+import 'config/server_config.dart';
 import 'network/connectivity.dart';
 import 'network/dio_client.dart';
 import 'settings/app_settings.dart';
@@ -23,6 +24,7 @@ final onUnauthorizedProvider = Provider<Future<void> Function()>(
 final dioClientProvider = Provider<DioClient>((ref) {
   return DioClient(
     ref.watch(tokenStorageProvider),
+    baseUrl: ref.watch(serverConfigProvider).baseUrl,
     connectivity: ref.watch(connectivityProvider.notifier),
     onUnauthorized: () => ref.read(onUnauthorizedProvider)(),
   );

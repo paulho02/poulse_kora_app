@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
+import '../config/server_config.dart';
 
 enum ConnectionStatus {
   online,
@@ -55,16 +56,23 @@ class ConnectivityNotifier extends Notifier<ConnectionStatus> {
   /// A bare Dio with no interceptors: the probe must not attach an auth token,
   /// must not be re-entrantly reported back into this notifier, and needs a much
   /// shorter timeout than a real request so the backoff stays on schedule.
-  late final Dio _probeDio = Dio(
-    BaseOptions(
-      baseUrl: '${AppConfig.apiBaseUrl}${AppConfig.apiPath}',
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
-    ),
-  );
+  ///
+  /// Rebuilt whenever the configured server changes (see `build()`) — a probe
+  /// still pointed at the official server after switching to a self-hosted one
+  /// would report the wrong backend's reachability.
+  late Dio _probeDio;
 
   @override
   ConnectionStatus build() {
+    final baseUrl = ref.watch(serverConfigProvider).baseUrl;
+    _probeDio = Dio(
+      BaseOptions(
+        baseUrl: '$baseUrl${AppConfig.apiPath}',
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ),
+    );
+
     // Optimistic start: assume reachable until something says otherwise, so a
     // cold start doesn't flash a red banner before the first request completes.
     _linkSubscription = Connectivity().onConnectivityChanged.listen(

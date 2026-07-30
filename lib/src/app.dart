@@ -5,6 +5,7 @@ import 'core/announcements/application/announcement_providers.dart';
 import 'core/announcements/presentation/info_banner.dart';
 import 'core/app_config/application/app_config_providers.dart';
 import 'core/network/connectivity.dart';
+import 'core/presentation/beta_banner.dart';
 import 'core/presentation/offline_banner.dart';
 import 'core/settings/app_settings.dart';
 import 'core/theme/app_theme.dart';
@@ -131,10 +132,14 @@ class PoulseKoraApp extends ConsumerWidget {
       routerConfig: router,
       // Wrapping here rather than in AppShell puts the banners over every
       // route, including login/register, which sit outside the shell.
-      // Connectivity state is the more urgent/certain of the two, so it
-      // renders above the announcement.
-      builder: (context, child) => OfflineBanner(
-        child: InfoBanner(child: child ?? const SizedBox.shrink()),
+      // BetaBanner is outermost since it's structural (reserves its own
+      // strip of space) rather than an overlay like the other two;
+      // connectivity state is the more urgent/certain of the remaining pair,
+      // so it renders above the announcement.
+      builder: (context, child) => BetaBanner(
+        child: OfflineBanner(
+          child: InfoBanner(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
   }
