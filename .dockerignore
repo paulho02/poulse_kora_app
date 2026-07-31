@@ -1,0 +1,9 @@
+build
+.dart_tool
+android
+.idea
+.vscode
+test
+.git
+*.iml
+.metadata

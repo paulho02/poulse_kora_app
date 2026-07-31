@@ -35,6 +35,24 @@ hits the network to work — see Architecture below for how the base URL is reso
 port, which the browser then blocks via CORS. Always run web with `--web-port=3000`, or add the
 port you need to the backend's `.env`.
 
+## Deploying (Railway)
+
+`Dockerfile` (repo root) builds the web target with Flutter, then serves the static output via
+nginx (`nginx.conf.template` + `docker-entrypoint.sh`, which substitutes Railway's injected `$PORT`
+into the nginx config at container start — no Flutter/Nixpacks buildpack exists on Railway, hence
+the explicit Dockerfile). `railway.json` wires it up as the Dockerfile builder with a `/` healthcheck.
+
+`API_BASE_URL` and `BETA_DISCLAIMER_ENABLED` (see `core/config/app_config.dart`) are **build-time**,
+not runtime — they're compiled into the JS bundle via `--dart-define`. They must exist as Railway
+**service Variables** on this service; the Dockerfile declares matching `ARG`s in the build stage,
+and Railway auto-populates any `ARG` from a same-named Variable with no extra config needed.
+
+Because `API_BASE_URL` has to be known at build time, there's a one-time bootstrapping order when
+standing up both services fresh: deploy the backend first, note its Railway domain, set that as this
+service's `API_BASE_URL`, deploy this service, then go back and add *this* service's domain to the
+backend's `BACKEND_CORS_ORIGINS` and redeploy the backend once more. Full details in the backend
+repo's `RAILWAY.md`.
+
 ## Architecture
 
 Feature-first layout under `lib/src/`, each feature split into `data/` (repositories talking to
