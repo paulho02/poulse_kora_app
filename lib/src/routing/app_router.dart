@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +20,15 @@ import 'app_shell.dart';
 const _authRoutes = {'/login', '/register'};
 const _verifyEmailRoute = '/verify-email';
 const _onboardingRoute = '/onboarding';
+
+/// The context `MaterialApp.router`'s `builder` receives (and thus
+/// [BetaBanner]/[OfflineBanner]/[InfoBanner], which wrap the routed content
+/// there) sits *above* this Navigator in the tree, not below it — so
+/// `Navigator.of(context)` from that context never finds it, no matter how
+/// deep the widget that calls it. Anything outside the routed tree that
+/// needs to push a route or open a sheet/dialog over it must go through
+/// this key's `currentContext` instead.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Bridges Riverpod state changes to go_router's `refreshListenable`, so the
 /// router re-evaluates `redirect` without rebuilding the `GoRouter` itself.
@@ -83,6 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/feed',
     refreshListenable: refresh,
     redirect: (context, state) {

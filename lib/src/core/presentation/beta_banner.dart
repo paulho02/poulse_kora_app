@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../routing/app_router.dart';
 import '../config/app_config.dart';
 
 const _points = [
@@ -71,16 +72,26 @@ class BetaBanner extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: InkWell(
-                onTap: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(16),
+                // Can't use the `context` this build method received:
+                // `BetaBanner` sits in `MaterialApp.router`'s `builder`,
+                // outside (above) the Navigator that lives inside its own
+                // `child` — so `Navigator.of(context)` from here throws
+                // "context that does not include a Navigator". Route
+                // through the router's own navigator key instead.
+                onTap: () {
+                  final navigatorContext = rootNavigatorKey.currentContext;
+                  if (navigatorContext == null) return;
+                  showModalBottomSheet<void>(
+                    context: navigatorContext,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
-                  ),
-                  builder: (context) => const _BetaInfoSheet(),
-                ),
+                    builder: (context) => const _BetaInfoSheet(),
+                  );
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
