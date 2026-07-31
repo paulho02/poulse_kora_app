@@ -21,6 +21,7 @@ class Post {
     required this.author,
     required this.forwardedCount,
     required this.droppedCount,
+    required this.subscriptionKind,
     required this.created,
   });
 
@@ -34,6 +35,7 @@ class Post {
     author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
     forwardedCount: json['forwarded_count'] as int,
     droppedCount: json['dropped_count'] as int,
+    subscriptionKind: json['subscription_kind'] as String?,
     created: DateTime.parse(json['created'] as String),
   );
 
@@ -46,7 +48,14 @@ class Post {
   final PostAuthor author;
   final int forwardedCount;
   final int droppedCount;
+  // Snapshot of the author's subscription at the moment this post was created
+  // (e.g. "supporter"), or null. Fixed forever — doesn't reflect their current
+  // subscription status.
+  final String? subscriptionKind;
   final DateTime created;
+
+  /// Whether this post should get the supporter visual treatment.
+  bool get isSupporterPost => subscriptionKind == 'supporter';
 
   /// Fraction of the prototype's 24h review-deadline window that has
   /// elapsed since creation — a purely client-side, display-only visual.

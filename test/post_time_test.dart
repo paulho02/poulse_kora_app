@@ -12,6 +12,7 @@ Post _postCreatedAgo(Duration ago) => Post(
   author: PostAuthor(id: 'u1', username: 'ada'),
   forwardedCount: 0,
   droppedCount: 0,
+  subscriptionKind: null,
   created: DateTime.now().toUtc().subtract(ago),
 );
 

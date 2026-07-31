@@ -67,7 +67,18 @@ class AppTheme {
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
       ),
-      cardTheme: CardThemeData(clipBehavior: Clip.antiAlias, shape: shape),
+      // M3's default Card color (`surfaceContainerLow`) sits only a couple of
+      // tonal steps from `scaffoldBackgroundColor` (`surface`) - in practice
+      // close enough to read as barely-there in both themes. Cards need to
+      // read as a distinctly lighter sheet, so this reaches further up the
+      // neutral ramp than the M3 default.
+      cardTheme: CardThemeData(
+        clipBehavior: Clip.antiAlias,
+        shape: shape,
+        color: brightness == Brightness.dark
+            ? colorScheme.surfaceContainerHigh
+            : colorScheme.surfaceContainerLowest,
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(shape: shape),
       ),

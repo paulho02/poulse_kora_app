@@ -105,9 +105,33 @@ class _PostCardState extends ConsumerState<PostCard>
     final theme = Theme.of(context);
     final post = widget.post;
     final color = AppColors.channelColor(post.channelName);
+    // Match CardTheme's own base color (see AppTheme._build) rather than
+    // leaving `color` null, so the wash below blends onto the *actual* card
+    // background instead of compositing over whatever sits behind the card
+    // (e.g. scaffoldBackgroundColor), which read as noticeably darker than a
+    // normal card.
+    final cardBaseColor = theme.brightness == Brightness.dark
+        ? theme.colorScheme.surfaceContainerHigh
+        : theme.colorScheme.surfaceContainerLowest;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      // Supporter posts get a thin accent border plus a faint accent wash —
+      // cards are otherwise borderless/neutral (see AppTheme.cardTheme), so
+      // this reads as clearly special without introducing a new color or
+      // going as loud as a full accent fill.
+      color: post.isSupporterPost
+          ? Color.alphaBlend(
+              theme.colorScheme.primary.withValues(alpha: 0.08),
+              cardBaseColor,
+            )
+          : null,
+      shape: post.isSupporterPost
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radius),
+              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            )
+          : null,
       child: InkWell(
         onTap: () => ref.read(expandedPostIdProvider.notifier).set(post.id),
         child: Padding(
@@ -128,8 +152,22 @@ class _PostCardState extends ConsumerState<PostCard>
                       fontStyle: post.isAnonymous
                           ? FontStyle.italic
                           : FontStyle.normal,
+                      color: post.isSupporterPost
+                          ? theme.colorScheme.primary
+                          : null,
                     ),
                   ),
+                  if (post.isSupporterPost) ...[
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: 'Supporter — thanks for backing Kora',
+                      child: Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
                   const SizedBox(width: 6),
                   Text('·', style: theme.textTheme.labelSmall),
                   const SizedBox(width: 6),

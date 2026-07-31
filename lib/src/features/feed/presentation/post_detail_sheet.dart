@@ -63,11 +63,55 @@ class _PostDetailSheet extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      post.isAnonymous
-                          ? 'Anonymous'
-                          : (post.author.username ?? 'Unknown'),
-                      style: theme.textTheme.titleSmall,
+                    Row(
+                      children: [
+                        Text(
+                          post.isAnonymous
+                              ? 'Anonymous'
+                              : (post.author.username ?? 'Unknown'),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: post.isSupporterPost
+                                ? theme.colorScheme.primary
+                                : null,
+                          ),
+                        ),
+                        // Spelled out here (not just the icon used on the feed
+                        // card) since this is the one place worth a beat of
+                        // explanation for what the sparkle means.
+                        if (post.isSupporterPost) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 12,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Supporter',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       '${post.channelName} · Posted $postedAgo · '
