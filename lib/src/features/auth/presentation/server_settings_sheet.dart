@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,11 +9,19 @@ import '../application/auth_providers.dart';
 /// official server. Deliberately a small, muted icon rather than a field on
 /// the form itself — the overwhelming majority of installs never touch this,
 /// and it must not read as "something you're supposed to fill in" to them.
+///
+/// Native-app-only: a browser tab can't be trusted the way an installed app
+/// can (anyone can point a stock browser at a lookalike page), so the web
+/// build never offers this. `kIsWeb` is a compile-time constant, so this
+/// branch — and the sheet it would open — is dead-code-eliminated from the
+/// web bundle rather than merely hidden at runtime.
 class ServerSettingsButton extends ConsumerWidget {
   const ServerSettingsButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (kIsWeb) return const SizedBox.shrink();
+
     final server = ref.watch(serverConfigProvider);
     return IconButton(
       icon: Icon(server.isCustom ? Icons.dns : Icons.dns_outlined),

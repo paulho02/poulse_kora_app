@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,10 +49,18 @@ class ServerConfigStore {
 
   static const _customBaseUrlKey = 'server.customBaseUrl';
 
-  ServerConfig read() =>
-      ServerConfig(customBaseUrl: _prefs.getString(_customBaseUrlKey));
+  // Guarded here, not just in `ServerSettingsButton`: on web,
+  // `shared_preferences` sits on top of `window.localStorage`, which a user
+  // can edit directly from devtools. Ignoring/refusing the key on web means
+  // there's no way to make the web build talk to a custom backend, not just
+  // no UI for it.
+  ServerConfig read() {
+    if (kIsWeb) return const ServerConfig();
+    return ServerConfig(customBaseUrl: _prefs.getString(_customBaseUrlKey));
+  }
 
   Future<void> write(String? customBaseUrl) async {
+    if (kIsWeb) return;
     if (customBaseUrl == null) {
       await _prefs.remove(_customBaseUrlKey);
     } else {
