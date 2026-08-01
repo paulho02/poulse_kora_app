@@ -28,8 +28,16 @@ http {
             try_files $uri $uri/ /index.html;
         }
 
-        # Flutter's build output is content-hashed except index.html/manifest,
-        # so long-cache everything and let index.html itself stay revalidated.
+        # Flutter's own bootstrap files keep a fixed name across builds (unlike
+        # a bundler's content-hashed chunks), so an immutable long cache here
+        # would mean a browser that's ever loaded the app never picks up a new
+        # deploy. Must revalidate on every request, same as index.html.
+        location ~* ^/(main\.dart\.js|flutter(_bootstrap|_service_worker)?\.js|version\.json|manifest\.json)$ {
+            add_header Cache-Control "no-cache";
+        }
+
+        # Everything else in the build output (assets/, canvaskit/, fonts) is
+        # genuinely content-addressed, so it's safe to long-cache.
         location ~* \.(?:js|css|wasm|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
             try_files $uri =404;
             add_header Cache-Control "public, max-age=31536000, immutable";
