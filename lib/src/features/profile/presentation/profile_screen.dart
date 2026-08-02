@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/app_colors.dart';
@@ -21,10 +22,11 @@ class ProfileScreen extends ConsumerWidget {
     // keeps it correct and usable with no connection.
     final darkMode = ref.watch(appSettingsProvider).darkMode;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profileTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -34,7 +36,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: ViewTip(
         tipKey: 'tip.profile',
-        message: 'Manage your account, bio, and app preferences here.',
+        message: l10n.profileTipMessage,
         child: profileAsync.when(
           data: (cached) {
             final profile = cached.data;
@@ -84,14 +86,17 @@ class ProfileScreen extends ConsumerWidget {
                     data: (stats) => Row(
                       children: [
                         _StatTile(
-                          label: 'Created',
+                          label: l10n.profileStatCreated,
                           value: stats.data.createdPostCount,
                         ),
                         _StatTile(
-                          label: 'Reviewed',
+                          label: l10n.statsReviewed,
                           value: stats.data.reviewedCount,
                         ),
-                        _StatTile(label: 'Trust', value: stats.data.trustScore),
+                        _StatTile(
+                          label: l10n.profileStatTrust,
+                          value: stats.data.trustScore,
+                        ),
                       ],
                     ),
                     loading: () => const SizedBox(
@@ -103,7 +108,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   Card(
                     child: SwitchListTile(
-                      title: const Text('Dark Mode'),
+                      title: Text(l10n.profileDarkMode),
                       secondary: const Icon(Icons.dark_mode_outlined),
                       value: darkMode,
                       // No try/catch and no error message on purpose: the theme has
@@ -117,15 +122,17 @@ class ProfileScreen extends ConsumerWidget {
                   OutlinedButton(
                     onPressed: () =>
                         ref.read(authNotifierProvider.notifier).logout(),
-                    child: const Text('Sign Out'),
+                    child: Text(l10n.profileSignOut),
                   ),
                 ],
               ),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) =>
-              Center(child: Text('Could not load profile:\n$error')),
+          error: (error, _) => ErrorStateView(
+            error: error,
+            onRetry: () => ref.invalidate(profileProvider),
+          ),
         ),
       ),
     );

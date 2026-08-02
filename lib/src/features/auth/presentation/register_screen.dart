@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/app_config/application/app_config_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../application/auth_providers.dart';
@@ -57,18 +58,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final appConfig = ref.watch(appConfigProvider).value;
     final requireStrongPassword = appConfig?.requireStrongPassword ?? false;
     final passwordMinLength = appConfig?.passwordMinLength ?? 1;
+    final l10n = AppLocalizations.of(context);
 
     ref.listen(authNotifierProvider, (previous, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(messageFor(next.error))));
+        ).showSnackBar(SnackBar(content: Text(messageFor(l10n, next.error))));
       }
     });
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create account'),
+        title: Text(l10n.authCreateAccount),
         actions: const [ServerSettingsButton()],
       ),
       body: Center(
@@ -83,28 +85,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   TextFormField(
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
+                    decoration: InputDecoration(labelText: l10n.commonUsername),
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.newUsername],
                     validator: (v) => (v == null || v.isEmpty)
-                        ? 'Username is required'
+                        ? l10n.validationUsernameRequired
                         : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: l10n.commonEmail),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Email is required' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? l10n.validationEmailRequired
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: l10n.commonPassword,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -112,8 +115,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               : Icons.visibility_off_outlined,
                         ),
                         tooltip: _obscurePassword
-                            ? 'Show password'
-                            : 'Hide password',
+                            ? l10n.authShowPassword
+                            : l10n.authHidePassword,
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
                         ),
@@ -133,12 +136,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     onFieldSubmitted: (_) => isLoading ? null : _submit(),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
-                        return 'Password is required';
+                        return l10n.validationPasswordRequired;
                       }
                       if (requireStrongPassword &&
                           v.length < passwordMinLength) {
-                        return 'Password must be at least $passwordMinLength '
-                            'characters';
+                        return l10n.validationPasswordMinLength(
+                          passwordMinLength,
+                        );
                       }
                       return null;
                     },
@@ -152,12 +156,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Create account'),
+                        : Text(l10n.authCreateAccount),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: isLoading ? null : () => context.go('/login'),
-                    child: const Text('Already have an account? Log in'),
+                    child: Text(l10n.authGoToLogin),
                   ),
                 ],
               ),

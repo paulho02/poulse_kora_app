@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
@@ -42,6 +43,7 @@ class _PostCardState extends ConsumerState<PostCard>
     // this card, so by the time a failure comes back `context` is dead. Reading
     // the messenger now is what lets the error still reach the user.
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
 
     setState(() {
       _leaving = true;
@@ -60,7 +62,7 @@ class _PostCardState extends ConsumerState<PostCard>
       // Say why. Offline is just another error code here — the card returns
       // rather than the review being queued, since the server decides whether a
       // review is still valid (the post may have left this user's queue).
-      showErrorSnackBarOn(messenger, error);
+      showErrorSnackBarOn(messenger, l10n, error);
       // Roll the card back into view — but only if this state object survived;
       // the rollback in the notifier may have rebuilt a fresh one.
       if (!mounted) return;
@@ -103,6 +105,7 @@ class _PostCardState extends ConsumerState<PostCard>
 
   Widget _buildCard(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final post = widget.post;
     final color = AppColors.channelColor(post.channelName);
     // Match CardTheme's own base color (see AppTheme._build) rather than
@@ -145,8 +148,8 @@ class _PostCardState extends ConsumerState<PostCard>
                   const SizedBox(width: 8),
                   Text(
                     post.isAnonymous
-                        ? 'Anonymous'
-                        : (post.author.username ?? 'Unknown'),
+                        ? l10n.postAnonymous
+                        : (post.author.username ?? l10n.postUnknownAuthor),
                     style: theme.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontStyle: post.isAnonymous
@@ -160,7 +163,7 @@ class _PostCardState extends ConsumerState<PostCard>
                   if (post.isSupporterPost) ...[
                     const SizedBox(width: 4),
                     Tooltip(
-                      message: 'Supporter — thanks for backing Kora',
+                      message: l10n.postSupporterTooltip,
                       child: Icon(
                         Icons.auto_awesome,
                         size: 12,
@@ -196,7 +199,10 @@ class _PostCardState extends ConsumerState<PostCard>
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Text('IMAGE', style: theme.textTheme.labelSmall),
+                  child: Text(
+                    l10n.postImagePlaceholder,
+                    style: theme.textTheme.labelSmall,
+                  ),
                 ),
               ],
               const SizedBox(height: 12),
@@ -224,7 +230,7 @@ class _PostCardState extends ConsumerState<PostCard>
                         ),
                         onPressed: _leaving ? null : () => _review('forward'),
                         icon: const Icon(Icons.arrow_forward, size: 16),
-                        label: const Text('Forward'),
+                        label: Text(l10n.postForward),
                       ),
                     ),
                   ),
@@ -250,12 +256,13 @@ class _DropButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final progress = post.deadlineProgress;
     final hoursLeft = post.timeRemaining.inHours;
     final radius = BorderRadius.circular(AppTheme.radius);
 
     return Tooltip(
-      message: 'Auto-drops in ${hoursLeft}h',
+      message: l10n.postAutoDropsIn(hoursLeft),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -296,7 +303,7 @@ class _DropButton extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Drop',
+                          l10n.postDrop,
                           style: Theme.of(context).textTheme.labelLarge,
                         ),
                       ],

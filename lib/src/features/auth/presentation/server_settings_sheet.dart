@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/config/server_config.dart';
 import '../application/auth_providers.dart';
 
@@ -23,6 +24,7 @@ class ServerSettingsButton extends ConsumerWidget {
     if (kIsWeb) return const SizedBox.shrink();
 
     final server = ref.watch(serverConfigProvider);
+    final l10n = AppLocalizations.of(context);
     return IconButton(
       icon: Icon(server.isCustom ? Icons.dns : Icons.dns_outlined),
       iconSize: 20,
@@ -30,8 +32,8 @@ class ServerSettingsButton extends ConsumerWidget {
           ? Theme.of(context).colorScheme.primary
           : Theme.of(context).colorScheme.outline,
       tooltip: server.isCustom
-          ? 'Server: ${server.customBaseUrl}'
-          : 'Server settings',
+          ? l10n.serverSettingsTooltipCustom(server.customBaseUrl ?? '')
+          : l10n.serverSettingsTooltipDefault,
       onPressed: () => showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -98,6 +100,7 @@ class _ServerSettingsSheetState extends ConsumerState<_ServerSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -111,27 +114,29 @@ class _ServerSettingsSheetState extends ConsumerState<_ServerSettingsSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Server', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.serverSettingsTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Most people should leave this on the official server. Only '
-              'change it if you were given a different one to connect to.',
+              l10n.serverSettingsDescription,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             RadioGroup<bool>(
               groupValue: _useCustom,
               onChanged: (v) => setState(() => _useCustom = v!),
-              child: const Column(
+              child: Column(
                 children: [
                   RadioListTile<bool>(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Official server'),
+                    title: Text(l10n.serverSettingsOfficial),
                     value: false,
                   ),
                   RadioListTile<bool>(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('Custom server'),
+                    title: Text(l10n.serverSettingsCustom),
                     value: true,
                   ),
                 ],
@@ -141,8 +146,8 @@ class _ServerSettingsSheetState extends ConsumerState<_ServerSettingsSheet> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'Server URL',
+                decoration: InputDecoration(
+                  labelText: l10n.serverSettingsUrlLabel,
                   hintText: 'https://backend.example.com',
                 ),
                 keyboardType: TextInputType.url,
@@ -151,17 +156,17 @@ class _ServerSettingsSheetState extends ConsumerState<_ServerSettingsSheet> {
                 onFieldSubmitted: (_) => _save(),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
-                    return 'Server URL is required';
+                    return l10n.serverSettingsUrlRequired;
                   }
                   if (!isValidServerUrl(v)) {
-                    return 'Enter a valid http(s) URL';
+                    return l10n.serverSettingsUrlInvalid;
                   }
                   return null;
                 },
               ),
             ],
             const SizedBox(height: 24),
-            FilledButton(onPressed: _save, child: const Text('Save')),
+            FilledButton(onPressed: _save, child: Text(l10n.commonSave)),
           ],
         ),
       ),

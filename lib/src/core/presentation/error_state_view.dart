@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../errors/api_exception.dart';
 import '../errors/error_messages.dart';
 
@@ -18,6 +19,7 @@ class ErrorStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final isOffline =
         error is RelayApiException &&
         (error as RelayApiException).isConnectivityFailure;
@@ -42,13 +44,13 @@ class ErrorStateView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    titleFor(error),
+                    titleFor(l10n, error),
                     style: theme.textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    messageFor(error),
+                    messageFor(l10n, error),
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -56,7 +58,7 @@ class ErrorStateView extends StatelessWidget {
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: onRetry,
-                      child: const Text('Try again'),
+                      child: Text(l10n.errorStateTryAgain),
                     ),
                   ],
                 ],
@@ -106,22 +108,32 @@ class StaleDataNotice extends StatelessWidget {
 /// Shows a failure as a snackbar. Centralized so every error the user triggers
 /// looks and reads the same, whether it came from the server or from being offline.
 void showErrorSnackBar(BuildContext context, Object? error) {
-  showErrorSnackBarOn(ScaffoldMessenger.of(context), error);
+  showErrorSnackBarOn(
+    ScaffoldMessenger.of(context),
+    AppLocalizations.of(context),
+    error,
+  );
 }
 
-/// Same, but against a messenger captured *before* the failing await.
+/// Same, but against a messenger (and localizations) captured *before* the
+/// failing await.
 ///
 /// Necessary wherever the widget reporting the error may not survive long enough
 /// to report it. An optimistic review unmounts the `PostCard` the instant it's
 /// tapped, and the detail sheet pops itself — so by the time the request fails,
 /// `context` is defunct and a `mounted` check silently swallows the message. Grab
-/// the messenger while the widget is still alive and the snackbar always lands.
-void showErrorSnackBarOn(ScaffoldMessengerState messenger, Object? error) {
+/// the messenger (and `l10n`, for the same reason) while the widget is still
+/// alive and the snackbar always lands.
+void showErrorSnackBarOn(
+  ScaffoldMessengerState messenger,
+  AppLocalizations l10n,
+  Object? error,
+) {
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(messageFor(error)),
+        content: Text(messageFor(l10n, error)),
         behavior: SnackBarBehavior.floating,
       ),
     );

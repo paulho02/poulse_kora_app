@@ -118,3 +118,35 @@ There is no auth flow implemented yet (login/register screens, token refresh-on-
 route guards) — `core/network` and `core/storage` exist specifically so that work has somewhere to
 plug in. The backend's auth endpoints are `POST /api/v1/auth/jwt/login`,
 `POST /api/v1/auth/register`, `GET/PATCH /api/v1/users/me` (see backend `app/deps/users.py`).
+
+### Localization (i18n)
+
+The app ships English + German today, built to extend to more languages later. **Every
+user-facing string is required to go through this system — a raw `Text('...')` literal in a
+widget is a bug**, the same way a hardcoded English error message on the backend would be. This
+applies to all new features, not just ones the user explicitly calls out as needing translation.
+
+- **Source of truth**: `lib/l10n/app_en.arb` (template, with `@key` metadata for placeholders/ICU
+  plurals) and `lib/l10n/app_de.arb` (translation, values only). Adding a string means adding it
+  to *both* files, in the same change that introduces the widget using it — not as a follow-up.
+  `flutter pub get` (or `flutter gen-l10n`) regenerates `lib/l10n/generated/` (gitignored); that
+  directory is never hand-edited.
+- **Usage**: `final l10n = AppLocalizations.of(context);` then `l10n.someKey` (or
+  `l10n.someKey(arg)` for a parameterized/plural one). `nullable-getter: false` in `l10n.yaml`
+  means `.of(context)` is non-null — never append `!`. Reference implementations:
+  `core/errors/error_messages.dart` (the error-code-to-copy layer, including how the backend's
+  structured password-policy violations get formatted) and
+  `features/profile/presentation/settings_screen.dart` (the language picker).
+- **German tone**: casual `du`-form, professional but warm — translate for *meaning*, not
+  word-for-word. Loanwords already established in this app's German copy (`Feed`, `Token`,
+  `Post`/`Beitrag`, `Score`) should stay loanwords rather than being forced into a stiffer native
+  equivalent; avoid literal, nominalized, or passive-voice German (`Nominalstil`) even when it's
+  what a direct translation would produce.
+- **Locale resolution**: device locale by default, with a manual override in Settings → Language
+  (`core/settings/locale_settings.dart`, persisted locally, never synced to the server — see
+  `activeLocaleProvider`). The active locale is sent on every backend request as `Accept-Language`
+  (`core/network/dio_client.dart`'s interceptor), which is what lets backend-authored text (the
+  admin banner, password-policy messages) match the app's language too — see the backend's
+  `app/core/locale.py` / `app/core/banner.py`.
+- **Exceptions** (deliberately left untranslated): the `Relay` brand name, and example/placeholder
+  URLs (e.g. `server_settings_sheet.dart`'s hint text) — URLs aren't translated by convention.

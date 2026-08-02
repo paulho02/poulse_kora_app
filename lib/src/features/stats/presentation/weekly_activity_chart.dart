@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../data/user_stats.dart';
-
-const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /// Plain Row/Container bar chart — 7 static bars don't warrant pulling in a
 /// charting dependency.
@@ -14,6 +13,16 @@ class WeeklyActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final dayLabels = [
+      l10n.statsWeekdayMon,
+      l10n.statsWeekdayTue,
+      l10n.statsWeekdayWed,
+      l10n.statsWeekdayThu,
+      l10n.statsWeekdayFri,
+      l10n.statsWeekdaySat,
+      l10n.statsWeekdaySun,
+    ];
     final maxCount = buckets.fold<int>(
       1,
       (max, b) => b.count > max ? b.count : max,
@@ -53,7 +62,7 @@ class WeeklyActivityChart extends StatelessWidget {
             for (var i = 0; i < buckets.length; i++)
               Expanded(
                 child: Text(
-                  _dayLabels[buckets[i].date.weekday - 1],
+                  dayLabels[buckets[i].date.weekday - 1],
                   textAlign: TextAlign.center,
                   style: theme.textTheme.labelSmall,
                 ),

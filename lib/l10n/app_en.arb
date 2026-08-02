@@ -1,0 +1,492 @@
+{
+  "@@locale": "en",
+
+  "infoBannerDontShowAgain": "Don't show again",
+  "@infoBannerDontShowAgain": {},
+
+  "infoBannerDismiss": "Dismiss",
+  "@infoBannerDismiss": {},
+
+  "settingsLanguageSectionHeader": "Language",
+  "@settingsLanguageSectionHeader": {},
+
+  "settingsLanguageDialogTitle": "Choose language",
+  "@settingsLanguageDialogTitle": {},
+
+  "settingsLanguageSystemDefault": "System default",
+  "@settingsLanguageSystemDefault": {},
+
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {},
+
+  "settingsLanguageGerman": "German",
+  "@settingsLanguageGerman": {},
+
+  "passwordTooShort": "Password must be at least {minLength} characters long.",
+  "@passwordTooShort": {
+    "placeholders": { "minLength": { "type": "int" } }
+  },
+
+  "passwordMissingVariety": "Password must include at least {requiredCategories} of: lowercase letters, uppercase letters, numbers, and symbols.",
+  "@passwordMissingVariety": {
+    "placeholders": { "requiredCategories": { "type": "int" } }
+  },
+
+  "errorOffline": "You're offline. This needs a connection — try again once you're back.",
+  "@errorOffline": {},
+
+  "errorTimeout": "The server took too long to respond. Check your connection and try again.",
+  "@errorTimeout": {},
+
+  "errorLoginBadCredentials": "That email or password isn't right. Check both and try again.",
+  "@errorLoginBadCredentials": {},
+
+  "errorEmailAlreadyExists": "An account with that email already exists. Try logging in instead.",
+  "@errorEmailAlreadyExists": {},
+
+  "errorInvalidPasswordGeneric": "That password isn't strong enough. Try a longer one with a mix of letters, numbers, and symbols.",
+  "@errorInvalidPasswordGeneric": {},
+
+  "errorUnverifiedUser": "Verify your email to continue.",
+  "@errorUnverifiedUser": {},
+
+  "errorInvalidCodeRemaining": "{remaining, plural, one{That code isn't right. 1 try left.} other{That code isn't right. {remaining} tries left.}}",
+  "@errorInvalidCodeRemaining": {
+    "placeholders": { "remaining": { "type": "int" } }
+  },
+
+  "errorInvalidCodeExhausted": "That code isn't right, and you're out of tries. Request a new code.",
+  "@errorInvalidCodeExhausted": {},
+
+  "errorInvalidCodeGeneric": "That code isn't right. Try again.",
+  "@errorInvalidCodeGeneric": {},
+
+  "errorVerificationCodeExpired": "That code has expired. Request a new one.",
+  "@errorVerificationCodeExpired": {},
+
+  "errorTooManyVerificationAttempts": "Too many wrong tries. Request a new code and try again.",
+  "@errorTooManyVerificationAttempts": {},
+
+  "errorResendCooldownWait": "{seconds, plural, one{You can request another code in 1 second.} other{You can request another code in {seconds} seconds.}}",
+  "@errorResendCooldownWait": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "errorResendCooldownGeneric": "Please wait a moment before requesting another code.",
+  "@errorResendCooldownGeneric": {},
+
+  "errorInsufficientTokens": "Not enough tokens to post (need {price}, you have {balance}). Review posts in your feed to earn more.",
+  "@errorInsufficientTokens": {
+    "placeholders": {
+      "price": { "type": "int" },
+      "balance": { "type": "int" }
+    }
+  },
+
+  "errorChannelNotFound": "That channel doesn't exist anymore. Pick another one.",
+  "@errorChannelNotFound": {},
+
+  "errorNotInQueue": "That post is no longer in your queue. Pull down to refresh your feed.",
+  "@errorNotInQueue": {},
+
+  "errorAlreadyReviewed": "You've already reviewed that post. Pull down to refresh your feed.",
+  "@errorAlreadyReviewed": {},
+
+  "errorPostNotFound": "That post is no longer available.",
+  "@errorPostNotFound": {},
+
+  "errorRateLimitedWait": "{seconds, plural, one{You're going a bit fast. Try again in 1 second.} other{You're going a bit fast. Try again in {seconds} seconds.}}",
+  "@errorRateLimitedWait": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "errorRateLimitedGeneric": "You're going a bit fast. Take a moment, then try again.",
+  "@errorRateLimitedGeneric": {},
+
+  "errorUnauthorized": "Your session has expired. Please sign in again.",
+  "@errorUnauthorized": {},
+
+  "errorForbidden": "You don't have permission to do that.",
+  "@errorForbidden": {},
+
+  "errorValidationWithDetail": "Check your input: {detail}",
+  "@errorValidationWithDetail": {
+    "placeholders": { "detail": { "type": "String" } }
+  },
+
+  "errorValidationGeneric": "That didn't look right. Check your input and try again.",
+  "@errorValidationGeneric": {},
+
+  "errorInternalError": "Something went wrong on our end. Please try again in a moment.",
+  "@errorInternalError": {},
+
+  "errorUnknown": "Something went wrong. Please try again.",
+  "@errorUnknown": {},
+
+  "errorTitleOffline": "You're offline",
+  "@errorTitleOffline": {},
+
+  "errorTitleSessionExpired": "Session expired",
+  "@errorTitleSessionExpired": {},
+
+  "errorTitleGeneric": "Couldn't load this",
+  "@errorTitleGeneric": {},
+
+  "errorStateTryAgain": "Try again",
+  "@errorStateTryAgain": {},
+
+  "commonEmail": "Email",
+  "@commonEmail": {},
+  "commonUsername": "Username",
+  "@commonUsername": {},
+  "commonPassword": "Password",
+  "@commonPassword": {},
+  "commonSave": "Save",
+  "@commonSave": {},
+  "commonContinue": "Continue",
+  "@commonContinue": {},
+  "commonLogOut": "Log out",
+  "@commonLogOut": {},
+
+  "validationEmailRequired": "Email is required",
+  "@validationEmailRequired": {},
+  "validationUsernameRequired": "Username is required",
+  "@validationUsernameRequired": {},
+  "validationPasswordRequired": "Password is required",
+  "@validationPasswordRequired": {},
+  "validationPasswordMinLength": "Password must be at least {minLength} characters",
+  "@validationPasswordMinLength": {
+    "placeholders": { "minLength": { "type": "int" } }
+  },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": {},
+  "settingsSectionAlgorithm": "Algorithm",
+  "@settingsSectionAlgorithm": {},
+  "settingsReviewGate": "Review gate",
+  "@settingsReviewGate": {},
+  "settingsReviewGatePosts": "{count, plural, one{1 post} other{{count} posts}}",
+  "@settingsReviewGatePosts": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "settingsQueuePriority": "Queue priority",
+  "@settingsQueuePriority": {},
+  "settingsQueuePriorityValue": "Newest first",
+  "@settingsQueuePriorityValue": {},
+  "settingsSectionNotifications": "Notifications",
+  "@settingsSectionNotifications": {},
+  "settingsNewPostsNotification": "New posts to review",
+  "@settingsNewPostsNotification": {},
+  "settingsWeeklyDigestNotification": "Weekly stats digest",
+  "@settingsWeeklyDigestNotification": {},
+  "settingsSectionHelp": "Help",
+  "@settingsSectionHelp": {},
+  "settingsResetTutorialHints": "Reset tutorial hints",
+  "@settingsResetTutorialHints": {},
+  "settingsResetTutorialHintsSubtitle": "Bring back the tips you've dismissed on each tab.",
+  "@settingsResetTutorialHintsSubtitle": {},
+  "settingsResetTutorialHintsSnackbar": "Tutorial hints will show again as you open each tab.",
+  "@settingsResetTutorialHintsSnackbar": {},
+  "settingsSectionAccount": "Account",
+  "@settingsSectionAccount": {},
+
+  "authLogIn": "Log in",
+  "@authLogIn": {},
+  "authShowPassword": "Show password",
+  "@authShowPassword": {},
+  "authHidePassword": "Hide password",
+  "@authHidePassword": {},
+  "authGoToRegister": "Don't have an account? Register",
+  "@authGoToRegister": {},
+  "authCreateAccount": "Create account",
+  "@authCreateAccount": {},
+  "authGoToLogin": "Already have an account? Log in",
+  "@authGoToLogin": {},
+
+  "serverSettingsTooltipCustom": "Server: {url}",
+  "@serverSettingsTooltipCustom": {
+    "placeholders": { "url": { "type": "String" } }
+  },
+  "serverSettingsTooltipDefault": "Server settings",
+  "@serverSettingsTooltipDefault": {},
+  "serverSettingsTitle": "Server",
+  "@serverSettingsTitle": {},
+  "serverSettingsDescription": "Most people should leave this on the official server. Only change it if you were given a different one to connect to.",
+  "@serverSettingsDescription": {},
+  "serverSettingsOfficial": "Official server",
+  "@serverSettingsOfficial": {},
+  "serverSettingsCustom": "Custom server",
+  "@serverSettingsCustom": {},
+  "serverSettingsUrlLabel": "Server URL",
+  "@serverSettingsUrlLabel": {},
+  "serverSettingsUrlRequired": "Server URL is required",
+  "@serverSettingsUrlRequired": {},
+  "serverSettingsUrlInvalid": "Enter a valid http(s) URL",
+  "@serverSettingsUrlInvalid": {},
+
+  "statsTitle": "Statistics",
+  "@statsTitle": {},
+  "statsTipMessage": "Track your review streak, trust score, and how far your forwards have spread.",
+  "@statsTipMessage": {},
+  "statsThisWeek": "THIS WEEK",
+  "@statsThisWeek": {},
+  "statsBadges": "BADGES",
+  "@statsBadges": {},
+  "statsTrustScore": "TRUST SCORE",
+  "@statsTrustScore": {},
+  "statsOutOf100": "/ 100",
+  "@statsOutOf100": {},
+  "statsAcrossApp": "ACROSS POULSE KORA",
+  "@statsAcrossApp": {},
+  "statsForwardingDistribution": "Forwarding distribution",
+  "@statsForwardingDistribution": {},
+  "statsNoPostsYet": "No posts yet",
+  "@statsNoPostsYet": {},
+  "statsTotalPosts": "{count, plural, one{1 post total} other{{count} posts total}}",
+  "@statsTotalPosts": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "statsReviewed": "Reviewed",
+  "@statsReviewed": {},
+  "statsForwarded": "Forwarded",
+  "@statsForwarded": {},
+  "statsDropped": "Dropped",
+  "@statsDropped": {},
+  "statsAvgHops": "Avg Hops",
+  "@statsAvgHops": {},
+  "statsForwardsPerPost": "forwards per post",
+  "@statsForwardsPerPost": {},
+  "statsWeekdayMon": "M",
+  "@statsWeekdayMon": {},
+  "statsWeekdayTue": "T",
+  "@statsWeekdayTue": {},
+  "statsWeekdayWed": "W",
+  "@statsWeekdayWed": {},
+  "statsWeekdayThu": "T",
+  "@statsWeekdayThu": {},
+  "statsWeekdayFri": "F",
+  "@statsWeekdayFri": {},
+  "statsWeekdaySat": "S",
+  "@statsWeekdaySat": {},
+  "statsWeekdaySun": "S",
+  "@statsWeekdaySun": {},
+
+  "emailVerifyTitle": "Verify your email",
+  "@emailVerifyTitle": {},
+  "emailVerifyInstructions": "We've sent a verification code to your email. Enter it below to continue.",
+  "@emailVerifyInstructions": {},
+  "emailVerifyCodeLabel": "Verification code",
+  "@emailVerifyCodeLabel": {},
+  "emailVerifyEnterCode": "Enter the code",
+  "@emailVerifyEnterCode": {},
+  "emailVerifyButton": "Verify",
+  "@emailVerifyButton": {},
+  "emailVerifyResendIn": "{seconds, plural, one{Resend code in 1s} other{Resend code in {seconds}s}}",
+  "@emailVerifyResendIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "emailVerifyResendPrompt": "Didn't get a code? Resend",
+  "@emailVerifyResendPrompt": {},
+  "emailVerifyResendSnackbar": "A new code is on its way.",
+  "@emailVerifyResendSnackbar": {},
+
+  "feedTitle": "Feed",
+  "@feedTitle": {},
+  "feedTitleWithCount": "{count, plural, one{Feed · 1 open post} other{Feed · {count} open posts}}",
+  "@feedTitleWithCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "feedReloadTooltip": "Reload feed",
+  "@feedReloadTooltip": {},
+  "feedTipMessage": "This is your feed — review each post and forward or drop it. Nothing here is ranked by an algorithm.",
+  "@feedTipMessage": {},
+  "feedAllChannelsChip": "All",
+  "@feedAllChannelsChip": {},
+  "feedEmptyNoChannelsTitle": "Join a channel to get started",
+  "@feedEmptyNoChannelsTitle": {},
+  "feedEmptyNoChannelsSubtitle": "Subscribe to channels to start seeing posts in your feed.",
+  "@feedEmptyNoChannelsSubtitle": {},
+  "feedEmptyNoChannelsAction": "Browse channels",
+  "@feedEmptyNoChannelsAction": {},
+  "feedEmptyCaughtUpTitle": "All caught up",
+  "@feedEmptyCaughtUpTitle": {},
+  "feedEmptyCaughtUpSubtitle": "No posts to review right now.",
+  "@feedEmptyCaughtUpSubtitle": {},
+
+  "postAnonymous": "Anonymous",
+  "@postAnonymous": {},
+  "postUnknownAuthor": "Unknown",
+  "@postUnknownAuthor": {},
+  "postSupporterTooltip": "Supporter — thanks for backing Kora",
+  "@postSupporterTooltip": {},
+  "postSupporterBadge": "Supporter",
+  "@postSupporterBadge": {},
+  "postImagePlaceholder": "IMAGE",
+  "@postImagePlaceholder": {},
+  "postPhotoPlaceholder": "PHOTO",
+  "@postPhotoPlaceholder": {},
+  "postForward": "Forward",
+  "@postForward": {},
+  "postDrop": "Drop",
+  "@postDrop": {},
+  "postAutoDropsIn": "{hours, plural, one{Auto-drops in 1h} other{Auto-drops in {hours}h}}",
+  "@postAutoDropsIn": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "postDetailHeader": "POST DETAIL",
+  "@postDetailHeader": {},
+  "postJustNow": "just now",
+  "@postJustNow": {},
+  "postTimeAgoSuffix": "{time} ago",
+  "@postTimeAgoSuffix": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "postDetailPostedAgo": "Posted {postedAgo}",
+  "@postDetailPostedAgo": {
+    "placeholders": { "postedAgo": { "type": "String" } }
+  },
+  "postDetailHoursLeft": "{hours, plural, one{1 h left} other{{hours} h left}}",
+  "@postDetailHoursLeft": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+
+  "createPostPickChannelError": "Pick a channel to post to.",
+  "@createPostPickChannelError": {},
+  "createPostEmptyTextError": "Write something before relaying.",
+  "@createPostEmptyTextError": {},
+  "createPostTitle": "New Post",
+  "@createPostTitle": {},
+  "createPostTipMessage": "Posting costs tokens, earned by reviewing others' posts — that keeps posting tied to participating.",
+  "@createPostTipMessage": {},
+  "createPostNeedMoreTokens": "{needed, plural, one{Need 1 more token to post at the current price of {price}. Review posts in your feed to earn more.} other{Need {needed} more tokens to post at the current price of {price}. Review posts in your feed to earn more.}}",
+  "@createPostNeedMoreTokens": {
+    "placeholders": {
+      "needed": { "type": "int" },
+      "price": { "type": "int" }
+    }
+  },
+  "createPostNoChannels": "No channels are available to post to yet.",
+  "@createPostNoChannels": {},
+  "createPostHint": "What's worth sharing?",
+  "@createPostHint": {},
+  "createPostChannelLabel": "Channel",
+  "@createPostChannelLabel": {},
+  "createPostSelectChannel": "Select a channel",
+  "@createPostSelectChannel": {},
+
+  "channelsTitle": "Channels",
+  "@channelsTitle": {},
+  "channelsTipMessage": "Channels are topics you follow. What you join here is what fills your Feed.",
+  "@channelsTipMessage": {},
+  "channelsSearchHint": "Search channels",
+  "@channelsSearchHint": {},
+  "channelsNoneFound": "No channels found",
+  "@channelsNoneFound": {},
+  "channelsJoinedButton": "Joined",
+  "@channelsJoinedButton": {},
+  "channelsJoinButton": "Join",
+  "@channelsJoinButton": {},
+
+  "onboardingSlide1Title": "Welcome to Relay",
+  "@onboardingSlide1Title": {},
+  "onboardingSlide1Body": "Posts move through the channels you follow, carried from person to person rather than pushed by a central feed.",
+  "@onboardingSlide1Body": {},
+  "onboardingSlide2Title": "No black-box ranking",
+  "@onboardingSlide2Title": {},
+  "onboardingSlide2Body": "There's no algorithm optimizing for outrage or watch time. Every post you see, a real person decides — by forwarding or dropping it — whether it keeps spreading.",
+  "@onboardingSlide2Body": {},
+  "onboardingSlide3Title": "Posting is earned, not free",
+  "@onboardingSlide3Title": {},
+  "onboardingSlide3Body": "Publishing costs tokens, which you earn by reviewing other people's posts. Speaking up is tied to taking part in curation.",
+  "@onboardingSlide3Body": {},
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {},
+  "onboardingGetStarted": "Get started",
+  "@onboardingGetStarted": {},
+  "onboardingNext": "Next",
+  "@onboardingNext": {},
+  "onboardingChannelsTitle": "Pick 1-3 channels to follow",
+  "@onboardingChannelsTitle": {},
+  "onboardingChannelsSubtitle": "This is what fills your feed to start — you can join more anytime from the Channels tab.",
+  "@onboardingChannelsSubtitle": {},
+  "onboardingChannelsSelectedCount": "{selected}/{max} selected",
+  "@onboardingChannelsSelectedCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "onboardingChannelsMaxReached": "You can pick up to {max} to start — join more anytime from Channels.",
+  "@onboardingChannelsMaxReached": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "onboardingDisclaimerTitle": "Before you dive in",
+  "@onboardingDisclaimerTitle": {},
+  "onboardingDisclaimerPoint1": "Posts are public — anything you publish can be forwarded on to any other user on the platform.",
+  "@onboardingDisclaimerPoint1": {},
+  "onboardingDisclaimerPoint2": "Act responsibly. No misinformation, hate speech, harassment, or illegal content.",
+  "@onboardingDisclaimerPoint2": {},
+  "onboardingDisclaimerPoint3": "Once forwarded, a post is out of your control — deleting it doesn't undo what's already spread.",
+  "@onboardingDisclaimerPoint3": {},
+  "onboardingDisclaimerPoint4": "Don't share other people's private information without their consent.",
+  "@onboardingDisclaimerPoint4": {},
+  "onboardingDisclaimerPoint5": "Violating these guidelines can get your account suspended.",
+  "@onboardingDisclaimerPoint5": {},
+  "onboardingDisclaimerConfirm": "Got it!",
+  "@onboardingDisclaimerConfirm": {},
+
+  "profileTitle": "Profile",
+  "@profileTitle": {},
+  "profileTipMessage": "Manage your account, bio, and app preferences here.",
+  "@profileTipMessage": {},
+  "profileStatCreated": "Created",
+  "@profileStatCreated": {},
+  "profileStatTrust": "Trust",
+  "@profileStatTrust": {},
+  "profileDarkMode": "Dark Mode",
+  "@profileDarkMode": {},
+  "profileSignOut": "Sign Out",
+  "@profileSignOut": {},
+
+  "betaPoint1": "Relay is in beta. You're using an early version of the app while it's still being built.",
+  "@betaPoint1": {},
+  "betaPoint2": "Bugs and rough edges are expected. If something breaks or feels off, that's the beta, not you.",
+  "@betaPoint2": {},
+  "betaPoint3": "Features can change, move, or disappear between versions as things get reworked.",
+  "@betaPoint3": {},
+  "betaPoint4": "Data may occasionally be reset while the platform is under active development — don't treat it as permanent yet.",
+  "@betaPoint4": {},
+  "betaTapForDetails": "Beta version — tap for details",
+  "@betaTapForDetails": {},
+  "betaVersionTitle": "Beta version",
+  "@betaVersionTitle": {},
+  "betaGotIt": "Got it",
+  "@betaGotIt": {},
+
+  "offlineReconnecting": "You're offline — reconnecting…",
+  "@offlineReconnecting": {},
+  "offlineBackOnline": "Back online",
+  "@offlineBackOnline": {},
+
+  "economyTokenBalance": "{count, plural, one{1 token} other{{count} tokens}}",
+  "@economyTokenBalance": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "economyPriceApprox": "~{price} to post",
+  "@economyPriceApprox": {
+    "placeholders": { "price": { "type": "int" } }
+  },
+  "economyPrice": "{price} to post",
+  "@economyPrice": {
+    "placeholders": { "price": { "type": "int" } }
+  },
+  "economyPriceExpired": "The price just expired — refreshing it now.",
+  "@economyPriceExpired": {},
+  "economyPriceExplainer": "The price to post rises when the app is busy. It's locked in for {countdown} — after that it may change.",
+  "@economyPriceExplainer": {
+    "placeholders": { "countdown": { "type": "String" } }
+  },
+
+  "tipDismiss": "Dismiss",
+  "@tipDismiss": {}
+}

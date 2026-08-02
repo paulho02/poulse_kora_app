@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../theme/app_theme.dart';
 import '../application/tip_providers.dart';
 
@@ -92,6 +93,7 @@ class _TipCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Material(
       color: theme.colorScheme.surfaceContainerHigh,
@@ -111,7 +113,7 @@ class _TipCard extends StatelessWidget {
               ),
             ),
             Semantics(
-              label: 'Dismiss',
+              label: l10n.tipDismiss,
               child: IconButton(
                 icon: const Icon(Icons.close, size: 18),
                 onPressed: onClose,

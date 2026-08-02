@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/presentation/error_state_view.dart';
@@ -44,15 +45,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
     final text = _textController.text.trim();
+    final l10n = AppLocalizations.of(context);
     if (channelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a channel to post to.')),
+        SnackBar(content: Text(l10n.createPostPickChannelError)),
       );
       return;
     }
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write something before relaying.')),
+        SnackBar(content: Text(l10n.createPostEmptyTextError)),
       );
       return;
     }
@@ -100,14 +102,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final channelsAsync = ref.watch(channelsNotifierProvider);
     final economy = ref.watch(economyProvider);
     final isOffline = ref.watch(connectivityProvider).isOffline;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New Post')),
+      appBar: AppBar(title: Text(l10n.createPostTitle)),
       body: ViewTip(
         tipKey: 'tip.create',
-        message:
-            "Posting costs tokens, earned by reviewing others' posts — "
-            'that keeps posting tied to participating.',
+        message: l10n.createPostTipMessage,
         child: Builder(
           builder: (context) {
             if (economy == null) {
@@ -146,6 +147,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   /// posting is admission-priced in tokens, earned by reviewing.
   Widget _buildAffordabilityBanner(BuildContext context, Economy economy) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final needed = (economy.postPrice - economy.tokenBalance).clamp(
       0,
       economy.postPrice,
@@ -168,8 +170,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Need $needed more token${needed == 1 ? '' : 's'} to post at the current '
-              'price of ${economy.postPrice}. Review posts in your feed to earn more.',
+              l10n.createPostNeedMoreTokens(needed, economy.postPrice),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onErrorContainer,
               ),
@@ -177,7 +178,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
           TextButton(
             onPressed: () => context.go('/feed'),
-            child: const Text('Feed'),
+            child: Text(l10n.feedTitle),
           ),
         ],
       ),
@@ -189,12 +190,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     List<Channel> channels,
     Economy economy,
   ) {
+    final l10n = AppLocalizations.of(context);
     if (channels.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
-            'No channels are available to post to yet.',
+            l10n.createPostNoChannels,
             textAlign: TextAlign.center,
           ),
         ),
@@ -232,8 +234,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
-                    decoration: const InputDecoration(
-                      hintText: "What's worth sharing?",
+                    decoration: InputDecoration(
+                      hintText: l10n.createPostHint,
                       border: InputBorder.none,
                     ),
                   ),
@@ -242,7 +244,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 Row(
                   children: [
                     FilterChip(
-                      label: const Text('Anonymous'),
+                      label: Text(l10n.postAnonymous),
                       avatar: Icon(
                         _isAnonymous ? Icons.visibility_off : Icons.visibility,
                         size: 16,
@@ -285,6 +287,7 @@ class _ChannelSelectorButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final hasSelection = channel != null;
     final color = hasSelection ? AppColors.channelColor(channel!.name) : null;
 
@@ -292,10 +295,13 @@ class _ChannelSelectorButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Channel',
-          border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: InputDecoration(
+          labelText: l10n.createPostChannelLabel,
+          border: const OutlineInputBorder(),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
         ),
         child: Row(
           children: [
@@ -305,7 +311,7 @@ class _ChannelSelectorButton extends StatelessWidget {
             ],
             Expanded(
               child: Text(
-                hasSelection ? channel!.name : 'Select a channel',
+                hasSelection ? channel!.name : l10n.createPostSelectChannel,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: hasSelection
                       ? theme.colorScheme.onSurface

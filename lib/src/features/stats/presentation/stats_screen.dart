@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/tips/presentation/view_tip.dart';
@@ -16,14 +17,13 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistics')),
+      appBar: AppBar(title: Text(l10n.statsTitle)),
       body: ViewTip(
         tipKey: 'tip.stats',
-        message:
-            'Track your review streak, trust score, and how far your '
-            'forwards have spread.',
+        message: l10n.statsTipMessage,
         child: statsAsync.when(
           data: (cached) {
             final stats = cached.data;
@@ -52,7 +52,7 @@ class StatsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'THIS WEEK',
+                            l10n.statsThisWeek,
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                           const SizedBox(height: 16),
@@ -69,7 +69,7 @@ class StatsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'BADGES',
+                            l10n.statsBadges,
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                           const SizedBox(height: 12),
@@ -123,13 +123,14 @@ class _TrustScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('TRUST SCORE', style: theme.textTheme.labelSmall),
+            Text(l10n.statsTrustScore, style: theme.textTheme.labelSmall),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -140,7 +141,7 @@ class _TrustScoreCard extends StatelessWidget {
                   style: theme.textTheme.displaySmall,
                 ),
                 const SizedBox(width: 6),
-                Text('/ 100', style: theme.textTheme.labelMedium),
+                Text(l10n.statsOutOf100, style: theme.textTheme.labelMedium),
               ],
             ),
             const SizedBox(height: 12),
@@ -166,6 +167,7 @@ class _GlobalStatsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final globalAsync = ref.watch(globalStatsProvider);
 
     return Card(
@@ -174,9 +176,12 @@ class _GlobalStatsCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ACROSS POULSE KORA', style: theme.textTheme.labelSmall),
+            Text(l10n.statsAcrossApp, style: theme.textTheme.labelSmall),
             const SizedBox(height: 4),
-            Text('Forwarding distribution', style: theme.textTheme.titleSmall),
+            Text(
+              l10n.statsForwardingDistribution,
+              style: theme.textTheme.titleSmall,
+            ),
             const SizedBox(height: 16),
             globalAsync.when(
               data: (cached) => _GlobalStatsBody(global: cached.data),
@@ -190,7 +195,7 @@ class _GlobalStatsCard extends ConsumerWidget {
                 height: 60,
                 child: Center(
                   child: Text(
-                    messageFor(error),
+                    messageFor(l10n, error),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall,
                   ),
@@ -212,10 +217,11 @@ class _GlobalStatsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     if (global.totalPosts == 0) {
-      return const SizedBox(
+      return SizedBox(
         height: 60,
-        child: Center(child: Text('No posts yet')),
+        child: Center(child: Text(l10n.statsNoPostsYet)),
       );
     }
     return Column(
@@ -224,7 +230,7 @@ class _GlobalStatsBody extends StatelessWidget {
         ForwardingDistributionChart(buckets: global.forwardingDistribution),
         const SizedBox(height: 12),
         Text(
-          '${global.totalPosts} post${global.totalPosts == 1 ? '' : 's'} total',
+          l10n.statsTotalPosts(global.totalPosts),
           style: theme.textTheme.labelSmall,
         ),
       ],
@@ -239,6 +245,7 @@ class _MetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -247,10 +254,10 @@ class _MetricsGrid extends StatelessWidget {
       crossAxisSpacing: 10,
       childAspectRatio: 2,
       children: [
-        _MetricTile(label: 'Reviewed', value: stats.reviewedCount),
-        _MetricTile(label: 'Forwarded', value: stats.forwardedCount),
-        _MetricTile(label: 'Dropped', value: stats.droppedCount),
-        _MetricTile(label: 'Avg Hops', value: stats.avgHops),
+        _MetricTile(label: l10n.statsReviewed, value: stats.reviewedCount),
+        _MetricTile(label: l10n.statsForwarded, value: stats.forwardedCount),
+        _MetricTile(label: l10n.statsDropped, value: stats.droppedCount),
+        _MetricTile(label: l10n.statsAvgHops, value: stats.avgHops),
       ],
     );
   }

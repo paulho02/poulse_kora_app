@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
 class _Slide {
@@ -9,28 +10,21 @@ class _Slide {
   final String body;
 }
 
-const _slides = [
+List<_Slide> _slides(AppLocalizations l10n) => [
   _Slide(
     icon: Icons.hub_outlined,
-    title: 'Welcome to Relay',
-    body:
-        'Posts move through the channels you follow, carried from person to '
-        'person rather than pushed by a central feed.',
+    title: l10n.onboardingSlide1Title,
+    body: l10n.onboardingSlide1Body,
   ),
   _Slide(
     icon: Icons.groups_outlined,
-    title: 'No black-box ranking',
-    body:
-        "There's no algorithm optimizing for outrage or watch time. Every "
-        'post you see, a real person decides — by forwarding or dropping it — '
-        'whether it keeps spreading.',
+    title: l10n.onboardingSlide2Title,
+    body: l10n.onboardingSlide2Body,
   ),
   _Slide(
     icon: Icons.token_outlined,
-    title: 'Posting is earned, not free',
-    body:
-        'Publishing costs tokens, which you earn by reviewing other '
-        "people's posts. Speaking up is tied to taking part in curation.",
+    title: l10n.onboardingSlide3Title,
+    body: l10n.onboardingSlide3Body,
   ),
 ];
 
@@ -56,7 +50,9 @@ class _IntroSlidesState extends State<IntroSlides> {
     super.dispose();
   }
 
-  bool get _isLast => _index == _slides.length - 1;
+  static const _slideCount = 3;
+
+  bool get _isLast => _index == _slideCount - 1;
 
   void _next() {
     if (_isLast) {
@@ -72,6 +68,8 @@ class _IntroSlidesState extends State<IntroSlides> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final slides = _slides(l10n);
     final accent = theme.brightness == Brightness.dark
         ? AppColors.accentDark
         : AppColors.accentLight;
@@ -85,17 +83,17 @@ class _IntroSlidesState extends State<IntroSlides> {
               padding: const EdgeInsets.only(right: 8, top: 4),
               child: TextButton(
                 onPressed: widget.onDone,
-                child: const Text('Skip'),
+                child: Text(l10n.onboardingSkip),
               ),
             ),
           ),
           Expanded(
             child: PageView.builder(
               controller: _controller,
-              itemCount: _slides.length,
+              itemCount: slides.length,
               onPageChanged: (i) => setState(() => _index = i),
               itemBuilder: (context, i) {
-                final slide = _slides[i];
+                final slide = slides[i];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
@@ -135,7 +133,7 @@ class _IntroSlidesState extends State<IntroSlides> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              _slides.length,
+              slides.length,
               (i) => AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -156,7 +154,9 @@ class _IntroSlidesState extends State<IntroSlides> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: _next,
-                child: Text(_isLast ? 'Get started' : 'Next'),
+                child: Text(
+                  _isLast ? l10n.onboardingGetStarted : l10n.onboardingNext,
+                ),
               ),
             ),
           ),

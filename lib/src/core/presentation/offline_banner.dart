@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../network/connectivity.dart';
 
 /// A thin status strip that appears when the backend is unreachable and briefly
@@ -44,6 +45,7 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOffline = status.isOffline;
+    final l10n = AppLocalizations.of(context);
     // Fixed, semantic colors rather than scheme colors: this must read as a
     // warning identically in light and dark themes.
     final background = isOffline
@@ -80,8 +82,8 @@ class _Bar extends StatelessWidget {
                   isOffline
                       // Names the state and the fact that recovery is automatic,
                       // so there's no implied "go fix something" for the user.
-                      ? "You're offline — reconnecting…"
-                      : 'Back online',
+                      ? l10n.offlineReconnecting
+                      : l10n.offlineBackOnline,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,

@@ -1,29 +1,13 @@
 import 'package:flutter/material.dart';
 
-const _points = [
-  (
-    Icons.public,
-    'Posts are public — anything you publish can be forwarded on to any other '
-        'user on the platform.',
-  ),
-  (
-    Icons.favorite_border,
-    'Act responsibly. No misinformation, hate speech, harassment, or illegal '
-        'content.',
-  ),
-  (
-    Icons.forward_outlined,
-    "Once forwarded, a post is out of your control — deleting it doesn't undo "
-        "what's already spread.",
-  ),
-  (
-    Icons.lock_outline,
-    "Don't share other people's private information without their consent.",
-  ),
-  (
-    Icons.gpp_maybe_outlined,
-    'Violating these guidelines can get your account suspended.',
-  ),
+import '../../../../l10n/generated/app_localizations.dart';
+
+List<(IconData, String)> _points(AppLocalizations l10n) => [
+  (Icons.public, l10n.onboardingDisclaimerPoint1),
+  (Icons.favorite_border, l10n.onboardingDisclaimerPoint2),
+  (Icons.forward_outlined, l10n.onboardingDisclaimerPoint3),
+  (Icons.lock_outline, l10n.onboardingDisclaimerPoint4),
+  (Icons.gpp_maybe_outlined, l10n.onboardingDisclaimerPoint5),
 ];
 
 /// The onboarding flow's third and final, mandatory step. Confirmed with a
@@ -41,6 +25,8 @@ class DisclaimerStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final points = _points(l10n);
 
     return SafeArea(
       child: Column(
@@ -57,7 +43,7 @@ class DisclaimerStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Before you dive in',
+                  l10n.onboardingDisclaimerTitle,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -68,10 +54,10 @@ class DisclaimerStep extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-              itemCount: _points.length,
+              itemCount: points.length,
               separatorBuilder: (context, _) => const SizedBox(height: 18),
               itemBuilder: (context, i) {
-                final (icon, text) = _points[i];
+                final (icon, text) = points[i];
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -101,7 +87,7 @@ class DisclaimerStep extends StatelessWidget {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Got it!'),
+                    : Text(l10n.onboardingDisclaimerConfirm),
               ),
             ),
           ),

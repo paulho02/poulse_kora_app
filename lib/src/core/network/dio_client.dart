@@ -21,6 +21,7 @@ class DioClient {
     required String baseUrl,
     required ConnectivityNotifier connectivity,
     required Future<void> Function() onUnauthorized,
+    required String Function() localeCode,
   }) : dio = Dio(
          BaseOptions(
            baseUrl: '$baseUrl${AppConfig.apiPath}',
@@ -35,6 +36,11 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Lets the backend localize what little user-facing prose it
+          // generates itself (banner text, password-policy messages) — see
+          // `backend/app/deps/locale.py`. Kept in sync with `MaterialApp`'s
+          // `locale` via the same `activeLocaleProvider`.
+          options.headers['Accept-Language'] = localeCode();
           handler.next(options);
         },
         onResponse: (response, handler) {

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Local dev config (per-machine backend URL etc.) - see env.example.json
 env.json
+
+# Generated from lib/l10n/*.arb by `flutter gen-l10n` (see l10n.yaml)
+lib/l10n/generated/

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
@@ -21,6 +22,7 @@ class ChannelSelectionStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final channelsAsync = ref.watch(channelsNotifierProvider);
     final selectedCount = ref.watch(subscribedChannelsProvider).length;
     final canContinue = selectedCount >= 1 && selectedCount <= _maxSelectable;
@@ -34,22 +36,24 @@ class ChannelSelectionStep extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pick 1-3 channels to follow',
+                  l10n.onboardingChannelsTitle,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "This is what fills your feed to start — you can join more anytime "
-                  'from the Channels tab.',
+                  l10n.onboardingChannelsSubtitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '$selectedCount/$_maxSelectable selected',
+                  l10n.onboardingChannelsSelectedCount(
+                    selectedCount,
+                    _maxSelectable,
+                  ),
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: selectedCount == 0
                         ? theme.colorScheme.error
@@ -83,7 +87,7 @@ class ChannelSelectionStep extends ConsumerWidget {
               width: double.infinity,
               child: FilledButton(
                 onPressed: canContinue ? onContinue : null,
-                child: const Text('Continue'),
+                child: Text(l10n.commonContinue),
               ),
             ),
           ),
@@ -104,12 +108,15 @@ class _SelectableChannelTile extends ConsumerWidget {
 
   Future<void> _toggle(BuildContext context, WidgetRef ref) async {
     if (!channel.isSubscribed && atMax) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'You can pick up to 3 to start — join more anytime from Channels.',
+              l10n.onboardingChannelsMaxReached(
+                ChannelSelectionStep._maxSelectable,
+              ),
             ),
             behavior: SnackBarBehavior.floating,
           ),

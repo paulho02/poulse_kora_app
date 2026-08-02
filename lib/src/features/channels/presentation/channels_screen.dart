@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/tips/presentation/view_tip.dart';
@@ -27,14 +28,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   @override
   Widget build(BuildContext context) {
     final channelsAsync = ref.watch(channelsNotifierProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Channels')),
+      appBar: AppBar(title: Text(l10n.channelsTitle)),
       body: ViewTip(
         tipKey: 'tip.channels',
-        message:
-            'Channels are topics you follow. What you join here is what '
-            'fills your Feed.',
+        message: l10n.channelsTipMessage,
         child: RefreshIndicator(
           onRefresh: () =>
               ref.read(channelsNotifierProvider.notifier).refresh(),
@@ -44,10 +44,10 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Search channels',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: l10n.channelsSearchHint,
+                    border: const OutlineInputBorder(),
                   ),
                   onChanged: (value) =>
                       setState(() => _query = value.toLowerCase()),
@@ -74,7 +74,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                           StaleDataNotice(label: cached.staleLabel!),
                         Expanded(
                           child: filtered.isEmpty
-                              ? const Center(child: Text('No channels found'))
+                              ? Center(child: Text(l10n.channelsNoneFound))
                               : ListView.builder(
                                   itemCount: filtered.length,
                                   itemBuilder: (context, index) =>
@@ -109,6 +109,7 @@ class _ChannelTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = AppColors.channelColor(channel.name);
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: color.withValues(alpha: 0.15),
@@ -134,7 +135,9 @@ class _ChannelTile extends ConsumerWidget {
             }
           }
         },
-        child: Text(channel.isSubscribed ? 'Joined' : 'Join'),
+        child: Text(
+          channel.isSubscribed ? l10n.channelsJoinedButton : l10n.channelsJoinButton,
+        ),
       ),
     );
   }

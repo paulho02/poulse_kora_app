@@ -1,3 +1,4 @@
+import '../../../l10n/generated/app_localizations.dart';
 import 'api_exception.dart';
 
 /// Single place where a failure becomes something a person can read.
@@ -7,7 +8,11 @@ import 'api_exception.dart';
 /// one case here rather than hunting through screens. Never render an exception's
 /// `toString()` at a call site — that is what produced the raw Dio dumps this
 /// replaces.
-String messageFor(Object? rawError) {
+///
+/// Takes [AppLocalizations] rather than a `BuildContext` so this stays a pure,
+/// widget-free function — every call site already has a `context` in scope to
+/// resolve `AppLocalizations.of(context)!` from.
+String messageFor(AppLocalizations l10n, Object? rawError) {
   // Unwrap first: `AsyncValue.guard` hands widgets the raw `DioException` that
   // Dio rethrows, not the normalized failure inside it.
   final error = asRelayException(rawError);
@@ -15,103 +20,125 @@ String messageFor(Object? rawError) {
   switch (error.error) {
     // ---- connectivity -------------------------------------------------------
     case 'offline':
-      return "You're offline. This needs a connection — try again once you're back.";
+      return l10n.errorOffline;
     case 'timeout':
-      return 'The server took too long to respond. Check your connection and try again.';
+      return l10n.errorTimeout;
 
     // ---- auth -----------------------------------------------------------------
     case 'login_bad_credentials':
-      return "That email or password isn't right. Check both and try again.";
+      return l10n.errorLoginBadCredentials;
     case 'register_user_already_exists':
     case 'update_user_email_already_exists':
-      return 'An account with that email already exists. Try logging in instead.';
+      return l10n.errorEmailAlreadyExists;
     case 'register_invalid_password':
     case 'update_user_invalid_password':
-      final reason = error.detail['reason'];
-      return reason is String && reason.isNotEmpty
-          ? reason
-          : "That password isn't strong enough. Try a longer one with a mix of "
-                'letters, numbers, and symbols.';
+      return _passwordErrorMessage(l10n, error.detail['reason']);
 
     // ---- email verification --------------------------------------------------
     case 'unverified_user':
-      return 'Verify your email to continue.';
+      return l10n.errorUnverifiedUser;
     case 'invalid_verification_code':
       final remaining = error.detail['attempts_remaining'];
       if (remaining is int) {
         return remaining > 0
-            ? "That code isn't right. $remaining "
-                  '${remaining == 1 ? 'try' : 'tries'} left.'
-            : "That code isn't right, and you're out of tries. Request a new code.";
+            ? l10n.errorInvalidCodeRemaining(remaining)
+            : l10n.errorInvalidCodeExhausted;
       }
-      return "That code isn't right. Try again.";
+      return l10n.errorInvalidCodeGeneric;
     case 'verification_code_expired':
-      return 'That code has expired. Request a new one.';
+      return l10n.errorVerificationCodeExpired;
     case 'too_many_verification_attempts':
-      return "Too many wrong tries. Request a new code and try again.";
+      return l10n.errorTooManyVerificationAttempts;
     case 'resend_cooldown':
       final retryAfter = error.detail['retry_after'];
-      final wait = retryAfter is int ? retryAfter : null;
-      return wait == null
-          ? 'Please wait a moment before requesting another code.'
-          : 'You can request another code in $wait '
-                "${wait == 1 ? 'second' : 'seconds'}.";
+      return retryAfter is int
+          ? l10n.errorResendCooldownWait(retryAfter)
+          : l10n.errorResendCooldownGeneric;
 
     // ---- posting ------------------------------------------------------------
     case 'insufficient_tokens':
-      final price = error.detail['price'];
-      final balance = error.detail['balance'];
-      return 'Not enough tokens to post (need $price, you have $balance). '
-          'Review posts in your feed to earn more.';
+      final price = error.detail['price'] as int? ?? 0;
+      final balance = error.detail['balance'] as int? ?? 0;
+      return l10n.errorInsufficientTokens(price, balance);
     case 'channel_not_found':
-      return "That channel doesn't exist anymore. Pick another one.";
+      return l10n.errorChannelNotFound;
 
     // ---- reviewing ----------------------------------------------------------
     // Both mean the post left this user's queue while the card was still on
     // screen — stale UI rather than a real failure, so point at the fix.
     case 'not_in_queue':
-      return 'That post is no longer in your queue. Pull down to refresh your feed.';
+      return l10n.errorNotInQueue;
     case 'already_reviewed':
-      return "You've already reviewed that post. Pull down to refresh your feed.";
+      return l10n.errorAlreadyReviewed;
     case 'post_not_found':
-      return 'That post is no longer available.';
+      return l10n.errorPostNotFound;
 
     // ---- pacing -------------------------------------------------------------
     // One budget covers posting, forwarding and dropping, so the copy has to work
     // for all three. `retry_after` is whole seconds, and never below 1.
     case 'rate_limited':
       final retryAfter = error.detail['retry_after'];
-      final wait = retryAfter is int ? retryAfter : null;
-      return wait == null
-          ? "You're going a bit fast. Take a moment, then try again."
-          : "You're going a bit fast. Try again in $wait "
-                "${wait == 1 ? 'second' : 'seconds'}.";
+      return retryAfter is int
+          ? l10n.errorRateLimitedWait(retryAfter)
+          : l10n.errorRateLimitedGeneric;
 
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':
-      return 'Your session has expired. Please sign in again.';
+      return l10n.errorUnauthorized;
     case 'forbidden':
-      return "You don't have permission to do that.";
+      return l10n.errorForbidden;
     case 'validation_error':
       final fields = error.detail['fields'];
       if (fields is List && fields.isNotEmpty) {
         final first = fields.first;
         if (first is Map && first['message'] != null) {
-          return 'Check your input: ${first['message']}';
+          return l10n.errorValidationWithDetail(first['message'] as String);
         }
       }
-      return "That didn't look right. Check your input and try again.";
+      return l10n.errorValidationGeneric;
     case 'internal_error':
-      return 'Something went wrong on our end. Please try again in a moment.';
+      return l10n.errorInternalError;
     default:
-      return 'Something went wrong. Please try again.';
+      return l10n.errorUnknown;
+  }
+}
+
+/// Maps the backend's `{code, params}` violation list (see
+/// `backend/app/core/password_policy.py`) into one sentence. Tolerant of an
+/// empty/unrecognized list (falls back to generic copy) and of a legacy plain
+/// string `reason` (pre-i18n backend), so a version mismatch degrades rather
+/// than crashing.
+String _passwordErrorMessage(AppLocalizations l10n, Object? reason) {
+  if (reason is String && reason.isNotEmpty) return reason;
+  if (reason is List && reason.isNotEmpty) {
+    final parts = reason
+        .whereType<Map>()
+        .map((v) => _violationMessage(l10n, v))
+        .where((s) => s.isNotEmpty);
+    if (parts.isNotEmpty) return parts.join(' ');
+  }
+  return l10n.errorInvalidPasswordGeneric;
+}
+
+String _violationMessage(AppLocalizations l10n, Map violation) {
+  final params = violation['params'];
+  final p = params is Map ? params : const {};
+  switch (violation['code']) {
+    case 'password_too_short':
+      return l10n.passwordTooShort((p['min_length'] as num?)?.toInt() ?? 0);
+    case 'password_missing_variety':
+      return l10n.passwordMissingVariety(
+        (p['required_categories'] as num?)?.toInt() ?? 0,
+      );
+    default:
+      return '';
   }
 }
 
 /// Short label for a full-screen error state — pairs with [messageFor] as the body.
-String titleFor(Object? rawError) {
+String titleFor(AppLocalizations l10n, Object? rawError) {
   final error = asRelayException(rawError);
-  if (error.isConnectivityFailure) return "You're offline";
-  if (error.kind == ApiErrorKind.unauthorized) return 'Session expired';
-  return "Couldn't load this";
+  if (error.isConnectivityFailure) return l10n.errorTitleOffline;
+  if (error.kind == ApiErrorKind.unauthorized) return l10n.errorTitleSessionExpired;
+  return l10n.errorTitleGeneric;
 }

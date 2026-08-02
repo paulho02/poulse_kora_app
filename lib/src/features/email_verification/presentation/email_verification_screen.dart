@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/app_config/application/app_config_providers.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/error_messages.dart';
@@ -71,9 +72,11 @@ class _EmailVerificationScreenState
       await ref.read(emailVerificationProvider.notifier).resend();
       if (!mounted) return;
       _startCooldown(defaultCooldown ?? 60);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('A new code is on its way.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).emailVerifyResendSnackbar),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       final relayError = asRelayException(error);
@@ -81,9 +84,10 @@ class _EmailVerificationScreenState
         final retryAfter = relayError.detail['retry_after'];
         if (retryAfter is int) _startCooldown(retryAfter);
       }
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(messageFor(error))));
+      ).showSnackBar(SnackBar(content: Text(messageFor(l10n, error))));
     }
   }
 
@@ -91,25 +95,26 @@ class _EmailVerificationScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(emailVerificationProvider);
     final isSubmitting = state.isLoading;
+    final l10n = AppLocalizations.of(context);
 
     ref.listen(emailVerificationProvider, (previous, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(messageFor(next.error))));
+        ).showSnackBar(SnackBar(content: Text(messageFor(l10n, next.error))));
       }
     });
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify your email'),
+        title: Text(l10n.emailVerifyTitle),
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
             onPressed: isSubmitting
                 ? null
                 : () => ref.read(authNotifierProvider.notifier).logout(),
-            child: const Text('Log out'),
+            child: Text(l10n.commonLogOut),
           ),
         ],
       ),
@@ -122,22 +127,19 @@ class _EmailVerificationScreenState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  "We've sent a verification code to your email. Enter it "
-                  'below to continue.',
-                  textAlign: TextAlign.center,
-                ),
+                Text(l10n.emailVerifyInstructions, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _codeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Verification code',
+                  decoration: InputDecoration(
+                    labelText: l10n.emailVerifyCodeLabel,
                   ),
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, letterSpacing: 4),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Enter the code' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? l10n.emailVerifyEnterCode
+                      : null,
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
@@ -148,7 +150,7 @@ class _EmailVerificationScreenState
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Verify'),
+                      : Text(l10n.emailVerifyButton),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
@@ -157,8 +159,8 @@ class _EmailVerificationScreenState
                       : _resend,
                   child: Text(
                     _cooldownSecondsRemaining > 0
-                        ? 'Resend code in ${_cooldownSecondsRemaining}s'
-                        : "Didn't get a code? Resend",
+                        ? l10n.emailVerifyResendIn(_cooldownSecondsRemaining)
+                        : l10n.emailVerifyResendPrompt,
                   ),
                 ),
               ],

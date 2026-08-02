@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/tips/presentation/view_tip.dart';
@@ -20,6 +21,7 @@ class FeedScreen extends ConsumerWidget {
     final feedAsync = ref.watch(feedNotifierProvider);
     final subscribedChannels = ref.watch(subscribedChannelsProvider);
     final selectedChannel = ref.watch(selectedChannelFilterProvider);
+    final l10n = AppLocalizations.of(context);
 
     // Seed the token/price header once; refreshed on pull-to-refresh below.
     ref.listen(expandedPostIdProvider, (previous, next) {
@@ -34,15 +36,15 @@ class FeedScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           feedAsync.when(
-            data: (feed) => 'Feed · ${feed.data.length} open posts',
-            loading: () => 'Feed',
-            error: (_, _) => 'Feed',
+            data: (feed) => l10n.feedTitleWithCount(feed.data.length),
+            loading: () => l10n.feedTitle,
+            error: (_, _) => l10n.feedTitle,
           ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Reload feed',
+            tooltip: l10n.feedReloadTooltip,
             onPressed: feedAsync.isLoading
                 ? null
                 : () => Future.wait([
@@ -54,9 +56,7 @@ class FeedScreen extends ConsumerWidget {
       ),
       body: ViewTip(
         tipKey: 'tip.feed',
-        message:
-            'This is your feed — review each post and forward or drop it. '
-            "Nothing here is ranked by an algorithm.",
+        message: l10n.feedTipMessage,
         child: RefreshIndicator(
           // Pull-to-refresh (scroll up) also fetches the latest token balance/price.
           onRefresh: () => Future.wait([
@@ -74,7 +74,7 @@ class FeedScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
                       _ChannelChip(
-                        label: 'All',
+                        label: l10n.feedAllChannelsChip,
                         selected: selectedChannel == null,
                         onTap: () => ref
                             .read(selectedChannelFilterProvider.notifier)
@@ -99,18 +99,17 @@ class FeedScreen extends ConsumerWidget {
                     if (subscribedChannels.isEmpty) {
                       return _ScrollableEmptyState(
                         icon: Icons.forum_outlined,
-                        title: 'Join a channel to get started',
-                        subtitle:
-                            'Subscribe to channels to start seeing posts in your feed.',
-                        actionLabel: 'Browse channels',
+                        title: l10n.feedEmptyNoChannelsTitle,
+                        subtitle: l10n.feedEmptyNoChannelsSubtitle,
+                        actionLabel: l10n.feedEmptyNoChannelsAction,
                         onAction: () => context.go('/channels'),
                       );
                     }
                     if (posts.isEmpty) {
-                      return const _ScrollableEmptyState(
+                      return _ScrollableEmptyState(
                         icon: Icons.check_circle_outline,
-                        title: 'All caught up',
-                        subtitle: 'No posts to review right now.',
+                        title: l10n.feedEmptyCaughtUpTitle,
+                        subtitle: l10n.feedEmptyCaughtUpSubtitle,
                       );
                     }
                     return Column(

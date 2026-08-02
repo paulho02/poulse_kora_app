@@ -1,30 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../routing/app_router.dart';
 import '../config/app_config.dart';
 
-const _points = [
-  (
-    Icons.construction_outlined,
-    "Relay is in beta. You're using an early version of the app while it's "
-        'still being built.',
-  ),
-  (
-    Icons.bug_report_outlined,
-    "Bugs and rough edges are expected. If something breaks or feels off, "
-        "that's the beta, not you.",
-  ),
-  (
-    Icons.update_outlined,
-    'Features can change, move, or disappear between versions as things get '
-        'reworked.',
-  ),
-  (
-    Icons.storage_outlined,
-    "Data may occasionally be reset while the platform is under active "
-        "development — don't treat it as permanent yet.",
-  ),
+List<(IconData, String)> _points(AppLocalizations l10n) => [
+  (Icons.construction_outlined, l10n.betaPoint1),
+  (Icons.bug_report_outlined, l10n.betaPoint2),
+  (Icons.update_outlined, l10n.betaPoint3),
+  (Icons.storage_outlined, l10n.betaPoint4),
 ];
 
 /// Slim, permanent strip reminding the user this is a beta build. Unlike
@@ -46,6 +31,7 @@ class BetaBanner extends StatelessWidget {
     if (!AppConfig.betaDisclaimerEnabled) return child;
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final background = theme.colorScheme.tertiaryContainer;
     final foreground = theme.colorScheme.onTertiaryContainer;
 
@@ -107,7 +93,7 @@ class BetaBanner extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Beta version — tap for details',
+                          l10n.betaTapForDetails,
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: foreground,
                             fontWeight: FontWeight.w600,
@@ -143,6 +129,7 @@ class _BetaInfoSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return SafeArea(
       child: Padding(
@@ -160,7 +147,7 @@ class _BetaInfoSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Beta version',
+                  l10n.betaVersionTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -168,7 +155,7 @@ class _BetaInfoSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            for (final (icon, text) in _points) ...[
+            for (final (icon, text) in _points(l10n)) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -190,7 +177,7 @@ class _BetaInfoSheet extends StatelessWidget {
               width: double.infinity,
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Got it'),
+                child: Text(l10n.betaGotIt),
               ),
             ),
           ],

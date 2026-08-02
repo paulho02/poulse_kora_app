@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/speech_bubble_tooltip.dart';
 import '../application/economy_providers.dart';
 
@@ -22,6 +23,7 @@ class EconomyStatusBar extends ConsumerWidget {
     final economy = cached.data;
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final expiresAt = economy.postPriceExpiresAt;
     return Container(
       width: double.infinity,
@@ -36,9 +38,7 @@ class EconomyStatusBar extends ConsumerWidget {
         children: [
           _Stat(
             icon: Icons.toll_outlined,
-            label:
-                '${economy.tokenBalance} '
-                'token${economy.tokenBalance == 1 ? '' : 's'}',
+            label: l10n.economyTokenBalance(economy.tokenBalance),
             color: theme.colorScheme.primary,
           ),
           const SizedBox(width: 20),
@@ -53,8 +53,8 @@ class EconomyStatusBar extends ConsumerWidget {
             _Stat(
               icon: Icons.sell_outlined,
               label: cached.isStale
-                  ? '~${economy.postPrice} to post'
-                  : '${economy.postPrice} to post',
+                  ? l10n.economyPriceApprox(economy.postPrice)
+                  : l10n.economyPrice(economy.postPrice),
               color: economy.canAffordPost
                   ? theme.colorScheme.onSurfaceVariant
                   : theme.colorScheme.error,
@@ -175,12 +175,13 @@ class _PriceWithCountdownState extends ConsumerState<_PriceWithCountdown> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final priceColor = widget.canAfford
         ? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.error;
     final priceLabel = widget.isStale
-        ? '~${widget.price} to post'
-        : '${widget.price} to post';
+        ? l10n.economyPriceApprox(widget.price)
+        : l10n.economyPrice(widget.price);
 
     final expired = _remaining <= Duration.zero;
     final minutes = _remaining.inMinutes;
@@ -189,9 +190,8 @@ class _PriceWithCountdownState extends ConsumerState<_PriceWithCountdown> {
 
     return SpeechBubbleTooltip(
       message: expired
-          ? "The price just expired — refreshing it now."
-          : 'The price to post rises when the app is busy. '
-                "It's locked in for $countdownLabel — after that it may change.",
+          ? l10n.economyPriceExpired
+          : l10n.economyPriceExplainer(countdownLabel),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(

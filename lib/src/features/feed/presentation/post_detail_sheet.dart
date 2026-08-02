@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../application/feed_providers.dart';
 import '../data/post.dart';
@@ -25,23 +26,25 @@ class _PostDetailSheet extends ConsumerWidget {
     // Grab the messenger before popping: afterwards this sheet's context is
     // defunct, and a `context.mounted` check would just swallow the error.
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     Navigator.of(context).pop();
     try {
       await ref
           .read(feedNotifierProvider.notifier)
           .reviewAndRemove(post.id, kind);
     } catch (error) {
-      showErrorSnackBarOn(messenger, error);
+      showErrorSnackBarOn(messenger, l10n, error);
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final hoursLeft = post.timeRemaining.inHours;
     final postedAgo = post.timeAgo == 'now'
-        ? 'just now'
-        : '${post.timeAgo} ago';
+        ? l10n.postJustNow
+        : l10n.postTimeAgoSuffix(post.timeAgo);
 
     return SafeArea(
       child: Padding(
@@ -50,7 +53,7 @@ class _PostDetailSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('POST DETAIL', style: theme.textTheme.labelSmall),
+            Text(l10n.postDetailHeader, style: theme.textTheme.labelSmall),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -67,8 +70,8 @@ class _PostDetailSheet extends ConsumerWidget {
                       children: [
                         Text(
                           post.isAnonymous
-                              ? 'Anonymous'
-                              : (post.author.username ?? 'Unknown'),
+                              ? l10n.postAnonymous
+                              : (post.author.username ?? l10n.postUnknownAuthor),
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: post.isSupporterPost
                                 ? theme.colorScheme.primary
@@ -101,7 +104,7 @@ class _PostDetailSheet extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  'Supporter',
+                                  l10n.postSupporterBadge,
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.primary,
                                     fontWeight: FontWeight.w600,
@@ -114,8 +117,8 @@ class _PostDetailSheet extends ConsumerWidget {
                       ],
                     ),
                     Text(
-                      '${post.channelName} · Posted $postedAgo · '
-                      '$hoursLeft h left',
+                      '${post.channelName} · ${l10n.postDetailPostedAgo(postedAgo)} · '
+                      '${l10n.postDetailHoursLeft(hoursLeft)}',
                       style: theme.textTheme.labelSmall,
                     ),
                   ],
@@ -134,7 +137,10 @@ class _PostDetailSheet extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
-                child: Text('PHOTO', style: theme.textTheme.labelSmall),
+                child: Text(
+                  l10n.postPhotoPlaceholder,
+                  style: theme.textTheme.labelSmall,
+                ),
               ),
             ],
             const SizedBox(height: 24),
@@ -152,7 +158,7 @@ class _PostDetailSheet extends ConsumerWidget {
                   child: FilledButton.tonalIcon(
                     onPressed: () => _review(context, ref, 'drop'),
                     icon: const Icon(Icons.close),
-                    label: const Text('Drop'),
+                    label: Text(l10n.postDrop),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -160,7 +166,7 @@ class _PostDetailSheet extends ConsumerWidget {
                   child: FilledButton.icon(
                     onPressed: () => _review(context, ref, 'forward'),
                     icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Forward'),
+                    label: Text(l10n.postForward),
                   ),
                 ),
               ],

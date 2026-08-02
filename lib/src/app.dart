@@ -8,7 +8,9 @@ import 'core/network/connectivity.dart';
 import 'core/presentation/beta_banner.dart';
 import 'core/presentation/offline_banner.dart';
 import 'core/settings/app_settings.dart';
+import 'core/settings/locale_settings.dart';
 import 'core/theme/app_theme.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'features/auth/application/auth_providers.dart';
 import 'features/channels/application/channels_providers.dart';
 import 'features/economy/application/economy_providers.dart';
@@ -27,6 +29,7 @@ class PoulseKoraApp extends ConsumerWidget {
     // profile. Reading it from the network meant a preference the app already
     // knew about was unavailable whenever the backend was.
     final themeMode = ref.watch(appSettingsProvider).themeMode;
+    final locale = ref.watch(activeLocaleProvider);
 
     // Public endpoint, checked pre-login too — warm it here rather than
     // waiting for InfoBanner to mount, since the splash-screen return below
@@ -115,6 +118,9 @@ class PoulseKoraApp extends ConsumerWidget {
     final authReady = ref.watch(authReadyProvider);
     if (!authReady) {
       return MaterialApp(
+        locale: locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: themeMode,
@@ -126,6 +132,9 @@ class PoulseKoraApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Relay',
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,

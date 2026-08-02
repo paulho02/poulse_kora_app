@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../data/global_stats.dart';
 
 /// Vertical bar chart of how many posts have been forwarded N times.
@@ -13,6 +14,7 @@ class ForwardingDistributionChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final maxCount = buckets.fold<int>(
       1,
       (max, b) => b.postCount > max ? b.postCount : max,
@@ -75,7 +77,7 @@ class ForwardingDistributionChart extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'forwards per post',
+          l10n.statsForwardsPerPost,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

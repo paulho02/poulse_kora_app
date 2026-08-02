@@ -5,6 +5,7 @@ import 'config/server_config.dart';
 import 'network/connectivity.dart';
 import 'network/dio_client.dart';
 import 'settings/app_settings.dart';
+import 'settings/locale_settings.dart';
 import 'storage/token_storage.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) => TokenStorage());
@@ -27,5 +28,6 @@ final dioClientProvider = Provider<DioClient>((ref) {
     baseUrl: ref.watch(serverConfigProvider).baseUrl,
     connectivity: ref.watch(connectivityProvider.notifier),
     onUnauthorized: () => ref.read(onUnauthorizedProvider)(),
+    localeCode: () => ref.read(activeLocaleProvider).languageCode,
   );
 });

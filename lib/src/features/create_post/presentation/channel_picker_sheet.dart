@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/data/channel.dart';
 
@@ -45,6 +46,7 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final filtered = _query.isEmpty
         ? widget.channels
         : widget.channels
@@ -81,10 +83,10 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Search channels',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: l10n.channelsSearchHint,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) =>
                     setState(() => _query = value.toLowerCase()),
@@ -92,9 +94,9 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
             ),
             Flexible(
               child: filtered.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text('No channels found'),
+                  ? Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(l10n.channelsNoneFound),
                     )
                   : ListView.builder(
                       shrinkWrap: true,

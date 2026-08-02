@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/error_messages.dart';
 import '../application/auth_providers.dart';
 import 'server_settings_sheet.dart';
@@ -44,18 +45,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
+    final l10n = AppLocalizations.of(context);
 
     ref.listen(authNotifierProvider, (previous, next) {
       if (next.hasError) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(messageFor(next.error))));
+        ).showSnackBar(SnackBar(content: Text(messageFor(l10n, next.error))));
       }
     });
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log in'),
+        title: Text(l10n.authLogIn),
         actions: const [ServerSettingsButton()],
       ),
       body: Center(
@@ -75,18 +77,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: l10n.commonEmail),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Email is required' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? l10n.validationEmailRequired
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: l10n.commonPassword,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -94,8 +97,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               : Icons.visibility_off_outlined,
                         ),
                         tooltip: _obscurePassword
-                            ? 'Show password'
-                            : 'Hide password',
+                            ? l10n.authShowPassword
+                            : l10n.authHidePassword,
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
                         ),
@@ -111,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     autofillHints: const [AutofillHints.password],
                     onFieldSubmitted: (_) => isLoading ? null : _submit(),
                     validator: (v) => (v == null || v.isEmpty)
-                        ? 'Password is required'
+                        ? l10n.validationPasswordRequired
                         : null,
                   ),
                   const SizedBox(height: 24),
@@ -123,14 +126,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Log in'),
+                        : Text(l10n.authLogIn),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: isLoading
                         ? null
                         : () => context.go('/register'),
-                    child: const Text("Don't have an account? Register"),
+                    child: Text(l10n.authGoToRegister),
                   ),
                 ],
               ),

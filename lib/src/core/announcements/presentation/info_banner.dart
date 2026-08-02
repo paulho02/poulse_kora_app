@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../theme/app_theme.dart';
 import '../application/announcement_providers.dart';
 import '../data/announcement.dart';
@@ -109,6 +110,7 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     // The Material 3 token pair meant for exactly this — a floating surface
     // that reads as an overlay, not another panel blending into the app,
     // in both light and dark theme. Same convention as SpeechBubbleTooltip.
@@ -169,7 +171,7 @@ class _Card extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            "Don't show again",
+                            l10n.infoBannerDontShowAgain,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: foreground.withValues(alpha: 0.85),
                             ),
@@ -186,7 +188,7 @@ class _Card extends StatelessWidget {
               // Navigator that owns the only `Overlay` in this tree, so that
               // would throw "No Overlay widget found" the moment it builds.
               Semantics(
-                label: 'Dismiss',
+                label: l10n.infoBannerDismiss,
                 child: IconButton(
                   icon: Icon(Icons.close, size: 18, color: foreground),
                   onPressed: onClose,
