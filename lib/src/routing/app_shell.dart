@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+
 /// Bottom-nav shell for the 5 main tabs (Feed/Channels/Create/Stats/Profile),
 /// wrapping a [StatefulShellRoute.indexedStack] so each tab keeps its own
 /// navigation stack (e.g. Profile > Settings survives switching tabs).
@@ -11,6 +13,7 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
@@ -19,31 +22,31 @@ class AppShell extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.forum_outlined),
-            selectedIcon: Icon(Icons.forum),
-            label: 'Feed',
+            icon: const Icon(Icons.forum_outlined),
+            selectedIcon: const Icon(Icons.forum),
+            label: l10n.feedTitle,
           ),
           NavigationDestination(
-            icon: Icon(Icons.tag_outlined),
-            selectedIcon: Icon(Icons.tag),
-            label: 'Channels',
+            icon: const Icon(Icons.tag_outlined),
+            selectedIcon: const Icon(Icons.tag),
+            label: l10n.channelsTitle,
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: 'Create',
+            icon: const Icon(Icons.add_circle_outline),
+            selectedIcon: const Icon(Icons.add_circle),
+            label: l10n.navCreate,
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Stats',
+            icon: const Icon(Icons.bar_chart_outlined),
+            selectedIcon: const Icon(Icons.bar_chart),
+            label: l10n.navStats,
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: l10n.profileTitle,
           ),
         ],
       ),

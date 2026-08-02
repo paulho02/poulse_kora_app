@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/app_config/application/app_config_providers.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/presentation/language_picker.dart';
 import '../application/auth_providers.dart';
 import 'server_settings_sheet.dart';
 
@@ -71,7 +72,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.authCreateAccount),
-        actions: const [ServerSettingsButton()],
+        actions: const [LanguagePickerButton(), ServerSettingsButton()],
       ),
       body: Center(
         child: SingleChildScrollView(
