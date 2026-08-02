@@ -70,6 +70,8 @@
   "settingsResetTutorialHints": "Tipps zurücksetzen",
   "settingsResetTutorialHintsSubtitle": "Bringt die Tipps zurück, die du auf jedem Tab ausgeblendet hast.",
   "settingsResetTutorialHintsSnackbar": "Die Tipps werden wieder angezeigt, sobald du die jeweiligen Tabs öffnest.",
+  "settingsReplayIntro": "Intro erneut ansehen",
+  "settingsReplayIntroSubtitle": "Sieh dir die Willkommens-Folien und Richtlinien noch einmal an.",
   "settingsSectionAccount": "Konto",
 
   "authLogIn": "Anmelden",
@@ -209,5 +211,8 @@
   "economyPriceExpired": "Der Preis ist gerade abgelaufen — wird jetzt aktualisiert.",
   "economyPriceExplainer": "Der Preis fürs Posten steigt, wenn gerade viel los ist. Er gilt noch für {countdown} — danach kann er sich ändern.",
 
-  "tipDismiss": "Schließen"
+  "tipDismiss": "Schließen",
+
+  "navCreate": "Erstellen",
+  "navStats": "Stats"
 }

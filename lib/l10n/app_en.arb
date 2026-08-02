@@ -187,6 +187,10 @@
   "@settingsResetTutorialHintsSubtitle": {},
   "settingsResetTutorialHintsSnackbar": "Tutorial hints will show again as you open each tab.",
   "@settingsResetTutorialHintsSnackbar": {},
+  "settingsReplayIntro": "Replay intro",
+  "@settingsReplayIntro": {},
+  "settingsReplayIntroSubtitle": "Watch the welcome slides and guidelines again.",
+  "@settingsReplayIntroSubtitle": {},
   "settingsSectionAccount": "Account",
   "@settingsSectionAccount": {},
 
@@ -488,5 +492,10 @@
   },
 
   "tipDismiss": "Dismiss",
-  "@tipDismiss": {}
+  "@tipDismiss": {},
+
+  "navCreate": "Create",
+  "@navCreate": {},
+  "navStats": "Stats",
+  "@navStats": {}
 }

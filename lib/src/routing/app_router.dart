@@ -163,6 +163,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
+      // A normal pushed route (unlike `_onboardingRoute`, which the redirect
+      // above owns) — reached from Settings' "Replay intro" for an
+      // already-onboarded user, see `OnboardingScreen.isReplay`. Distinct
+      // from `_onboardingRoute` so the redirect's "already onboarded, bounce
+      // to /feed" check (keyed on `_onboardingRoute` exactly) leaves it alone.
+      GoRoute(
+        path: '/onboarding/replay',
+        name: 'onboardingReplay',
+        builder: (context, state) => const OnboardingScreen(isReplay: true),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),

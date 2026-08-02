@@ -14,8 +14,19 @@ enum _OnboardingStep { intro, channels, disclaimer }
 /// `UserProfile.onboardingCompleted`). Three steps in a single screen rather
 /// than three routes: the step index is transient flow state, not something
 /// that needs to survive a deep link or a back-button press independently.
+///
+/// Also reused, via [isReplay], as an already-onboarded user's "watch the
+/// intro again" from Settings (`/onboarding/replay`, a normal pushed route
+/// rather than the redirect-driven one) — see `settings_screen.dart`'s
+/// "Replay intro" row.
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({super.key, this.isReplay = false});
+
+  /// True when reached from Settings rather than the mandatory post-
+  /// registration flow. Skips channel selection (those channels are already
+  /// chosen) and, on confirming the disclaimer, just pops back to Settings
+  /// instead of calling `completeOnboarding()` again.
+  final bool isReplay;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -26,6 +37,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   var _submitting = false;
 
   Future<void> _confirmDisclaimer() async {
+    if (widget.isReplay) {
+      Navigator.of(context).pop();
+      return;
+    }
     setState(() => _submitting = true);
     try {
       await ref.read(profileProvider.notifier).completeOnboarding();
@@ -43,7 +58,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       body: switch (_step) {
         _OnboardingStep.intro => IntroSlides(
-          onDone: () => setState(() => _step = _OnboardingStep.channels),
+          onDone: () => setState(
+            () => _step = widget.isReplay
+                ? _OnboardingStep.disclaimer
+                : _OnboardingStep.channels,
+          ),
         ),
         _OnboardingStep.channels => ChannelSelectionStep(
           onContinue: () => setState(() => _step = _OnboardingStep.disclaimer),
