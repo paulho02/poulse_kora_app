@@ -6,6 +6,7 @@ import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/feed_providers.dart';
+import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 
 /// Shared height for the Drop / Forward action buttons so they always match.
@@ -39,36 +40,40 @@ class _PostCardState extends ConsumerState<PostCard>
 
   Future<void> _review(String kind) async {
     if (_leaving) return;
-    // Captured up front: the optimistic removal inside `reviewAndRemove` unmounts
-    // this card, so by the time a failure comes back `context` is dead. Reading
-    // the messenger now is what lets the error still reach the user.
+    // Captured up front: once the review succeeds, the provider drops this
+    // post and this card can end up unmounted before the snackbar would be
+    // shown for a *later* failure path — reading the messenger now keeps
+    // that path working too.
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
 
-    setState(() {
-      _leaving = true;
-      _direction = kind == 'forward' ? 1 : -1;
-    });
+    // Disable the buttons immediately, but don't animate yet: the server
+    // gets the final say on whether this review is even valid (the post may
+    // already have left this user's queue), so the "it flew off the list"
+    // animation must not play until that's confirmed.
+    setState(() => _leaving = true);
 
-    // Play the exit animation first so the action feels physical, then commit
-    // the removal to the provider (which drops it from the underlying list).
-    await _exit.forward();
-
+    final PostReviewResult result;
     try {
-      await ref
+      result = await ref
           .read(feedNotifierProvider.notifier)
-          .reviewAndRemove(widget.post.id, kind);
+          .reviewPost(widget.post.id, kind);
     } catch (error) {
-      // Say why. Offline is just another error code here — the card returns
-      // rather than the review being queued, since the server decides whether a
-      // review is still valid (the post may have left this user's queue).
       showErrorSnackBarOn(messenger, l10n, error);
-      // Roll the card back into view — but only if this state object survived;
-      // the rollback in the notifier may have rebuilt a fresh one.
       if (!mounted) return;
       setState(() => _leaving = false);
-      _exit.reset();
+      return;
     }
+
+    if (!mounted) return;
+    // Confirmed — now it's safe to play the exit animation, then commit the
+    // removal to the provider (which drops it from the underlying list).
+    setState(() => _direction = kind == 'forward' ? 1 : -1);
+    await _exit.forward();
+    if (!mounted) return;
+    ref
+        .read(feedNotifierProvider.notifier)
+        .applyReviewResult(widget.post.id, result);
   }
 
   @override
