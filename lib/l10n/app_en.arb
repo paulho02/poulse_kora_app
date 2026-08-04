@@ -47,6 +47,9 @@
   "errorInvalidPasswordGeneric": "That password isn't strong enough. Try a longer one with a mix of letters, numbers, and symbols.",
   "@errorInvalidPasswordGeneric": {},
 
+  "errorChangePasswordWrongCurrentPassword": "That's not your current password.",
+  "@errorChangePasswordWrongCurrentPassword": {},
+
   "errorUnverifiedUser": "Verify your email to continue.",
   "@errorUnverifiedUser": {},
 
@@ -158,6 +161,8 @@
   "@validationPasswordMinLength": {
     "placeholders": { "minLength": { "type": "int" } }
   },
+  "validationPasswordsDoNotMatch": "Passwords don't match",
+  "@validationPasswordsDoNotMatch": {},
 
   "settingsTitle": "Settings",
   "@settingsTitle": {},
@@ -193,6 +198,23 @@
   "@settingsReplayIntroSubtitle": {},
   "settingsSectionAccount": "Account",
   "@settingsSectionAccount": {},
+  "settingsChangePassword": "Change Password",
+  "@settingsChangePassword": {},
+  "settingsChangePasswordSubtitle": "Update the password you sign in with.",
+  "@settingsChangePasswordSubtitle": {},
+
+  "changePasswordTitle": "Change Password",
+  "@changePasswordTitle": {},
+  "changePasswordCurrentPasswordLabel": "Current password",
+  "@changePasswordCurrentPasswordLabel": {},
+  "changePasswordNewPasswordLabel": "New password",
+  "@changePasswordNewPasswordLabel": {},
+  "changePasswordConfirmPasswordLabel": "Confirm new password",
+  "@changePasswordConfirmPasswordLabel": {},
+  "changePasswordSubmit": "Change Password",
+  "@changePasswordSubmit": {},
+  "changePasswordSuccess": "Your password has been changed.",
+  "@changePasswordSuccess": {},
 
   "authLogIn": "Log in",
   "@authLogIn": {},

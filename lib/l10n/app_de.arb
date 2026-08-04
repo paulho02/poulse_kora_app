@@ -18,6 +18,7 @@
   "errorLoginBadCredentials": "E-Mail oder Passwort stimmt nicht. Überprüfe beides und versuch es erneut.",
   "errorEmailAlreadyExists": "Für diese E-Mail-Adresse gibt es schon ein Konto. Melde dich stattdessen an.",
   "errorInvalidPasswordGeneric": "Dieses Passwort ist nicht sicher genug. Verwende ein längeres mit einer Mischung aus Buchstaben, Zahlen und Sonderzeichen.",
+  "errorChangePasswordWrongCurrentPassword": "Das ist nicht dein aktuelles Passwort.",
   "errorUnverifiedUser": "Bestätige deine E-Mail-Adresse, um fortzufahren.",
   "errorInvalidCodeRemaining": "{remaining, plural, one{Der Code ist falsch. Noch 1 Versuch übrig.} other{Der Code ist falsch. Noch {remaining} Versuche übrig.}}",
   "errorInvalidCodeExhausted": "Der Code ist falsch, und deine Versuche sind aufgebraucht. Hol dir einen neuen Code.",
@@ -56,6 +57,7 @@
   "validationUsernameRequired": "Benutzername erforderlich",
   "validationPasswordRequired": "Passwort erforderlich",
   "validationPasswordMinLength": "Das Passwort muss mindestens {minLength} Zeichen lang sein",
+  "validationPasswordsDoNotMatch": "Passwörter stimmen nicht überein",
 
   "settingsTitle": "Einstellungen",
   "settingsSectionAlgorithm": "Algorithmus",
@@ -73,6 +75,15 @@
   "settingsReplayIntro": "Intro erneut ansehen",
   "settingsReplayIntroSubtitle": "Sieh dir die Willkommens-Folien und Richtlinien noch einmal an.",
   "settingsSectionAccount": "Konto",
+  "settingsChangePassword": "Passwort ändern",
+  "settingsChangePasswordSubtitle": "Aktualisiere das Passwort, mit dem du dich anmeldest.",
+
+  "changePasswordTitle": "Passwort ändern",
+  "changePasswordCurrentPasswordLabel": "Aktuelles Passwort",
+  "changePasswordNewPasswordLabel": "Neues Passwort",
+  "changePasswordConfirmPasswordLabel": "Neues Passwort bestätigen",
+  "changePasswordSubmit": "Passwort ändern",
+  "changePasswordSuccess": "Dein Passwort wurde geändert.",
 
   "authLogIn": "Anmelden",
   "authShowPassword": "Passwort anzeigen",

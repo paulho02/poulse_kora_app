@@ -32,7 +32,10 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorEmailAlreadyExists;
     case 'register_invalid_password':
     case 'update_user_invalid_password':
+    case 'change_password_invalid_password':
       return _passwordErrorMessage(l10n, error.detail['reason']);
+    case 'change_password_wrong_current_password':
+      return l10n.errorChangePasswordWrongCurrentPassword;
 
     // ---- email verification --------------------------------------------------
     case 'unverified_user':
@@ -139,6 +142,8 @@ String _violationMessage(AppLocalizations l10n, Map violation) {
 String titleFor(AppLocalizations l10n, Object? rawError) {
   final error = asRelayException(rawError);
   if (error.isConnectivityFailure) return l10n.errorTitleOffline;
-  if (error.kind == ApiErrorKind.unauthorized) return l10n.errorTitleSessionExpired;
+  if (error.kind == ApiErrorKind.unauthorized) {
+    return l10n.errorTitleSessionExpired;
+  }
   return l10n.errorTitleGeneric;
 }

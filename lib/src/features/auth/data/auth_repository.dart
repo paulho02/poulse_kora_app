@@ -30,4 +30,17 @@ class AuthRepository {
       data: {'email': email, 'password': password, 'username': username},
     );
   }
+
+  /// Requires the current password server-side — see
+  /// `backend/app/api/change_password.py`. `PATCH /users/me` deliberately
+  /// cannot change the password at all, so this is the only path.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _dio.post<void>(
+      '/auth/change-password',
+      data: {'current_password': currentPassword, 'new_password': newPassword},
+    );
+  }
 }

@@ -12,6 +12,7 @@ import '../features/email_verification/presentation/email_verification_screen.da
 import '../features/feed/presentation/feed_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_providers.dart';
+import '../features/profile/presentation/change_password_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
@@ -116,8 +117,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // fails open (treats as "not required") if the public config hasn't
       // loaded yet.
       final requireEmailVerification =
-          ref.read(appConfigProvider).value?.requireEmailVerification ??
-          false;
+          ref.read(appConfigProvider).value?.requireEmailVerification ?? false;
       final needsEmailVerification =
           requireEmailVerification && profile?.isVerified == false;
 
@@ -224,6 +224,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'settings',
                     name: 'settings',
                     builder: (context, state) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'change-password',
+                        name: 'changePassword',
+                        builder: (context, state) =>
+                            const ChangePasswordScreen(),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'posted',
+                    name: 'profile-posted',
+                    builder: (context, state) =>
+                        const PostHistoryScreen(mode: HistoryMode.posted),
+                  ),
+                  GoRoute(
+                    path: 'reviewed',
+                    name: 'profile-reviewed',
+                    builder: (context, state) =>
+                        const PostHistoryScreen(mode: HistoryMode.reviewed),
                   ),
                 ],
               ),

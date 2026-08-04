@@ -115,6 +115,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             error: (_, _) => const SizedBox.shrink(),
           ),
+          ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: Text(l10n.settingsChangePassword),
+            subtitle: Text(l10n.settingsChangePasswordSubtitle),
+            onTap: () => context.push('/profile/settings/change-password'),
+          ),
         ],
       ),
     );
