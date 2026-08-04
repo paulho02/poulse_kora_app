@@ -159,6 +159,7 @@
   "postTimeAgoSuffix": "vor {time}",
   "postDetailPostedAgo": "Gepostet {postedAgo}",
   "postDetailHoursLeft": "{hours, plural, one{noch 1 Std.} other{noch {hours} Std.}}",
+  "historyDetailReviewedAgo": "Bewertet {reviewedAgo}",
 
   "createPostPickChannelError": "Wähle einen Kanal zum Posten aus.",
   "createPostEmptyTextError": "Schreibe etwas, bevor du es weiterleitest.",
@@ -200,8 +201,23 @@
 
   "profileTitle": "Profil",
   "profileTipMessage": "Verwalte hier dein Konto, deine Bio und deine App-Einstellungen.",
-  "profileStatCreated": "Erstellt",
+  "profileStatCreated": "Gepostet",
   "profileStatTrust": "Vertrauen",
+
+  "historyPostedTitle": "Meine Beiträge",
+  "historyReviewedTitle": "Meine Bewertungen",
+  "historySearchHint": "Beitragsinhalt durchsuchen",
+  "historySearchTooltip": "Suchen",
+  "historyJumpToDateTooltip": "Zu Datum springen",
+  "historyNoMatches": "Keine Treffer gefunden",
+  "historyEmptyPosted": "Du hast noch nichts gepostet.",
+  "historyEmptyReviewed": "Du hast noch nichts bewertet.",
+  "historyNoPostsOnOrBeforeDate": "Keine Beiträge an oder vor diesem Datum gefunden.",
+  "historyDateToday": "Heute",
+  "historyDateYesterday": "Gestern",
+  "historyReviewKindForward": "Weitergeleitet",
+  "historyReviewKindDrop": "Verworfen",
+
   "profileDarkMode": "Dunkler Modus",
   "profileSignOut": "Abmelden",
 

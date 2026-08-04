@@ -10,6 +10,7 @@ import '../features/channels/presentation/channels_screen.dart';
 import '../features/create_post/presentation/create_post_screen.dart';
 import '../features/email_verification/presentation/email_verification_screen.dart';
 import '../features/feed/presentation/feed_screen.dart';
+import '../features/history/presentation/post_history_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_providers.dart';
 import '../features/profile/presentation/change_password_screen.dart';

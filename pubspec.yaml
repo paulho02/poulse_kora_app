@@ -44,6 +44,7 @@ dependencies:
   connectivity_plus: ^7.3.1
   shared_preferences: ^2.5.5
   intl: any
+  scrollable_positioned_list: ^0.3.8
 
 dev_dependencies:
   flutter_test:

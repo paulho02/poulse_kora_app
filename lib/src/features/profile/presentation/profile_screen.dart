@@ -88,10 +88,12 @@ class ProfileScreen extends ConsumerWidget {
                         _StatTile(
                           label: l10n.profileStatCreated,
                           value: stats.data.createdPostCount,
+                          onTap: () => context.push('/profile/posted'),
                         ),
                         _StatTile(
                           label: l10n.statsReviewed,
                           value: stats.data.reviewedCount,
+                          onTap: () => context.push('/profile/reviewed'),
                         ),
                         _StatTile(
                           label: l10n.profileStatTrust,
@@ -140,24 +142,45 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value});
+  const _StatTile({required this.label, required this.value, this.onTap});
 
   final String label;
   final int value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Expanded(
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            children: [
-              Text('$value', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(label, style: theme.textTheme.labelSmall),
-            ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Text('$value', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label, style: theme.textTheme.labelSmall),
+                    // Matches the "tap for details" chevron in beta_banner.dart —
+                    // only shown when the tile is actually tappable, so the
+                    // non-interactive Trust tile doesn't look clickable too.
+                    if (onTap != null) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
