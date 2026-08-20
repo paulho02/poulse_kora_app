@@ -195,4 +195,58 @@ void main() {
       },
     );
   });
+
+  group('google sign-in', () {
+    test(
+      'a Google account gets told to use the button, not "bad password"',
+      () {
+        // The whole point of the dedicated code: the account's password was
+        // destroyed by the upgrade, so "wrong credentials" would send the user
+        // round in circles.
+        final e = RelayApiException(400, 'login_use_google', const {});
+        expect(messageFor(en, e), contains('signs in with Google'));
+        expect(messageFor(de, e), contains('mit Google an'));
+      },
+    );
+
+    test('every google_* code the backend can emit has copy', () {
+      // A missing case falls through to `errorUnknown`, which is a silent
+      // failure — this catches one before it ships.
+      const codes = [
+        'login_use_google',
+        'google_account_no_password',
+        'google_account_email_locked',
+        'google_email_unverified',
+        'google_account_in_use',
+        'google_account_mismatch',
+        'google_already_linked',
+        'google_invalid_id_token',
+        'google_verification_unavailable',
+        'google_oauth_disabled',
+      ];
+      for (final code in codes) {
+        final e = RelayApiException(400, code, const {});
+        expect(
+          messageFor(en, e),
+          isNot(en.errorUnknown),
+          reason: 'no English copy for "$code"',
+        );
+        expect(
+          messageFor(de, e),
+          isNot(de.errorUnknown),
+          reason: 'no German copy for "$code"',
+        );
+      }
+    });
+
+    test('google_link_required deliberately has no copy', () {
+      // It is a prompt, not a failure: GoogleAuthSection turns it into a
+      // confirmation dialog, and it must never reach a snackbar. If someone
+      // adds a case for it, that intent has been lost.
+      final e = RelayApiException(409, 'google_link_required', const {
+        'email': 'a@b.com',
+      });
+      expect(messageFor(en, e), en.errorUnknown);
+    });
+  });
 }

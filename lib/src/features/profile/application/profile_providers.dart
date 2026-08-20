@@ -61,6 +61,21 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
     }
   }
 
+  /// Set the account's username.
+  ///
+  /// Used by the onboarding username step, which Google signups get because the
+  /// backend had to derive a name for them (Google supplies no username, and
+  /// `UserCreate.username` is normally required). Rethrows like
+  /// [completeOnboarding] rather than softening offline failures: there is a
+  /// real value the user typed, and silently dropping it would be worse than
+  /// telling them to retry.
+  Future<void> updateUsername(String username) async {
+    final updated = await ref
+        .read(profileRepositoryProvider)
+        .updateMe(username: username);
+    state = AsyncData(Cached.live(updated));
+  }
+
   /// Confirms the one-time post-registration onboarding flow. Unlike
   /// `setDarkMode`, this has no offline path: reaching this point already
   /// required the network (channel subscriptions in the flow's second step),

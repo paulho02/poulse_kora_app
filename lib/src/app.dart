@@ -54,22 +54,13 @@ class PoulseKoraApp extends ConsumerWidget {
     // account on the same device would show the previous user's feed, profile and
     // counters until each happened to refetch.
     //
-    // Invalidating on the way out also makes the warm below work: `ref.read` on a
-    // provider that still holds state is a no-op and would never re-run the pull.
+    // Done on the way *in* as well as out — see `_invalidateSessionScoped`.
     ref.listen<AsyncValue<bool>>(authNotifierProvider, (previous, next) {
       final was = previous?.value ?? false;
       final now = next.value;
 
       if (was && now == false) {
-        ref.invalidate(profileProvider);
-        ref.invalidate(emailVerificationProvider);
-        ref.invalidate(feedNotifierProvider);
-        ref.invalidate(channelsNotifierProvider);
-        ref.invalidate(selectedChannelFilterProvider);
-        ref.invalidate(economyProvider);
-        ref.invalidate(reviewGateStatusProvider);
-        ref.invalidate(statsProvider);
-        ref.invalidate(globalStatsProvider);
+        _invalidateSessionScoped(ref);
         return;
       }
 
@@ -79,6 +70,7 @@ class PoulseKoraApp extends ConsumerWidget {
       // lazy — nothing builds it until the Profile tab is opened. Warm it here, or
       // signing in shows light mode until you go looking for the setting.
       if (!was && now == true) {
+        _invalidateSessionScoped(ref);
         ref.read(profileProvider.future).ignore();
       }
     });
@@ -152,4 +144,29 @@ class PoulseKoraApp extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Drop every provider holding data that belongs to one signed-in account.
+///
+/// Run at **both** session boundaries, which is the non-obvious part. Running it
+/// only on logout was not enough: the router keeps a listener on
+/// `profileProvider` for the rest of the app's life once it has ever been
+/// attached (`_RouterRefreshNotifier._profileListenerAttached` never resets), and
+/// invalidating a provider that still has a listener rebuilds it *immediately* —
+/// with the token already cleared. That refetch 401s and the error is what the
+/// provider then holds. Signing back in could not undo it, because
+/// `ref.read(...future)` on a provider that already holds state is a no-op: the
+/// new session inherited the old one's "session expired" until the user pressed
+/// Retry. Invalidating on the way in discards that stale error, and costs nothing
+/// when there is none.
+void _invalidateSessionScoped(WidgetRef ref) {
+  ref.invalidate(profileProvider);
+  ref.invalidate(emailVerificationProvider);
+  ref.invalidate(feedNotifierProvider);
+  ref.invalidate(channelsNotifierProvider);
+  ref.invalidate(selectedChannelFilterProvider);
+  ref.invalidate(economyProvider);
+  ref.invalidate(reviewGateStatusProvider);
+  ref.invalidate(statsProvider);
+  ref.invalidate(globalStatsProvider);
 }

@@ -49,6 +49,22 @@
 
   "errorChangePasswordWrongCurrentPassword": "That's not your current password.",
   "@errorChangePasswordWrongCurrentPassword": {},
+  "errorLoginUseGoogle": "This account signs in with Google. Use the Google button below.",
+  "@errorLoginUseGoogle": {},
+  "errorGoogleAccountNoPassword": "This account signs in with Google, so it has no password to change.",
+  "@errorGoogleAccountNoPassword": {},
+  "errorGoogleAccountEmailLocked": "This account signs in with Google, so its email address can't be changed.",
+  "@errorGoogleAccountEmailLocked": {},
+  "errorGoogleEmailUnverified": "Google hasn't confirmed that email address yet. Verify it with Google and try again.",
+  "@errorGoogleEmailUnverified": {},
+  "errorGoogleAccountInUse": "That Google account is already linked to another account here.",
+  "@errorGoogleAccountInUse": {},
+  "errorGoogleAlreadyLinked": "This account is already linked to Google.",
+  "@errorGoogleAlreadyLinked": {},
+  "errorGoogleSignInFailed": "Signing in with Google didn't work. Please try again.",
+  "@errorGoogleSignInFailed": {},
+  "errorGoogleOauthDisabled": "Google sign-in isn't available right now.",
+  "@errorGoogleOauthDisabled": {},
 
   "errorUnverifiedUser": "Verify your email to continue.",
   "@errorUnverifiedUser": {},
@@ -150,11 +166,17 @@
   "@commonContinue": {},
   "commonLogOut": "Log out",
   "@commonLogOut": {},
+  "commonCancel": "Cancel",
+  "@commonCancel": {},
 
   "validationEmailRequired": "Email is required",
   "@validationEmailRequired": {},
   "validationUsernameRequired": "Username is required",
   "@validationUsernameRequired": {},
+  "validationUsernameTooShort": "Username must be at least {minLength} characters long.",
+  "@validationUsernameTooShort": {
+    "placeholders": { "minLength": { "type": "int" } }
+  },
   "validationPasswordRequired": "Password is required",
   "@validationPasswordRequired": {},
   "validationPasswordMinLength": "Password must be at least {minLength} characters",
@@ -202,6 +224,22 @@
   "@settingsChangePassword": {},
   "settingsChangePasswordSubtitle": "Update the password you sign in with.",
   "@settingsChangePasswordSubtitle": {},
+  "settingsConnectGoogle": "Sign in with Google instead",
+  "@settingsConnectGoogle": {},
+  "settingsConnectGoogleSubtitle": "Any Google account. Permanent — your password stops working.",
+  "@settingsConnectGoogleSubtitle": {},
+  "settingsGoogleConnected": "Google connected",
+  "@settingsGoogleConnected": {},
+  "settingsGoogleConnectedSubtitle": "You sign in to this account with Google.",
+  "@settingsGoogleConnectedSubtitle": {},
+  "settingsGoogleConnectedAs": "Signed in with {email}",
+  "@settingsGoogleConnectedAs": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "settingsEmailContactOnly": "For messages to you — not for signing in",
+  "@settingsEmailContactOnly": {},
+  "settingsConnectGoogleUnsupported": "Connect Google from the app rather than the browser.",
+  "@settingsConnectGoogleUnsupported": {},
 
   "changePasswordTitle": "Change Password",
   "@changePasswordTitle": {},
@@ -228,6 +266,24 @@
   "@authCreateAccount": {},
   "authGoToLogin": "Already have an account? Log in",
   "@authGoToLogin": {},
+  "authOrDivider": "or",
+  "@authOrDivider": {},
+  "authContinueWithGoogle": "Continue with Google",
+  "@authContinueWithGoogle": {},
+  "authSignUpWithGoogle": "Sign up with Google",
+  "@authSignUpWithGoogle": {},
+  "authLinkGoogleTitle": "Switch this account to Google?",
+  "@authLinkGoogleTitle": {},
+  "authLinkGoogleBody": "{email} already has an account with a password. Continuing links it to Google permanently: from then on you sign in with Google, and your password stops working. This can't be undone.",
+  "@authLinkGoogleBody": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "authLinkGoogleConfirm": "Link with Google",
+  "@authLinkGoogleConfirm": {},
+  "authLinkGoogleSettingsBody": "From now on you'll sign in with Google instead of your password. Your password stops working, and this can't be undone. The Google account doesn't have to use the same address — {email} stays your contact address.",
+  "@authLinkGoogleSettingsBody": {
+    "placeholders": { "email": { "type": "String" } }
+  },
 
   "serverSettingsTooltipCustom": "Server: {url}",
   "@serverSettingsTooltipCustom": {
@@ -439,6 +495,10 @@
   "@onboardingChannelsTitle": {},
   "onboardingChannelsSubtitle": "This is what fills your feed to start — you can join more anytime from the Channels tab.",
   "@onboardingChannelsSubtitle": {},
+  "onboardingUsernameTitle": "Pick your username",
+  "@onboardingUsernameTitle": {},
+  "onboardingUsernameSubtitle": "This is the name other people see on your posts. We picked one from your Google account — keep it or change it.",
+  "@onboardingUsernameSubtitle": {},
   "onboardingChannelsSelectedCount": "{selected}/{max} selected",
   "@onboardingChannelsSelectedCount": {
     "placeholders": {

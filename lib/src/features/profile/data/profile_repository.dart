@@ -27,6 +27,7 @@ class ProfileRepository {
     String? bio,
     bool? darkMode,
     bool? onboardingCompleted,
+    String? username,
   }) async {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/users/me',
@@ -34,6 +35,7 @@ class ProfileRepository {
         'bio': ?bio,
         'dark_mode': ?darkMode,
         'onboarding_completed': ?onboardingCompleted,
+        'username': ?username,
       },
     );
     // Keep the cache in step so a subsequent offline read doesn't resurrect the

@@ -8,6 +8,7 @@ import '../../../core/settings/locale_settings.dart';
 import '../../../core/tips/application/tip_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../application/profile_providers.dart';
+import 'google_link_tile.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -105,21 +106,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 ListTile(
                   title: Text(l10n.commonEmail),
+                  // Only spelled out when the Google row below shows a
+                  // *different* address — otherwise the two rows look like they
+                  // contradict each other. When they match, the distinction is
+                  // academic and the extra line is noise.
+                  subtitle: profile.data.hasDistinctGoogleEmail
+                      ? Text(l10n.settingsEmailContactOnly)
+                      : null,
                   trailing: Text(profile.data.email),
                 ),
+                // A Google account has no password to change — the backend
+                // refuses `POST /auth/change-password` outright — so the row
+                // would only ever lead to an error message.
+                if (!profile.data.isGoogleAccount)
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(l10n.settingsChangePassword),
+                    subtitle: Text(l10n.settingsChangePasswordSubtitle),
+                    onTap: () =>
+                        context.push('/profile/settings/change-password'),
+                  ),
+                GoogleLinkTile(profile: profile.data),
               ],
             ),
             loading: () => const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          ListTile(
-            leading: const Icon(Icons.lock_outline),
-            title: Text(l10n.settingsChangePassword),
-            subtitle: Text(l10n.settingsChangePasswordSubtitle),
-            onTap: () => context.push('/profile/settings/change-password'),
+            // Falls back to the change-password row alone: without a profile we
+            // can't know the account type, and hiding the only password
+            // affordance on a transient fetch failure would be worse than
+            // showing a row that answers with a clear error if tapped.
+            error: (_, _) => ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: Text(l10n.settingsChangePassword),
+              subtitle: Text(l10n.settingsChangePasswordSubtitle),
+              onTap: () => context.push('/profile/settings/change-password'),
+            ),
           ),
         ],
       ),

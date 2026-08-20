@@ -37,10 +37,14 @@ COPY . .
 # name; nothing else to configure. See app/src/core/config/app_config.dart.
 ARG API_BASE_URL
 ARG BETA_DISCLAIMER_ENABLED=true
+# Google OAuth *web* client ID. Empty (the default) hides the Google button;
+# the backend's own GOOGLE_OAUTH_ENABLED has to agree as well.
+ARG GOOGLE_SERVER_CLIENT_ID=
 
 RUN flutter build web --release \
     --dart-define=API_BASE_URL=${API_BASE_URL} \
-    --dart-define=BETA_DISCLAIMER_ENABLED=${BETA_DISCLAIMER_ENABLED}
+    --dart-define=BETA_DISCLAIMER_ENABLED=${BETA_DISCLAIMER_ENABLED} \
+    --dart-define=GOOGLE_SERVER_CLIENT_ID=${GOOGLE_SERVER_CLIENT_ID}
 
 FROM nginx:alpine
 

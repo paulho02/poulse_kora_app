@@ -6,14 +6,20 @@ import '../../profile/application/profile_providers.dart';
 import 'channel_selection_step.dart';
 import 'disclaimer_step.dart';
 import 'intro_slides.dart';
+import 'username_step.dart';
 
-enum _OnboardingStep { intro, channels, disclaimer }
+enum _OnboardingStep { intro, username, channels, disclaimer }
 
 /// One-time flow shown right after registration (see the `/onboarding`
 /// redirect in `routing/app_router.dart`, driven by
-/// `UserProfile.onboardingCompleted`). Three steps in a single screen rather
-/// than three routes: the step index is transient flow state, not something
-/// that needs to survive a deep link or a back-button press independently.
+/// `UserProfile.onboardingCompleted`). The steps live in a single screen rather
+/// than in separate routes: the step index is transient flow state, not
+/// something that needs to survive a deep link or a back-button press
+/// independently.
+///
+/// The username step is conditional - only Google signups reach it, because
+/// only they never got asked for a username (the register form asks; Google has
+/// no such field, so the backend derived one). See [_stepAfterIntro].
 ///
 /// Also reused, via [isReplay], as an already-onboarded user's "watch the
 /// intro again" from Settings (`/onboarding/replay`, a normal pushed route
@@ -35,6 +41,21 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   var _step = _OnboardingStep.intro;
   var _submitting = false;
+
+  /// Where the intro hands off, which depends on why we are here.
+  ///
+  /// Replay skips straight to the disclaimer (channels are long since chosen,
+  /// and the username is not being re-confirmed). Otherwise a Google account
+  /// confirms its derived username first; a password account already typed one
+  /// on the register form, so re-asking would be busywork.
+  _OnboardingStep _stepAfterIntro() {
+    if (widget.isReplay) return _OnboardingStep.disclaimer;
+    final profile = ref.read(profileProvider).value?.data;
+    if (profile != null && profile.isGoogleAccount) {
+      return _OnboardingStep.username;
+    }
+    return _OnboardingStep.channels;
+  }
 
   Future<void> _confirmDisclaimer() async {
     if (widget.isReplay) {
@@ -58,11 +79,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       body: switch (_step) {
         _OnboardingStep.intro => IntroSlides(
-          onDone: () => setState(
-            () => _step = widget.isReplay
-                ? _OnboardingStep.disclaimer
-                : _OnboardingStep.channels,
-          ),
+          onDone: () => setState(() => _step = _stepAfterIntro()),
+        ),
+        _OnboardingStep.username => UsernameStep(
+          initialUsername:
+              ref.watch(profileProvider).value?.data.username ?? '',
+          onContinue: () => setState(() => _step = _OnboardingStep.channels),
         ),
         _OnboardingStep.channels => ChannelSelectionStep(
           onContinue: () => setState(() => _step = _OnboardingStep.disclaimer),

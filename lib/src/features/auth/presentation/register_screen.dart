@@ -7,6 +7,7 @@ import '../../../core/app_config/application/app_config_providers.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/language_picker.dart';
 import '../application/auth_providers.dart';
+import 'google_auth_section.dart';
 import 'server_settings_sheet.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -164,6 +165,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     onPressed: isLoading ? null : () => context.go('/login'),
                     child: Text(l10n.authGoToLogin),
                   ),
+                  // Same endpoint as on the login screen: signing up and
+                  // signing in with Google are one flow, and which of the two
+                  // it turns out to be depends only on whether the address is
+                  // already known.
+                  GoogleAuthSection(label: l10n.authSignUpWithGoogle),
                 ],
               ),
             ),

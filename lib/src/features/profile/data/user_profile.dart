@@ -8,6 +8,8 @@ class UserProfile {
     required this.settingsRevision,
     required this.onboardingCompleted,
     required this.isVerified,
+    required this.authProvider,
+    required this.googleEmail,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -27,6 +29,11 @@ class UserProfile {
     // belongs to a session that was already using the app normally, so it
     // must not be read as "unverified" and suddenly force the verify screen.
     isVerified: json['is_verified'] as bool? ?? true,
+    // Defaulted to "password": a cache entry written before this field existed
+    // belongs to an account that could only have been a password one, and
+    // guessing "google" would wrongly hide the change-password entry.
+    authProvider: json['auth_provider'] as String? ?? 'password',
+    googleEmail: json['google_email'] as String?,
   );
 
   final String id;
@@ -34,6 +41,25 @@ class UserProfile {
   final String? username;
   final String? bio;
   final bool isVerified;
+
+  /// "password" or "google" (backend `User.auth_provider`). A Google account
+  /// cannot go back: its password is gone and its email is frozen, so the UI
+  /// hides those affordances rather than let the user find out by being refused.
+  final String authProvider;
+
+  bool get isGoogleAccount => authProvider == 'google';
+
+  /// Address of the linked Google account, or null if there is none.
+  ///
+  /// Not necessarily [email]: linking from Settings accepts any Google account,
+  /// after which this is what signs you in while [email] stays the address you
+  /// get contacted at.
+  final String? googleEmail;
+
+  /// True when the sign-in address and the contact address are different, which
+  /// is the only case where showing both is worth the extra line.
+  bool get hasDistinctGoogleEmail =>
+      googleEmail != null && googleEmail!.toLowerCase() != email.toLowerCase();
 
   /// The server's copy of the preference. Note this is *not* what the app renders
   /// from — see `core/settings/app_settings.dart`. It is only an input to sync.
@@ -57,6 +83,8 @@ class UserProfile {
     id: id,
     email: email,
     username: username,
+    authProvider: authProvider,
+    googleEmail: googleEmail,
     bio: bio ?? this.bio,
     darkMode: darkMode ?? this.darkMode,
     settingsRevision: settingsRevision ?? this.settingsRevision,

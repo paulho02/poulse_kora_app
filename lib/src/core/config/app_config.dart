@@ -39,6 +39,20 @@ class AppConfig {
     return 'http://localhost:8000';
   }
 
+  /// Google OAuth *web* client ID, used for Google sign-in.
+  ///
+  /// One value covers both platforms, but it is passed under different names:
+  /// on Android as google_sign_in's `serverClientId` (which is what makes the
+  /// resulting ID token audienced to this client, so the backend accepts it),
+  /// and on web as `clientId` (the web plugin asserts `serverClientId == null`).
+  /// See `features/auth/data/google_sign_in_service.dart`.
+  ///
+  /// Empty means "not configured", and the Google button is hidden - the
+  /// backend's own `google_oauth_enabled` flag has to agree as well.
+  static const String googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
+
   /// Toggle the persistent "beta version" strip on/off. Override in
   /// `env.json` with `"BETA_DISCLAIMER_ENABLED": false` to switch it off,
   /// e.g. once the app leaves beta.

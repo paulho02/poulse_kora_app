@@ -114,10 +114,39 @@ State management is plain Riverpod (`Provider`, `FutureProvider`, `ConsumerWidge
 beyond a `FutureProvider`, prefer `NotifierProvider`/`AsyncNotifierProvider` over introducing a new
 pattern.
 
-There is no auth flow implemented yet (login/register screens, token refresh-on-401 handling,
-route guards) — `core/network` and `core/storage` exist specifically so that work has somewhere to
-plug in. The backend's auth endpoints are `POST /api/v1/auth/jwt/login`,
-`POST /api/v1/auth/register`, `GET/PATCH /api/v1/users/me` (see backend `app/deps/users.py`).
+**Auth** lives in `features/auth/`. `authNotifierProvider` tracks token *presence* only (there is
+no refresh-token flow); `app_router.dart`'s `redirect` chain guards routes in a fixed order —
+signed-in, then email-verified, then onboarded — and a 401 from the Dio interceptor forces a logout
+via `onUnauthorizedProvider`, while a 403 deliberately does not. Backend endpoints:
+`POST /api/v1/auth/jwt/login`, `POST /api/v1/auth/register`, `POST /api/v1/auth/google`,
+`GET/PATCH /api/v1/users/me`.
+
+**Google sign-in** (`google_sign_in` 7.x) is an ID-token flow, not a redirect: the plugin yields a
+Google ID token, `POST /auth/google` verifies it server-side and returns our own JWT. No deep links
+or URL schemes are involved. Three things about it are load-bearing:
+- **One client ID, two names.** `AppConfig.googleServerClientId` (a `--dart-define`, also wired
+  into the `Dockerfile`) is passed as `serverClientId` on Android and `clientId` on web — the web
+  plugin *asserts* `serverClientId` is null. See `features/auth/data/google_sign_in_service.dart`.
+- **Web needs Google's own button.** `supportsAuthenticate()` is false there and `authenticate()`
+  throws, so `google_sign_in_button.dart` is a conditional export (`dart.library.js_interop`) and
+  the result arrives on `GoogleSignInService.idTokens` rather than from the call. Anything touching
+  that file must be checked with `flutter build web` *and* `flutter build apk` — `flutter analyze`
+  only ever sees the non-web branch.
+- **Account identity is one-way.** Linking a password account to Google destroys its password, so
+  `UserProfile.authProvider` (`"password"`/`"google"`) drives what the UI offers: Settings hides
+  Change password, and only Google signups get the onboarding username step (the backend derived
+  their name; password registrants typed one). The backend's 409 `google_link_required` is a
+  *prompt*, not a failure — `GoogleAuthSection` turns it into the irreversibility dialog and
+  re-sends the same ID token, which is why it is deliberately absent from `error_messages.dart`.
+  The two entry points differ and have separate dialog copy: from the **login screen** the Google
+  address *is* the account address (that is what matched them), whereas from **Settings** any
+  Google account may be linked and the account keeps its own email as its contact address.
+
+Session boundaries invalidate the account-scoped providers on the way **in** as well as out
+(`_invalidateSessionScoped` in `app.dart`). Only invalidating on logout was not enough: the router
+keeps a permanent listener on `profileProvider`, so logout's invalidation rebuilt it immediately
+with the token already cleared, cached the resulting 401, and the next sign-in inherited that
+"session expired" — `ref.read(...future)` is a no-op on a provider that already holds state.
 
 ### Localization (i18n)
 

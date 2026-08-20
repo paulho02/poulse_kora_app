@@ -37,6 +37,33 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'change_password_wrong_current_password':
       return l10n.errorChangePasswordWrongCurrentPassword;
 
+    // ---- google sign-in ------------------------------------------------------
+    // `google_link_required` is deliberately absent: it is a prompt, not a
+    // failure, and `GoogleAuthSection` turns it into a confirmation dialog
+    // before it could ever reach a snackbar.
+    case 'login_use_google':
+      return l10n.errorLoginUseGoogle;
+    case 'google_account_no_password':
+      return l10n.errorGoogleAccountNoPassword;
+    case 'google_account_email_locked':
+      return l10n.errorGoogleAccountEmailLocked;
+    case 'google_email_unverified':
+      return l10n.errorGoogleEmailUnverified;
+    // The one uniqueness rule left after email was decoupled from identity:
+    // a Google account maps to at most one account here.
+    case 'google_account_in_use':
+    case 'google_account_mismatch':
+      return l10n.errorGoogleAccountInUse;
+    case 'google_already_linked':
+      return l10n.errorGoogleAlreadyLinked;
+    // Both are "not your fault, try again": an ID token that expired while the
+    // user hesitated, and Google being unreachable from the backend.
+    case 'google_invalid_id_token':
+    case 'google_verification_unavailable':
+      return l10n.errorGoogleSignInFailed;
+    case 'google_oauth_disabled':
+      return l10n.errorGoogleOauthDisabled;
+
     // ---- email verification --------------------------------------------------
     case 'unverified_user':
       return l10n.errorUnverifiedUser;

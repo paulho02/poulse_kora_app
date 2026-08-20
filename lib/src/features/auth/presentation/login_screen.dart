@@ -6,6 +6,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/language_picker.dart';
 import '../application/auth_providers.dart';
+import 'google_auth_section.dart';
 import 'server_settings_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -131,11 +132,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () => context.go('/register'),
+                    onPressed: isLoading ? null : () => context.go('/register'),
                     child: Text(l10n.authGoToRegister),
                   ),
+                  // Hides itself unless both this build and the backend have
+                  // Google sign-in turned on, so no gating is needed here.
+                  GoogleAuthSection(label: l10n.authContinueWithGoogle),
                 ],
               ),
             ),

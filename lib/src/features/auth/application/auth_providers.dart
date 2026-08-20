@@ -3,9 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers.dart';
 import '../../../core/settings/app_settings.dart';
 import '../data/auth_repository.dart';
+import '../data/google_sign_in_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(dioClientProvider).dio);
+});
+
+/// Single instance: `GoogleSignIn.instance` is itself a singleton that must be
+/// initialized exactly once, and the service memoizes that.
+final googleSignInServiceProvider = Provider<GoogleSignInService>((ref) {
+  return GoogleSignInService();
 });
 
 /// Holds whether the user is authenticated (a token is present). No refresh
@@ -48,6 +55,24 @@ class AuthNotifier extends AsyncNotifier<bool> {
     });
   }
 
+  /// Adopt an access token obtained out-of-band, by the Google flow.
+  ///
+  /// Takes the finished token rather than running the exchange itself, unlike
+  /// [login]: that exchange can answer 409 `google_link_required`, which is a
+  /// prompt ("this address already has a password account - upgrade it?") and
+  /// not a failure. Routed through here it would land in `state.error` and every
+  /// screen listening for errors would flash a snackbar for it. So
+  /// `GoogleAuthSection` owns the exchange and the confirmation, and hands the
+  /// result here once there is genuinely a session to start.
+  Future<void> completeGoogleSignIn(String accessToken) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(tokenStorageProvider).saveAccessToken(accessToken);
+      await _startCleanSession();
+      return true;
+    });
+  }
+
   /// Wipe anything the previous session left behind. Signing in is the one moment
   /// we know a different account may be taking over the device, and unlike logout
   /// it always runs — a session that ended by token expiry or by the app being
@@ -61,6 +86,15 @@ class AuthNotifier extends AsyncNotifier<bool> {
   /// and local settings would otherwise carry over and show the previous user's
   /// feed and theme to whoever signs in next on this device.
   Future<void> logout() async {
+    // Google keeps its own session, independent of our token. Left alone, the
+    // next "Continue with Google" silently signs the same account back in with
+    // no picker, which reads as the logout not having worked. Best-effort: a
+    // failure here must not block clearing our own session.
+    try {
+      await ref.read(googleSignInServiceProvider).signOut();
+    } catch (_) {
+      // Nothing actionable — our own sign-out below is what matters.
+    }
     await ref.read(tokenStorageProvider).clear();
     await ref.read(jsonCacheProvider).clearAll();
     await ref.read(appSettingsProvider.notifier).reset();

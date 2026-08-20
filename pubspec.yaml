@@ -45,6 +45,11 @@ dependencies:
   shared_preferences: ^2.5.5
   intl: any
   scrollable_positioned_list: ^0.3.8
+  google_sign_in: ^7.2.0
+  # Direct dependency, not just a transitive one of google_sign_in: web sign-in
+  # must use Google's own rendered button, and `renderButton()` lives in this
+  # package's `web_only.dart`. See features/auth/presentation/google_sign_in_button.dart.
+  google_sign_in_web: ^1.0.0
 
 dev_dependencies:
   flutter_test:
