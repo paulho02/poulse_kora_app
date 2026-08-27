@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/cache/cached.dart';
 import '../../../core/providers.dart';
 import '../../economy/application/economy_providers.dart';
+import '../../history/application/history_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../data/feed_repository.dart';
 import '../data/post.dart';
@@ -70,6 +71,8 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
         );
     // Reviewing earns a token — keep the economy header current without a refetch.
     ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
+    ref.invalidate(reviewedHistoryProvider);
+    ref.invalidate(statsProvider);
   }
 
   /// Convenience for callers with no exit animation to sequence around

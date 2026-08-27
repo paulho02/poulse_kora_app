@@ -14,6 +14,8 @@ import '../../economy/application/economy_providers.dart';
 import '../../economy/data/economy.dart';
 import '../../economy/presentation/economy_status_bar.dart';
 import '../../feed/application/feed_providers.dart';
+import '../../history/application/history_providers.dart';
+import '../../stats/application/stats_providers.dart';
 import 'channel_picker_sheet.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -72,6 +74,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
       await ref.read(economyProvider.notifier).refresh();
       ref.invalidate(feedNotifierProvider);
+      ref.invalidate(postedHistoryProvider);
+      ref.invalidate(statsProvider);
       if (!mounted) return;
       _textController.clear();
       setState(() => _isAnonymous = false);
