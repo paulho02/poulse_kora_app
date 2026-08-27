@@ -1,13 +1,25 @@
 class PostAuthor {
-  PostAuthor({required this.id, required this.username});
+  PostAuthor({
+    required this.id,
+    required this.username,
+    required this.profilePictureUrl,
+  });
 
   factory PostAuthor.fromJson(Map<String, dynamic> json) => PostAuthor(
     id: json['id'] as String?,
     username: json['username'] as String?,
+    profilePictureUrl: json['profile_picture_url'] as String?,
   );
 
   final String? id;
   final String? username;
+
+  /// Where to fetch the author's profile picture, or null if there is none.
+  ///
+  /// Also null on an anonymous post: the backend withholds the entire author
+  /// (id and username included) rather than trusting the client to hide it, so
+  /// there is nothing here that could give an anonymous poster away.
+  final String? profilePictureUrl;
 }
 
 class Post {

@@ -75,6 +75,34 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   that feature-level providers build on top of.
 - `routing/app_router.dart` — `go_router` config as a Riverpod provider (`routerProvider`), so
   routes can later depend on auth state (e.g. redirect logic reading `tokenStorageProvider`).
+- `core/avatars/` — profile pictures. The backend serves them from an **authenticated** route, so
+  they are deliberately *not* `Image.network`: `AvatarCache` fetches the bytes through the same Dio
+  client as every other call and renders them with `Image.memory`. That cache is a long-lived
+  mutable object behind a plain `Provider`, not a `FutureProvider.family`, because it has to outlive
+  the widgets watching it — feed cards are disposed and rebuilt constantly while scrolling, and an
+  auto-disposed family would re-request every image on every scroll. Three consequences to keep:
+  failures (offline included) are cached as "no picture" so an offline feed can't storm the network,
+  which is why `app.dart` calls `refresh()` on `backOnline`; the cache is also cleared at every
+  session boundary, since it holds one account's faces; and because the URL is derived from the user
+  id it does **not** change when a picture is replaced, so `ProfileNotifier` evicts the entry
+  explicitly after an upload or delete. That last point is why the cache is a `ChangeNotifier`:
+  eviction has to reach avatars *already on screen*, which cannot notice a swap by diffing their own
+  unchanged inputs — without the notification a replaced picture stayed stale until an app restart.
+  Hence two spellings of "drop everything": `refresh()` notifies (reconnect — the widgets needing
+  another try are the mounted ones) and `clear()` stays silent (logout — waking them would only fire
+  requests against a token being thrown away). `UserAvatar` renders picture-or-fallback and
+  `MonogramAvatar` is the coloured initial; `features/feed/presentation/post_author_avatar.dart`
+  wraps both with the anonymity rule for the three places a post is drawn.
+  Setting a picture lives on the profile header's own avatar (`EditableProfileAvatar`), not in
+  Settings — the profile view already shows the picture, so a settings row would be a second,
+  less obvious answer to "where do I change this?". Picking is followed by `CropAvatarScreen`,
+  which **always re-encodes to a 512px PNG**. That is what makes the upload's declared content type
+  true by construction: `image_picker` re-encodes differently per platform (its web resizer goes
+  through a canvas and emits PNG, Android emits JPEG, and neither renames the file), so anything
+  derived from the picker's own output would have been a guess. Format validation is likewise
+  Flutter's decoder rejecting the bytes, rather than an extension or magic-number check. The crop
+  geometry is the one part that can be subtly wrong, so it is a pure function (`cropSourceRect`)
+  tested on its own rather than only through the widget.
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.

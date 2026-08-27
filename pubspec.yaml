@@ -50,6 +50,10 @@ dependencies:
   # must use Google's own rendered button, and `renderButton()` lives in this
   # package's `web_only.dart`. See features/auth/presentation/google_sign_in_button.dart.
   google_sign_in_web: ^1.0.0
+  # Picking a profile picture from the gallery. Used via `readAsBytes()` on both
+  # targets rather than `XFile.path`, which is not a real file path on web —
+  # see features/profile/presentation/profile_picture_tile.dart.
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

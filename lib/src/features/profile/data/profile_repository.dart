@@ -43,4 +43,38 @@ class ProfileRepository {
     await _cache.write(CacheKeys.profile, response.data);
     return UserProfile.fromJson(response.data!);
   }
+
+  /// Replace the current user's profile picture.
+  ///
+  /// A multipart upload rather than a field on [updateMe]: the bytes go to
+  /// `PUT /users/me/profile-picture`, which is where the backend enforces the
+  /// size and content-type limits (see `PROFILE_PICTURE_*` in its config).
+  Future<UserProfile> uploadProfilePicture({
+    required List<int> bytes,
+    required String filename,
+    required String contentType,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/users/me/profile-picture',
+      data: FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          // The backend validates against this, not the extension, so it has to
+          // be the real type of the bytes rather than a generic default.
+          contentType: DioMediaType.parse(contentType),
+        ),
+      }),
+    );
+    await _cache.write(CacheKeys.profile, response.data);
+    return UserProfile.fromJson(response.data!);
+  }
+
+  Future<UserProfile> deleteProfilePicture() async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      '/users/me/profile-picture',
+    );
+    await _cache.write(CacheKeys.profile, response.data);
+    return UserProfile.fromJson(response.data!);
+  }
 }

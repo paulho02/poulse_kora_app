@@ -112,6 +112,14 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
           ? l10n.errorRateLimitedWait(retryAfter)
           : l10n.errorRateLimitedGeneric;
 
+    // ---- profile picture -----------------------------------------------------
+    // Both are checked server-side (see `PROFILE_PICTURE_*` in the backend
+    // config), because the picker can hand back anything the gallery holds.
+    case 'profile_picture_invalid_type':
+      return l10n.errorProfilePictureInvalidType;
+    case 'profile_picture_too_large':
+      return l10n.errorProfilePictureTooLarge;
+
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':
       return l10n.errorUnauthorized;

@@ -10,6 +10,7 @@ class UserProfile {
     required this.isVerified,
     required this.authProvider,
     required this.googleEmail,
+    required this.profilePictureUrl,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -34,6 +35,7 @@ class UserProfile {
     // guessing "google" would wrongly hide the change-password entry.
     authProvider: json['auth_provider'] as String? ?? 'password',
     googleEmail: json['google_email'] as String?,
+    profilePictureUrl: json['profile_picture_url'] as String?,
   );
 
   final String id;
@@ -61,6 +63,14 @@ class UserProfile {
   bool get hasDistinctGoogleEmail =>
       googleEmail != null && googleEmail!.toLowerCase() != email.toLowerCase();
 
+  /// Where to fetch this account's profile picture, or null if it has none.
+  ///
+  /// An API path rather than the bytes themselves — the route needs the bearer
+  /// token, so it is loaded through [AvatarCache] rather than `Image.network`.
+  /// The path is derived from the user id, so it does *not* change when the
+  /// picture is replaced; [AvatarCache.evict] is what makes a new upload show up.
+  final String? profilePictureUrl;
+
   /// The server's copy of the preference. Note this is *not* what the app renders
   /// from — see `core/settings/app_settings.dart`. It is only an input to sync.
   final bool darkMode;
@@ -85,6 +95,9 @@ class UserProfile {
     username: username,
     authProvider: authProvider,
     googleEmail: googleEmail,
+    // Not a parameter: clearing a picture goes through the server and comes back
+    // as a fresh profile, so there is no case where copyWith needs to null it.
+    profilePictureUrl: profilePictureUrl,
     bio: bio ?? this.bio,
     darkMode: darkMode ?? this.darkMode,
     settingsRevision: settingsRevision ?? this.settingsRevision,

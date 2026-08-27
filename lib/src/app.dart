@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/announcements/application/announcement_providers.dart';
 import 'core/announcements/presentation/info_banner.dart';
 import 'core/app_config/application/app_config_providers.dart';
+import 'core/avatars/application/avatar_providers.dart';
 import 'core/network/connectivity.dart';
 import 'core/presentation/beta_banner.dart';
 import 'core/presentation/offline_banner.dart';
@@ -85,6 +86,14 @@ class PoulseKoraApp extends ConsumerWidget {
       ref.read(profileProvider.notifier).syncAfterReconnect();
       ref.read(economyProvider.notifier).refresh();
 
+      // Avatars that failed while offline are cached as "no picture" (see
+      // AvatarCache), which is right for avoiding a request storm behind an
+      // offline screen but would otherwise leave every author a monogram for
+      // the rest of the session. `refresh`, not `clear`: the avatars needing
+      // another try are the ones already on screen, and only the notifying
+      // variant reaches them.
+      ref.read(avatarCacheProvider).refresh();
+
       // Only invalidate providers sitting on an error — those have nothing worth
       // keeping. Blanket-invalidating would also throw away a perfectly readable
       // cached feed and yank the list out from under someone mid-scroll.
@@ -160,6 +169,11 @@ class PoulseKoraApp extends ConsumerWidget {
 /// Retry. Invalidating on the way in discards that stale error, and costs nothing
 /// when there is none.
 void _invalidateSessionScoped(WidgetRef ref) {
+  // Not a provider, so `invalidate` can't reach it: the avatar cache is a
+  // long-lived mutable object (see AvatarCache) and holds pictures fetched as
+  // the previous account. Clearing it here is what stops one account's faces
+  // being shown to the next.
+  ref.read(avatarCacheProvider).clear();
   ref.invalidate(profileProvider);
   ref.invalidate(emailVerificationProvider);
   ref.invalidate(feedNotifierProvider);

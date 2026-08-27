@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../feed/data/post.dart';
+import '../../feed/presentation/post_author_avatar.dart';
 
 /// Read-only counterpart of the feed's `_PostDetailSheet` (see
 /// `feed/presentation/post_detail_sheet.dart`) for posts shown in a history
@@ -67,11 +68,7 @@ class _HistoryPostDetailSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(
-                  child: Icon(
-                    post.isAnonymous ? Icons.person_outline : Icons.person,
-                  ),
-                ),
+                PostAuthorAvatar(post: post, radius: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

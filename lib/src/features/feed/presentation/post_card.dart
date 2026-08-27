@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
+import 'post_author_avatar.dart';
 
 /// Shared height for the Drop / Forward action buttons so they always match.
 const double _actionButtonHeight = 40;
@@ -149,7 +150,7 @@ class _PostCardState extends ConsumerState<PostCard>
             children: [
               Row(
                 children: [
-                  _AuthorAvatar(post: post),
+                  PostAuthorAvatar(post: post, radius: 12),
                   const SizedBox(width: 8),
                   Text(
                     post.isAnonymous
@@ -324,32 +325,3 @@ class _DropButton extends StatelessWidget {
   }
 }
 
-class _AuthorAvatar extends StatelessWidget {
-  const _AuthorAvatar({required this.post});
-
-  final Post post;
-
-  @override
-  Widget build(BuildContext context) {
-    if (post.isAnonymous) {
-      return const CircleAvatar(
-        radius: 12,
-        child: Icon(Icons.person_outline, size: 14),
-      );
-    }
-    final username = post.author.username ?? '?';
-    final color = AppColors.avatarColor(username);
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: color,
-      child: Text(
-        username.isNotEmpty ? username[0].toUpperCase() : '?',
-        style: const TextStyle(
-          fontSize: 10,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}

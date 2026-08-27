@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/settings/app_settings.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/tips/presentation/view_tip.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../application/profile_providers.dart';
+import 'editable_profile_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -41,7 +41,6 @@ class ProfileScreen extends ConsumerWidget {
           data: (cached) {
             final profile = cached.data;
             final username = profile.username ?? profile.email;
-            final avatarColor = AppColors.avatarColor(username);
             return RefreshIndicator(
               onRefresh: () => ref.read(profileProvider.notifier).refresh(),
               child: ListView(
@@ -54,20 +53,7 @@ class ProfileScreen extends ConsumerWidget {
                   Center(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 36,
-                          backgroundColor: avatarColor,
-                          child: Text(
-                            username.isNotEmpty
-                                ? username[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        EditableProfileAvatar(profile: profile),
                         const SizedBox(height: 12),
                         Text(username, style: theme.textTheme.titleLarge),
                         if (profile.bio != null && profile.bio!.isNotEmpty) ...[

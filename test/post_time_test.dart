@@ -9,7 +9,7 @@ Post _postCreatedAgo(Duration ago) => Post(
   text: 'hi',
   hasImage: false,
   isAnonymous: false,
-  author: PostAuthor(id: 'u1', username: 'ada'),
+  author: PostAuthor(id: 'u1', username: 'ada', profilePictureUrl: null),
   forwardedCount: 0,
   droppedCount: 0,
   subscriptionKind: null,
@@ -38,7 +38,12 @@ void main() {
   group('Post.timeRemaining / deadlineProgress', () {
     test('a fresh post has nearly a full 24h window left', () {
       final post = _postCreatedAgo(Duration.zero);
-      expect(post.timeRemaining.inHours, 24);
+      // `inHours` truncates, and `created` is stamped from the clock a moment
+      // before this runs — so the exact value is 24 only when literally zero
+      // time has passed, and 23 otherwise. Asserting 24 made this test fail
+      // whenever the machine was busy enough to lose a microsecond here.
+      expect(post.timeRemaining.inHours, anyOf(23, 24));
+      expect(post.timeRemaining, greaterThan(const Duration(hours: 23)));
       expect(post.deadlineProgress, closeTo(0, 0.01));
     });
 

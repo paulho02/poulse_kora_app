@@ -113,6 +113,28 @@ void main() {
       expect(msg, contains('you have 2'));
     });
 
+    test('maps the profile-picture rejections to their own copy', () {
+      // Both are real answers from the backend's upload validation, so neither
+      // may fall through to the generic "something went wrong".
+      final badType = RelayApiException(
+        400,
+        'profile_picture_invalid_type',
+        const {},
+      );
+      final tooLarge = RelayApiException(
+        400,
+        'profile_picture_too_large',
+        const {},
+      );
+
+      expect(messageFor(en, badType), isNot(messageFor(en, tooLarge)));
+      expect(messageFor(en, badType), contains('PNG'));
+      expect(messageFor(en, tooLarge), contains('2 MB'));
+      // Translated, not just present in English.
+      expect(messageFor(de, tooLarge), isNot(messageFor(en, tooLarge)));
+      expect(messageFor(de, tooLarge), contains('2 MB'));
+    });
+
     test('points a stale review at the fix rather than just failing', () {
       expect(
         messageFor(en, RelayApiException(409, 'not_in_queue', const {})),

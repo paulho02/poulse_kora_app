@@ -5,6 +5,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../application/feed_providers.dart';
 import '../data/post.dart';
+import 'post_author_avatar.dart';
 
 void showPostDetailSheet(BuildContext context, WidgetRef ref, Post post) {
   showModalBottomSheet<void>(
@@ -57,11 +58,7 @@ class _PostDetailSheet extends ConsumerWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(
-                  child: Icon(
-                    post.isAnonymous ? Icons.person_outline : Icons.person,
-                  ),
-                ),
+                PostAuthorAvatar(post: post, radius: 20),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

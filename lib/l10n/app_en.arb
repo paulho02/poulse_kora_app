@@ -122,6 +122,11 @@
   "errorRateLimitedGeneric": "You're going a bit fast. Take a moment, then try again.",
   "@errorRateLimitedGeneric": {},
 
+  "errorProfilePictureInvalidType": "That file type isn't supported. Pick a JPEG, PNG or WebP image.",
+  "@errorProfilePictureInvalidType": {},
+  "errorProfilePictureTooLarge": "That image is too large. Pick one under 2 MB.",
+  "@errorProfilePictureTooLarge": {},
+
   "errorUnauthorized": "Your session has expired. Please sign in again.",
   "@errorUnauthorized": {},
 
@@ -240,6 +245,24 @@
   "@settingsEmailContactOnly": {},
   "settingsConnectGoogleUnsupported": "Connect Google from the app rather than the browser.",
   "@settingsConnectGoogleUnsupported": {},
+
+  "profilePictureChoose": "Choose a picture",
+  "@profilePictureChoose": {},
+  "profilePictureChange": "Change picture",
+  "@profilePictureChange": {},
+  "profilePictureRemove": "Remove picture",
+  "@profilePictureRemove": {},
+  "profilePictureUpdated": "Profile picture updated.",
+  "@profilePictureUpdated": {},
+  "profilePictureRemoved": "Profile picture removed.",
+  "@profilePictureRemoved": {},
+  "profilePictureEditTooltip": "Change your profile picture",
+  "@profilePictureEditTooltip": {},
+
+  "cropAvatarTitle": "Crop picture",
+  "@cropAvatarTitle": {},
+  "cropAvatarHint": "Drag to reposition, pinch or scroll to zoom. The circle is what others will see.",
+  "@cropAvatarHint": {},
 
   "changePasswordTitle": "Change Password",
   "@changePasswordTitle": {},

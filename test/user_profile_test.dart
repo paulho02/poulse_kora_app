@@ -13,6 +13,7 @@ Map<String, dynamic> json({Map<String, dynamic> overrides = const {}}) => {
   'is_verified': true,
   'auth_provider': 'password',
   'google_email': null,
+  'profile_picture_url': null,
   ...overrides,
 };
 
@@ -85,6 +86,44 @@ void main() {
         json(overrides: {'auth_provider': 'google'}),
       );
       expect(google.copyWith(bio: 'hi').isGoogleAccount, isTrue);
+    });
+  });
+
+  group('profilePictureUrl', () {
+    test('reads the backend field', () {
+      final profile = UserProfile.fromJson(
+        json(
+          overrides: {
+            'profile_picture_url':
+                '/api/v1/users/ce1b6b1e-0000-4000-8000-000000000000'
+                    '/profile-picture',
+          },
+        ),
+      );
+      expect(
+        profile.profilePictureUrl,
+        '/api/v1/users/ce1b6b1e-0000-4000-8000-000000000000/profile-picture',
+      );
+    });
+
+    test('an account with no picture reads as null', () {
+      expect(UserProfile.fromJson(json()).profilePictureUrl, isNull);
+    });
+
+    test('an entry written before the field existed reads as no picture', () {
+      // Cached profiles outlive app updates; the field simply won't be there.
+      final legacy = json()..remove('profile_picture_url');
+      expect(UserProfile.fromJson(legacy).profilePictureUrl, isNull);
+    });
+
+    test('survives copyWith', () {
+      // Same hazard as authProvider above: copyWith takes no parameter for it,
+      // so it has to be threaded through by hand. Dropping it would blank the
+      // avatar the moment any unrelated field was copied.
+      final withPicture = UserProfile.fromJson(
+        json(overrides: {'profile_picture_url': '/api/v1/users/x/pp'}),
+      );
+      expect(withPicture.copyWith(bio: 'hi').profilePictureUrl, '/api/v1/users/x/pp');
     });
   });
 }
