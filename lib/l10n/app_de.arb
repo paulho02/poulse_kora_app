@@ -35,6 +35,7 @@
   "errorTooManyVerificationAttempts": "Zu viele falsche Versuche. Hol dir einen neuen Code und versuch es noch mal.",
   "errorResendCooldownWait": "{seconds, plural, one{Du kannst in 1 Sekunde einen neuen Code anfordern.} other{Du kannst in {seconds} Sekunden einen neuen Code anfordern.}}",
   "errorResendCooldownGeneric": "Warte einen Moment, bevor du dir einen neuen Code holst.",
+  "errorEmailSendFailed": "Die E-Mail konnte nicht gesendet werden. Bitte versuche es gleich noch einmal.",
   "errorInsufficientTokens": "Du hast nicht genug Token zum Posten (brauchst {price}, hast {balance}). Bewerte Beiträge in deinem Feed, um mehr zu verdienen.",
   "errorChannelNotFound": "Diesen Kanal gibt es nicht mehr. Wähle einen anderen.",
   "errorNotInQueue": "Dieser Beitrag ist nicht mehr in deiner Warteschlange. Zieh nach unten, um deinen Feed zu aktualisieren.",

@@ -94,6 +94,9 @@
   "errorResendCooldownGeneric": "Please wait a moment before requesting another code.",
   "@errorResendCooldownGeneric": {},
 
+  "errorEmailSendFailed": "We couldn't send the email. Please try again in a moment.",
+  "@errorEmailSendFailed": {},
+
   "errorInsufficientTokens": "Not enough tokens to post (need {price}, you have {balance}). Review posts in your feed to earn more.",
   "@errorInsufficientTokens": {
     "placeholders": {

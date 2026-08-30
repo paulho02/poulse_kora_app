@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:poulse_kora_app/src/core/avatars/application/avatar_providers.dart';
-import 'package:poulse_kora_app/src/core/avatars/data/avatar_cache.dart';
 import 'package:poulse_kora_app/src/core/avatars/presentation/user_avatar.dart';
+import 'package:poulse_kora_app/src/core/media/data/authenticated_byte_cache.dart';
 
 /// Serves whatever bytes the test currently wants, and counts requests.
 class _FakeAdapter implements HttpClientAdapter {
@@ -35,14 +35,14 @@ class _FakeAdapter implements HttpClientAdapter {
 
 const _url = '/api/v1/users/abc/profile-picture';
 
-AvatarCache _cacheWith(_FakeAdapter adapter) {
+AuthenticatedByteCache _cacheWith(_FakeAdapter adapter) {
   final dio = Dio(BaseOptions(baseUrl: 'http://test/api/v1'));
   dio.httpClientAdapter = adapter;
-  return AvatarCache(dio);
+  return AuthenticatedByteCache(dio);
 }
 
 void main() {
-  group('AvatarCache', () {
+  group('AuthenticatedByteCache', () {
     test('strips the API prefix the backend puts on the URL', () async {
       final adapter = _FakeAdapter([1, 2, 3]);
       await _cacheWith(adapter).load(_url);

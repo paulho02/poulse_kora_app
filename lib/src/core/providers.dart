@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_config/application/app_config_providers.dart';
 import 'cache/json_cache.dart';
 import 'config/server_config.dart';
 import 'network/connectivity.dart';
@@ -28,6 +29,13 @@ final dioClientProvider = Provider<DioClient>((ref) {
     baseUrl: ref.watch(serverConfigProvider).baseUrl,
     connectivity: ref.watch(connectivityProvider.notifier),
     onUnauthorized: () => ref.read(onUnauthorizedProvider)(),
+    // Unlike `onUnauthorized`, this stays a direct read rather than an
+    // indirection overridden at the composition root: `serverConfirmedVerification-
+    // RequiredProvider` lives under `core/app_config`, not a feature, so there is
+    // no layering rule stopping `core/` from reading it directly.
+    onUnverifiedUser: () => ref
+        .read(serverConfirmedVerificationRequiredProvider.notifier)
+        .markConfirmed(),
     localeCode: () => ref.read(activeLocaleProvider).languageCode,
   );
 });

@@ -84,6 +84,8 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return retryAfter is int
           ? l10n.errorResendCooldownWait(retryAfter)
           : l10n.errorResendCooldownGeneric;
+    case 'email_send_failed':
+      return l10n.errorEmailSendFailed;
 
     // ---- posting ------------------------------------------------------------
     case 'insufficient_tokens':
