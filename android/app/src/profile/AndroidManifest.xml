@@ -4,4 +4,16 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Same cleartext exception the debug build type gets, for the same reason:
+         profile builds are how you test on a real device against the local
+         backend (http://<lan-ip>:8000), and they are never shipped.
+
+         This matters specifically for **video playback**, and only there. Dart's
+         `dart:io` HTTP stack - which every Dio API call goes through - does not
+         consult Android's cleartext policy at all, so the whole app appears to
+         work over plain HTTP. ExoPlayer (behind `video_player`) is native Java
+         and *does* consult it, so without this a video is the one thing that
+         fails, with "Cleartext HTTP traffic to <host> not permitted". -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>

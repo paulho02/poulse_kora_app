@@ -21,6 +21,7 @@ class DioClient {
     required String baseUrl,
     required ConnectivityNotifier connectivity,
     required Future<void> Function() onUnauthorized,
+    required void Function() onUnverifiedUser,
     required String Function() localeCode,
   }) : dio = Dio(
          BaseOptions(
@@ -62,6 +63,13 @@ class DioClient {
           // this, expiry surfaces as a confusing error on every screen at once.
           if (failure.kind == ApiErrorKind.unauthorized) {
             await onUnauthorized();
+          }
+
+          // Authoritative proof the backend enforces verification right now,
+          // regardless of whatever `appConfigProvider` cached at app start -
+          // see `serverConfirmedVerificationRequiredProvider`.
+          if (failure.error == 'unverified_user') {
+            onUnverifiedUser();
           }
 
           handler.reject(

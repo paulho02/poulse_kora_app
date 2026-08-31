@@ -52,8 +52,20 @@ dependencies:
   google_sign_in_web: ^1.0.0
   # Picking a profile picture from the gallery. Used via `readAsBytes()` on both
   # targets rather than `XFile.path`, which is not a real file path on web —
-  # see features/profile/presentation/profile_picture_tile.dart.
+  # see features/profile/presentation/profile_picture_tile.dart. Also used to pick
+  # post photos/videos (features/create_post).
   image_picker: ^1.2.3
+  # Post video playback (feed/presentation/post_media_gallery.dart). Wrapped in
+  # chewie for a ready-made play/pause/seek/fullscreen overlay instead of a
+  # hand-built scrubber.
+  video_player: ^2.10.0
+  chewie: ^1.11.3
+  # Web-only video playback path (core/media/data/media_video_source_web.dart):
+  # the browser's native <video> element cannot send a custom Authorization
+  # header, so authenticated video on web is fetched as bytes and handed to the
+  # player as a blob: URL instead. Already a transitive dependency (via
+  # google_sign_in_web); made direct because this code calls its API itself.
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

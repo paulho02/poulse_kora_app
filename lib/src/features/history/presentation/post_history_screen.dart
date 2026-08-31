@@ -88,7 +88,8 @@ List<int> _computeMatches(List<Object> rows, String query) {
   final matches = <int>[];
   for (var i = 0; i < rows.length; i++) {
     final row = rows[i];
-    if (row is _Entry && row.post.text.toLowerCase().contains(lowerQuery)) {
+    if (row is _Entry &&
+        row.post.previewText.toLowerCase().contains(lowerQuery)) {
       matches.add(i);
     }
   }
@@ -539,7 +540,7 @@ class _HistoryTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              _HighlightedText(text: entry.post.text, query: query),
+              _HighlightedText(text: entry.post.previewText, query: query),
             ],
           ),
         ),

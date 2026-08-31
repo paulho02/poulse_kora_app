@@ -22,13 +22,59 @@ class PostAuthor {
   final String? profilePictureUrl;
 }
 
+class PostMedia {
+  PostMedia({
+    required this.id,
+    required this.mediaType,
+    required this.contentType,
+    required this.url,
+    required this.durationSeconds,
+  });
+
+  factory PostMedia.fromJson(Map<String, dynamic> json) => PostMedia(
+    id: json['id'] as int,
+    mediaType: json['media_type'] as String,
+    contentType: json['content_type'] as String,
+    url: json['url'] as String,
+    durationSeconds: (json['duration_seconds'] as num?)?.toDouble(),
+  );
+
+  final int id;
+  final String mediaType; // "image" | "video"
+  final String contentType;
+  final String url;
+  final double? durationSeconds;
+
+  bool get isVideo => mediaType == 'video';
+}
+
+/// One paragraph of text or one attached image/video, in the post's display
+/// order — a post is an ordered sequence of these (see the backend's
+/// `PostBlock`), article-style, rather than a text blob with a media strip
+/// bolted on the end.
+sealed class PostBlock {
+  factory PostBlock.fromJson(Map<String, dynamic> json) => switch (json['type']) {
+    'media' => PostMediaBlock(PostMedia.fromJson(json['media'] as Map<String, dynamic>)),
+    _ => PostTextBlock(json['text'] as String),
+  };
+}
+
+class PostTextBlock implements PostBlock {
+  PostTextBlock(this.text);
+  final String text;
+}
+
+class PostMediaBlock implements PostBlock {
+  PostMediaBlock(this.media);
+  final PostMedia media;
+}
+
 class Post {
   Post({
     required this.id,
     required this.channelId,
     required this.channelName,
-    required this.text,
-    required this.hasImage,
+    required this.blocks,
     required this.isAnonymous,
     required this.author,
     required this.forwardedCount,
@@ -41,8 +87,9 @@ class Post {
     id: json['id'] as int,
     channelId: json['channel_id'] as int,
     channelName: json['channel_name'] as String,
-    text: json['text'] as String,
-    hasImage: json['has_image'] as bool,
+    blocks: (json['blocks'] as List<dynamic>)
+        .map((b) => PostBlock.fromJson(b as Map<String, dynamic>))
+        .toList(),
     isAnonymous: json['is_anonymous'] as bool,
     author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
     forwardedCount: json['forwarded_count'] as int,
@@ -54,8 +101,7 @@ class Post {
   final int id;
   final int channelId;
   final String channelName;
-  final String text;
-  final bool hasImage;
+  final List<PostBlock> blocks;
   final bool isAnonymous;
   final PostAuthor author;
   final int forwardedCount;
@@ -65,6 +111,22 @@ class Post {
   // subscription status.
   final String? subscriptionKind;
   final DateTime created;
+
+  /// All the post's text blocks, joined into one string — used for the feed
+  /// card's 2-line preview and for history search/highlighting
+  /// (`post_history_screen.dart`). The full, in-order block-by-block layout is
+  /// only rendered in the detail sheet.
+  String get previewText =>
+      blocks.whereType<PostTextBlock>().map((b) => b.text).join(' ');
+
+  /// Every attached image/video, in the order its block appears — the
+  /// equivalent of the old flat `media` list, for call sites (feed card
+  /// thumbnail, "+N" badge) that just need "the attachments", not their
+  /// position among the text.
+  List<PostMedia> get mediaItems =>
+      blocks.whereType<PostMediaBlock>().map((b) => b.media).toList();
+
+  bool get hasMedia => mediaItems.isNotEmpty;
 
   /// Whether this post should get the supporter visual treatment.
   bool get isSupporterPost => subscriptionKind == 'supporter';

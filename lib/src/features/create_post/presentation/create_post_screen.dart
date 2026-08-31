@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/api_exception.dart';
@@ -14,9 +17,67 @@ import '../../economy/application/economy_providers.dart';
 import '../../economy/data/economy.dart';
 import '../../economy/presentation/economy_status_bar.dart';
 import '../../feed/application/feed_providers.dart';
+import '../../feed/data/feed_repository.dart'
+    show ComposerBlockInput, PickedMedia;
 import '../../history/application/history_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import 'channel_picker_sheet.dart';
+
+/// One photo/video picked in the composer, before upload — mirrors `PostMedia`'s
+/// shape closely enough to preview it, but stays local until `_submit` turns it
+/// into a `PickedMedia` for `FeedRepository.createPost`.
+class _PickedItem {
+  _PickedItem({
+    required this.bytes,
+    required this.filename,
+    required this.contentType,
+    required this.isVideo,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String contentType;
+  final bool isVideo;
+}
+
+/// One row in the composer, article-style: a paragraph of text or one picked
+/// photo/video. `_blocks` holds these in display order; dragging a row (via its
+/// handle) reorders them, which is how a photo ends up "between" two
+/// paragraphs - see `_onReorder`.
+sealed class _ComposerBlock {}
+
+class _TextBlock extends _ComposerBlock {
+  _TextBlock([String initial = ''])
+    : controller = TextEditingController(text: initial);
+
+  final TextEditingController controller;
+}
+
+class _MediaBlock extends _ComposerBlock {
+  _MediaBlock(this.item);
+
+  final _PickedItem item;
+}
+
+/// Up to POST_MEDIA_MAX_FILES total per post (see the backend's
+/// POST_MEDIA_MAX_FILES) — kept in sync manually since the composer has no
+/// config endpoint to read it from; matches the current backend default.
+const _kMaxMediaItems = 5;
+
+String _guessContentType(XFile file, {required bool isVideo}) {
+  final mime = file.mimeType;
+  if (mime != null) return mime;
+  final ext = file.name.split('.').last.toLowerCase();
+  if (isVideo) return ext == 'mov' ? 'video/quicktime' : 'video/mp4';
+  switch (ext) {
+    case 'png':
+      return 'image/png';
+    case 'webp':
+      return 'image/webp';
+    default:
+      return 'image/jpeg';
+  }
+}
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -26,10 +87,10 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
-  final _textController = TextEditingController();
   int? _selectedChannelId;
   bool _isAnonymous = false;
   bool _isSubmitting = false;
+  final List<_ComposerBlock> _blocks = [_TextBlock()];
 
   @override
   void initState() {
@@ -40,13 +101,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    for (final block in _blocks) {
+      if (block is _TextBlock) block.controller.dispose();
+    }
     super.dispose();
   }
 
+  int get _mediaCount => _blocks.whereType<_MediaBlock>().length;
+  int get _remainingMediaSlots => _kMaxMediaItems - _mediaCount;
+
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
-    final text = _textController.text.trim();
     final l10n = AppLocalizations.of(context);
     if (channelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,9 +119,33 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       );
       return;
     }
-    if (text.isEmpty) {
+
+    // Walk the blocks in order, building the parallel (block, file) lists the
+    // repository sends - a media block's `file_index` is its position in
+    // `media`, not in `_blocks`. Empty/whitespace-only paragraphs are dropped
+    // silently rather than rejected - an easy thing to leave behind while
+    // rearranging blocks.
+    final blockInputs = <ComposerBlockInput>[];
+    final media = <PickedMedia>[];
+    for (final block in _blocks) {
+      switch (block) {
+        case _TextBlock():
+          final text = block.controller.text.trim();
+          if (text.isNotEmpty) blockInputs.add(ComposerBlockInput.text(text));
+        case _MediaBlock():
+          blockInputs.add(ComposerBlockInput.media(media.length));
+          media.add(
+            PickedMedia(
+              bytes: block.item.bytes,
+              filename: block.item.filename,
+              contentType: block.item.contentType,
+            ),
+          );
+      }
+    }
+    if (blockInputs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.createPostEmptyTextError)),
+        SnackBar(content: Text(l10n.createPostEmptyPostError)),
       );
       return;
     }
@@ -67,8 +156,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           .read(feedRepositoryProvider)
           .createPost(
             channelId: channelId,
-            text: text,
+            blocks: blockInputs,
             isAnonymous: _isAnonymous,
+            media: media,
           );
       // Posting spent tokens; sync the balance and refresh the (now higher) price.
       ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
@@ -77,8 +167,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ref.invalidate(postedHistoryProvider);
       ref.invalidate(statsProvider);
       if (!mounted) return;
-      _textController.clear();
-      setState(() => _isAnonymous = false);
+      for (final block in _blocks) {
+        if (block is _TextBlock) block.controller.dispose();
+      }
+      setState(() {
+        _isAnonymous = false;
+        _blocks
+          ..clear()
+          ..add(_TextBlock());
+      });
       context.go('/feed');
     } catch (error) {
       if (!mounted) return;
@@ -99,6 +196,93 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (selected != null) {
       setState(() => _selectedChannelId = selected.id);
     }
+  }
+
+  Future<void> _addPhotos() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final remaining = _remainingMediaSlots;
+    if (remaining <= 0) return;
+
+    final List<XFile> files;
+    try {
+      files = await ImagePicker().pickMultiImage(
+        // Client-side courtesy only — the backend re-encodes/downscales and
+        // enforces the real caps (POST_IMAGE_MAX_DIMENSION_PX etc.) regardless.
+        maxWidth: 2048,
+        maxHeight: 2048,
+        limit: remaining,
+      );
+    } catch (error) {
+      showErrorSnackBarOn(messenger, l10n, error);
+      return;
+    }
+    if (files.isEmpty) return;
+
+    final items = await Future.wait(
+      files.take(remaining).map((file) async {
+        return _PickedItem(
+          bytes: await file.readAsBytes(),
+          filename: file.name,
+          contentType: _guessContentType(file, isVideo: false),
+          isVideo: false,
+        );
+      }),
+    );
+    if (!mounted) return;
+    // Appended at the end, not inserted at a cursor - the user drags a block
+    // to where it belongs (see the class docstring on _ComposerBlock).
+    setState(() => _blocks.addAll(items.map(_MediaBlock.new)));
+  }
+
+  Future<void> _addVideo() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (_remainingMediaSlots <= 0) return;
+
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickVideo(
+        source: ImageSource.gallery,
+        // Client-side courtesy only, matching the backend's
+        // POST_VIDEO_MAX_DURATION_SECONDS default — the server still measures
+        // and enforces the real cap itself via ffprobe.
+        maxDuration: const Duration(seconds: 60),
+      );
+    } catch (error) {
+      showErrorSnackBarOn(messenger, l10n, error);
+      return;
+    }
+    if (file == null) return;
+
+    final item = _PickedItem(
+      bytes: await file.readAsBytes(),
+      filename: file.name,
+      contentType: _guessContentType(file, isVideo: true),
+      isVideo: true,
+    );
+    if (!mounted) return;
+    setState(() => _blocks.add(_MediaBlock(item)));
+  }
+
+  void _addTextBlock() {
+    setState(() => _blocks.add(_TextBlock()));
+  }
+
+  void _removeBlock(int index) {
+    setState(() {
+      final block = _blocks.removeAt(index);
+      if (block is _TextBlock) block.controller.dispose();
+    });
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    // `onReorderItem`, not the deprecated `onReorder`: newIndex already
+    // accounts for the item being removed from oldIndex first.
+    setState(() {
+      final block = _blocks.removeAt(oldIndex);
+      _blocks.insert(newIndex, block);
+    });
   }
 
   @override
@@ -231,18 +415,39 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   channel: selectedChannel,
                   onTap: () => _pickChannel(channels),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    maxLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    decoration: InputDecoration(
-                      hintText: l10n.createPostHint,
-                      border: InputBorder.none,
-                    ),
+                  child: ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    itemCount: _blocks.length,
+                    onReorderItem: _onReorder,
+                    itemBuilder: (context, index) =>
+                        _buildBlockRow(context, index),
                   ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: l10n.createPostAddPhoto,
+                      onPressed: _remainingMediaSlots <= 0 ? null : _addPhotos,
+                      icon: const Icon(Icons.photo_outlined),
+                    ),
+                    IconButton(
+                      tooltip: l10n.createPostAddVideo,
+                      onPressed: _remainingMediaSlots <= 0 ? null : _addVideo,
+                      icon: const Icon(Icons.videocam_outlined),
+                    ),
+                    IconButton(
+                      tooltip: l10n.createPostAddText,
+                      onPressed: _addTextBlock,
+                      icon: const Icon(Icons.notes_outlined),
+                    ),
+                    if (_mediaCount > 0)
+                      Text(
+                        '$_mediaCount/$_kMaxMediaItems',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                  ],
                 ),
                 const Divider(),
                 Row(
@@ -276,6 +481,51 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBlockRow(BuildContext context, int index) {
+    final block = _blocks[index];
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      key: ValueKey(block),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReorderableDragStartListener(
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, right: 4),
+              child: Icon(
+                Icons.drag_indicator,
+                size: 20,
+                color: Theme.of(context).colorScheme.outline,
+                semanticLabel: l10n.createPostReorderBlock,
+              ),
+            ),
+          ),
+          Expanded(
+            child: switch (block) {
+              _TextBlock() => TextField(
+                controller: block.controller,
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: l10n.createPostHint,
+                  border: InputBorder.none,
+                ),
+              ),
+              _MediaBlock() => _ComposerMediaTile(item: block.item),
+            },
+          ),
+          IconButton(
+            tooltip: l10n.createPostRemoveMedia,
+            iconSize: 18,
+            onPressed: () => _removeBlock(index),
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -326,6 +576,32 @@ class _ChannelSelectorButton extends StatelessWidget {
             Icon(Icons.expand_more, color: theme.colorScheme.onSurfaceVariant),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// One picked photo/video, as a full-width row in the block editor. Video gets
+/// the same neutral play-icon tile as the feed card (`PostMediaThumbnail`'s
+/// `_VideoPlaceholderTile`) for visual consistency, rather than decoding a
+/// frame just for this preview.
+class _ComposerMediaTile extends StatelessWidget {
+  const _ComposerMediaTile({required this.item});
+
+  final _PickedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: AspectRatio(
+        aspectRatio: 4 / 3,
+        child: item.isVideo
+            ? const ColoredBox(
+                color: Colors.black87,
+                child: Icon(Icons.play_circle_outline, color: Colors.white),
+              )
+            : Image.memory(item.bytes, fit: BoxFit.cover),
       ),
     );
   }
