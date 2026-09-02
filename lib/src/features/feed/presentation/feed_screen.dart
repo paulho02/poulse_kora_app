@@ -243,12 +243,22 @@ class _ChannelFilter extends StatelessWidget {
       // Both halves are laid out at full width even while collapsed, so the
       // chips don't reflow as the row closes.
       alignment: Alignment.topCenter,
-      firstChild: SizedBox(
-        height: 44,
-        width: double.infinity,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+      // A `Row` inside a scroll view, not a horizontal `ListView` in a fixed
+      // 44dp box: a horizontal ListView forces every child to *exactly* the
+      // viewport height, and a Material chip squeezed below the height it
+      // wants centres its label against the padding it asked for and eats the
+      // whole deficit off the bottom — which is what left the tag text sitting
+      // low. A Row passes the height constraint down loose, so each chip lays
+      // out at its natural height and the label is centred in it.
+      //
+      // `mainAxisSize.min` keeps the row hugging its own content (and so the
+      // left edge) instead of trying to fill — and then re-centring within —
+      // the scroll view's width when there are too few chips to scroll.
+      firstChild: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _ChannelChip(
               label: l10n.feedAllChannelsChip,
@@ -352,7 +362,10 @@ class _ChannelChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final outline = color ?? Theme.of(context).colorScheme.outlineVariant;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      // Horizontal only. The chip's own tap-target padding already sets its
+      // height (48dp), and adding to it just makes the filter row taller than
+      // the control inside it needs to be.
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
