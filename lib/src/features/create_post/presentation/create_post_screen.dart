@@ -396,6 +396,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final economy = ref.watch(economyProvider);
     final isOffline = ref.watch(connectivityProvider).isOffline;
     final l10n = AppLocalizations.of(context);
+    final channels = channelsAsync.value?.data;
+    // Only real once the editor itself is showing (matches `_buildEditor`'s
+    // own empty-channels/loading/error branches, which render no toolbar).
+    final showToolbar =
+        economy != null && channels != null && channels.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -430,8 +435,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             return channelsAsync.when(
-              data: (cached) =>
-                  _buildEditor(context, cached.data, economy.data),
+              data: (cached) => _buildEditor(context, cached.data),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => ErrorStateView(
                 error: error,
@@ -442,23 +446,27 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           },
         ),
       ),
+      // Pinned outside the scrolling editor (rather than inline below the
+      // ReorderableListView) so these fixed-height controls don't eat into
+      // the editor's viewport once the keyboard is up — on a small screen
+      // that squeeze could push the actively-typed block below the fold,
+      // behind the keyboard. The Scaffold still slides this bar up above the
+      // keyboard on its own via `resizeToAvoidBottomInset`.
+      bottomNavigationBar: showToolbar
+          ? _buildToolbar(context, channels, economy.data)
+          : null,
     );
   }
 
-  Widget _buildEditor(
+  /// Everything that is not the article being written: the block-adding
+  /// buttons, and the three decisions made at the moment of publishing
+  /// (channel, anonymity, relay).
+  Widget _buildToolbar(
     BuildContext context,
     List<Channel> channels,
     Economy economy,
   ) {
     final l10n = AppLocalizations.of(context);
-    if (channels.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(l10n.createPostNoChannels, textAlign: TextAlign.center),
-        ),
-      );
-    }
 
     Channel? selectedChannel;
     for (final c in channels) {
@@ -473,97 +481,115 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       economy.postPrice,
     );
 
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: l10n.createPostAddPhoto,
+                  onPressed: _remainingMediaSlots <= 0 ? null : _addPhotos,
+                  icon: const Icon(Icons.photo_outlined),
+                ),
+                IconButton(
+                  tooltip: l10n.createPostAddVideo,
+                  onPressed: _remainingMediaSlots <= 0 ? null : _addVideo,
+                  icon: const Icon(Icons.videocam_outlined),
+                ),
+                IconButton(
+                  tooltip: l10n.createPostAddText,
+                  onPressed: _addTextBlock,
+                  icon: const Icon(Icons.notes_outlined),
+                ),
+                if (_mediaCount > 0)
+                  Text(
+                    '$_mediaCount/$_kMaxMediaItems',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+              ],
+            ),
+            const Divider(height: 8),
+            // Only when it applies, and right above the button it explains —
+            // the disabled Relay button is otherwise the only thing saying no,
+            // and it can't say why.
+            if (!economy.canAffordPost)
+              _ShortOnTokensHint(
+                needed: needed,
+                onEarnTokens: () => context.go('/feed'),
+              ),
+            Row(
+              children: [
+                FilterChip(
+                  label: Text(l10n.postAnonymous),
+                  avatar: Icon(
+                    _isAnonymous ? Icons.visibility_off : Icons.visibility,
+                    size: 16,
+                  ),
+                  selected: _isAnonymous,
+                  showCheckmark: false,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (value) => setState(() => _isAnonymous = value),
+                ),
+                const SizedBox(width: 8),
+                // The channel picker used to be a full-width labelled field at
+                // the top of the editor — a whole row spent on one word that is
+                // usually chosen once. As a chip it sits in the row it belongs
+                // to: the three decisions made at the moment of publishing.
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _ChannelSelectorChip(
+                      channel: selectedChannel,
+                      onTap: () => _pickChannel(channels),
+                    ),
+                  ),
+                ),
+                if (_isSubmitting)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 12),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                TextButton(
+                  onPressed: (_isSubmitting || !economy.canAffordPost)
+                      ? null
+                      : _submit,
+                  child: const Text('Relay'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditor(BuildContext context, List<Channel> channels) {
+    final l10n = AppLocalizations.of(context);
+    if (channels.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(l10n.createPostNoChannels, textAlign: TextAlign.center),
+        ),
+      );
+    }
+
+    // Nothing but the blocks: the controls live in the Scaffold's pinned
+    // toolbar (see `_buildToolbar`), so this whole viewport is the article.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              itemCount: _blocks.length,
-              onReorderItem: _onReorder,
-              itemBuilder: (context, index) => _buildBlockRow(context, index),
-            ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                tooltip: l10n.createPostAddPhoto,
-                onPressed: _remainingMediaSlots <= 0 ? null : _addPhotos,
-                icon: const Icon(Icons.photo_outlined),
-              ),
-              IconButton(
-                tooltip: l10n.createPostAddVideo,
-                onPressed: _remainingMediaSlots <= 0 ? null : _addVideo,
-                icon: const Icon(Icons.videocam_outlined),
-              ),
-              IconButton(
-                tooltip: l10n.createPostAddText,
-                onPressed: _addTextBlock,
-                icon: const Icon(Icons.notes_outlined),
-              ),
-              if (_mediaCount > 0)
-                Text(
-                  '$_mediaCount/$_kMaxMediaItems',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-            ],
-          ),
-          const Divider(height: 8),
-          // Only when it applies, and right above the button it explains —
-          // the disabled Relay button is otherwise the only thing saying no,
-          // and it can't say why.
-          if (!economy.canAffordPost)
-            _ShortOnTokensHint(
-              needed: needed,
-              onEarnTokens: () => context.go('/feed'),
-            ),
-          Row(
-            children: [
-              FilterChip(
-                label: Text(l10n.postAnonymous),
-                avatar: Icon(
-                  _isAnonymous ? Icons.visibility_off : Icons.visibility,
-                  size: 16,
-                ),
-                selected: _isAnonymous,
-                showCheckmark: false,
-                visualDensity: VisualDensity.compact,
-                onSelected: (value) => setState(() => _isAnonymous = value),
-              ),
-              const SizedBox(width: 8),
-              // The channel picker used to be a full-width labelled field at
-              // the top of the editor — a whole row spent on one word that is
-              // usually chosen once. As a chip it sits in the row it belongs
-              // to: the three decisions made at the moment of publishing.
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _ChannelSelectorChip(
-                    channel: selectedChannel,
-                    onTap: () => _pickChannel(channels),
-                  ),
-                ),
-              ),
-              if (_isSubmitting)
-                const Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              TextButton(
-                onPressed: (_isSubmitting || !economy.canAffordPost)
-                    ? null
-                    : _submit,
-                child: const Text('Relay'),
-              ),
-            ],
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: ReorderableListView.builder(
+        buildDefaultDragHandles: false,
+        itemCount: _blocks.length,
+        onReorderItem: _onReorder,
+        itemBuilder: (context, index) => _buildBlockRow(context, index),
       ),
     );
   }

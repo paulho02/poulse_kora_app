@@ -447,6 +447,16 @@
   "@feedEmptyCaughtUpTitle": {},
   "feedEmptyCaughtUpSubtitle": "No posts to review right now.",
   "@feedEmptyCaughtUpSubtitle": {},
+  "feedEmptyFilteredTitle": "No posts in {channelName}",
+  "@feedEmptyFilteredTitle": {
+    "placeholders": {
+      "channelName": { "type": "String" }
+    }
+  },
+  "feedEmptyFilteredSubtitle": "You have a channel filter active, so you're only seeing this one. Clear it to see posts from all your channels.",
+  "@feedEmptyFilteredSubtitle": {},
+  "feedEmptyFilteredAction": "Clear filter",
+  "@feedEmptyFilteredAction": {},
   "postAnonymous": "Anonymous",
   "@postAnonymous": {},
   "postUnknownAuthor": "Unknown",
