@@ -10,7 +10,7 @@ import '../../../core/presentation/error_state_view.dart';
 import '../../feed/data/post.dart';
 import '../application/history_providers.dart';
 import '../data/reviewed_post.dart';
-import 'history_post_detail_sheet.dart';
+import 'history_post_detail_view.dart';
 
 enum HistoryMode { posted, reviewed }
 
@@ -88,7 +88,8 @@ List<int> _computeMatches(List<Object> rows, String query) {
   final matches = <int>[];
   for (var i = 0; i < rows.length; i++) {
     final row = rows[i];
-    if (row is _Entry && row.post.text.toLowerCase().contains(lowerQuery)) {
+    if (row is _Entry &&
+        row.post.previewText.toLowerCase().contains(lowerQuery)) {
       matches.add(i);
     }
   }
@@ -108,6 +109,11 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
   final _itemScrollController = ItemScrollController();
   final _itemPositionsListener = ItemPositionsListener.create();
   final _searchController = TextEditingController();
+
+  /// Lets the app bar's refresh button drive the *same* indicator a pull does,
+  /// so both gestures produce one spinner in one place rather than the button
+  /// inventing a second kind of loading state.
+  final _refreshKey = GlobalKey<RefreshIndicatorState>();
 
   bool _searchActive = false;
   String _query = '';
@@ -171,15 +177,38 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
     }
   }
 
+  /// Throws away every loaded page and re-reads the first one — the pager's
+  /// `hasMore` resets with it, so a history that had been paged to the end can
+  /// be paged again. Errors are deliberately swallowed *here*: the provider
+  /// keeps them, and the list below already renders that through
+  /// [ErrorStateView]; letting one escape would only hang the spinner.
   Future<void> _onRefresh() async {
-    if (widget.mode == HistoryMode.posted) {
-      ref.invalidate(postedHistoryProvider);
-      await ref.read(postedHistoryProvider.future);
-    } else {
-      ref.invalidate(reviewedHistoryProvider);
-      await ref.read(reviewedHistoryProvider.future);
+    try {
+      if (widget.mode == HistoryMode.posted) {
+        ref.invalidate(postedHistoryProvider);
+        await ref.read(postedHistoryProvider.future);
+      } else {
+        ref.invalidate(reviewedHistoryProvider);
+        await ref.read(reviewedHistoryProvider.future);
+      }
+    } catch (_) {
+      // Rendered by the `error:` branch of the list below.
     }
+    if (!mounted) return;
     setState(() => _currentMatchPointer = -1);
+  }
+
+  /// The app bar button hands the work to the pull-to-refresh indicator so the
+  /// feedback is identical either way. It is only absent before the first page
+  /// has ever loaded (the spinner and the error view have no list to attach to),
+  /// and refreshing straight from the provider covers that case.
+  void _onRefreshPressed() {
+    final indicator = _refreshKey.currentState;
+    if (indicator == null) {
+      unawaited(_onRefresh());
+      return;
+    }
+    indicator.show();
   }
 
   Future<void> _onJumpToDate() async {
@@ -353,20 +382,27 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
       appBar: _buildAppBar(l10n, title),
       body: asyncEntries.when(
         data: (_) {
-          if (_rows.isEmpty) {
-            return Center(child: Text(emptyLabel));
-          }
-
           return Stack(
             children: [
               RefreshIndicator(
+                key: _refreshKey,
                 onRefresh: _onRefresh,
-                child: ScrollablePositionedList.builder(
-                  itemScrollController: _itemScrollController,
-                  itemPositionsListener: _itemPositionsListener,
-                  itemCount: _rows.length,
-                  itemBuilder: (context, index) => _buildRow(index),
-                ),
+                // The empty state is inside the indicator, not instead of it:
+                // "you haven't posted anything yet" is exactly when someone
+                // pulls to check again, and a bare `Center` cannot be pulled.
+                child: _rows.isEmpty
+                    ? _EmptyHistory(label: emptyLabel)
+                    : ScrollablePositionedList.builder(
+                        itemScrollController: _itemScrollController,
+                        itemPositionsListener: _itemPositionsListener,
+                        itemCount: _rows.length,
+                        itemBuilder: (context, index) => _buildRow(index),
+                        // Without this a history short enough to fit on screen
+                        // refuses the drag altogether, so the shortest lists —
+                        // the ones most likely to be waiting on new items —
+                        // were the ones that could not be refreshed.
+                        physics: const AlwaysScrollableScrollPhysics(),
+                      ),
               ),
               if (_isBusyLoading)
                 const Positioned(
@@ -457,7 +493,40 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
           tooltip: l10n.historyJumpToDateTooltip,
           onPressed: _onJumpToDate,
         ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: l10n.historyRefreshTooltip,
+          onPressed: _onRefreshPressed,
+        ),
       ],
+    );
+  }
+}
+
+/// "Nothing here yet", as a scrollable — the whole point is that it can be
+/// pulled down. [ConstrainedBox] against the viewport height keeps the message
+/// centred rather than pinned under the app bar, which is what a plain
+/// [SingleChildScrollView] would do.
+class _EmptyHistory extends StatelessWidget {
+  const _EmptyHistory({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(label, textAlign: TextAlign.center),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -500,7 +569,7 @@ class _HistoryTile extends StatelessWidget {
           ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
           : null,
       child: InkWell(
-        onTap: () => showHistoryPostDetailSheet(
+        onTap: () => showHistoryPostDetail(
           context,
           post: entry.post,
           reviewKindLabel: entry.kindLabel,
@@ -539,7 +608,7 @@ class _HistoryTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              _HighlightedText(text: entry.post.text, query: query),
+              _HighlightedText(text: entry.post.previewText, query: query),
             ],
           ),
         ),

@@ -64,9 +64,10 @@ final localeSettingsStoreProvider = Provider<LocaleSettingsStore>(
   (ref) => LocaleSettingsStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final localeOverrideProvider = NotifierProvider<LocaleOverrideNotifier, String?>(
-  LocaleOverrideNotifier.new,
-);
+final localeOverrideProvider =
+    NotifierProvider<LocaleOverrideNotifier, String?>(
+      LocaleOverrideNotifier.new,
+    );
 
 /// The render source of truth for the active locale — watched by the app root
 /// for `MaterialApp.router(locale: ...)` and read by `DioClient`'s

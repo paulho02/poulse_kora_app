@@ -3,16 +3,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../media/data/authenticated_byte_cache.dart';
 import '../../theme/app_colors.dart';
 import '../application/avatar_providers.dart';
-import '../data/avatar_cache.dart';
 
 /// A user's profile picture, with [fallback] shown until — or unless — there is
 /// one to display.
 ///
 /// The picture is fetched as bytes through the authenticated Dio client and
-/// memoized (see [AvatarCache]); it cannot be an `Image.network`, because the
-/// backend route requires the bearer token.
+/// memoized (see [AuthenticatedByteCache]); it cannot be an `Image.network`,
+/// because the backend route requires the bearer token.
 ///
 /// There is deliberately no spinner. An avatar is decoration around a name that
 /// is already legible, so a loading state would be more distracting than the
@@ -41,7 +41,7 @@ class UserAvatar extends ConsumerStatefulWidget {
 
 class _UserAvatarState extends ConsumerState<UserAvatar> {
   Uint8List? _bytes;
-  late final AvatarCache _cache;
+  late final AuthenticatedByteCache _cache;
 
   @override
   void initState() {

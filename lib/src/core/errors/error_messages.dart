@@ -84,6 +84,8 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return retryAfter is int
           ? l10n.errorResendCooldownWait(retryAfter)
           : l10n.errorResendCooldownGeneric;
+    case 'email_send_failed':
+      return l10n.errorEmailSendFailed;
 
     // ---- posting ------------------------------------------------------------
     case 'insufficient_tokens':
@@ -119,6 +121,30 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorProfilePictureInvalidType;
     case 'profile_picture_too_large':
       return l10n.errorProfilePictureTooLarge;
+
+    // ---- post media (images & videos) ----------------------------------------
+    // All checked server-side (see POST_MEDIA_*/POST_IMAGE_*/POST_VIDEO_* in the
+    // backend config) - the composer's own picker limits are only a courtesy.
+    case 'post_media_too_many_files':
+      return l10n.errorPostMediaTooManyFiles;
+    case 'post_media_invalid_type':
+      return l10n.errorPostMediaInvalidType;
+    case 'post_media_too_large':
+      return l10n.errorPostMediaTooLarge;
+    case 'post_media_total_too_large':
+      return l10n.errorPostMediaTotalTooLarge;
+    case 'post_media_video_too_long':
+      return l10n.errorPostMediaVideoTooLong;
+    // Only reachable if a photo skipped the cropper: the backend fixes the two
+    // allowed shapes and rejects anything else rather than cropping for you.
+    case 'post_media_invalid_aspect_ratio':
+      return l10n.errorPostMediaInvalidAspectRatio;
+    case 'post_blocks_invalid':
+      return l10n.errorPostBlocksInvalid;
+    case 'post_blocks_empty':
+      return l10n.errorPostBlocksEmpty;
+    case 'post_blocks_too_many':
+      return l10n.errorPostBlocksTooMany;
 
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':

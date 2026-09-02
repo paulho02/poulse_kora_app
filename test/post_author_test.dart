@@ -6,8 +6,9 @@ Map<String, dynamic> _postJson({Map<String, dynamic> author = const {}}) => {
   'id': 1,
   'channel_id': 1,
   'channel_name': 'General',
-  'text': 'hi',
-  'has_image': false,
+  'blocks': [
+    {'type': 'text', 'text': 'hi', 'media': null},
+  ],
   'is_anonymous': false,
   'author': {
     'id': 'ce1b6b1e-0000-4000-8000-000000000000',

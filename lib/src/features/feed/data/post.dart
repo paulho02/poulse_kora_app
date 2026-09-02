@@ -22,13 +22,94 @@ class PostAuthor {
   final String? profilePictureUrl;
 }
 
+class PostMedia {
+  PostMedia({
+    required this.id,
+    required this.mediaType,
+    required this.contentType,
+    required this.url,
+    required this.durationSeconds,
+    required this.width,
+    required this.height,
+    required this.posterUrl,
+  });
+
+  factory PostMedia.fromJson(Map<String, dynamic> json) => PostMedia(
+    id: json['id'] as int,
+    mediaType: json['media_type'] as String,
+    contentType: json['content_type'] as String,
+    url: json['url'] as String,
+    durationSeconds: (json['duration_seconds'] as num?)?.toDouble(),
+    width: json['width'] as int?,
+    height: json['height'] as int?,
+    posterUrl: json['poster_url'] as String?,
+  );
+
+  final int id;
+  final String mediaType; // "image" | "video"
+  final String contentType;
+  final String url;
+  final double? durationSeconds;
+
+  /// Pixel size of the stored file, or null for anything uploaded before the
+  /// backend started measuring it. Everything published since is one of two
+  /// fixed shapes, but old rows are *not* backfilled and may be anything — so
+  /// null means "unknown, letterbox it", never "assume the default".
+  final int? width;
+  final int? height;
+
+  /// A still frame to show in place of an unplayed video. Null for images
+  /// (which are their own preview) and for a video whose frame extraction
+  /// failed server-side, which is a tolerated outcome rather than an error.
+  final String? posterUrl;
+
+  bool get isVideo => mediaType == 'video';
+
+  /// The shape to lay this block out in, or null when it isn't known yet — see
+  /// [width]. Callers letterbox rather than guessing, since a wrong guess crops
+  /// an old post's photo instead of merely padding it.
+  double? get aspectRatio {
+    final w = width;
+    final h = height;
+    if (w == null || h == null || w <= 0 || h <= 0) return null;
+    return w / h;
+  }
+
+  /// What to fetch to show this item *without* playing it: a photo is its own
+  /// preview, a video has a poster frame (when one exists).
+  String? get previewUrl => isVideo ? posterUrl : url;
+}
+
+/// One paragraph of text or one attached image/video, in the post's display
+/// order — a post is an ordered sequence of these (see the backend's
+/// `PostBlock`), article-style, rather than a text blob with a media strip
+/// bolted on the end.
+sealed class PostBlock {
+  factory PostBlock.fromJson(Map<String, dynamic> json) =>
+      switch (json['type']) {
+        'media' => PostMediaBlock(
+          PostMedia.fromJson(json['media'] as Map<String, dynamic>),
+        ),
+        _ => PostTextBlock(json['text'] as String),
+      };
+}
+
+class PostTextBlock implements PostBlock {
+  PostTextBlock(this.text);
+  final String text;
+}
+
+class PostMediaBlock implements PostBlock {
+  PostMediaBlock(this.media);
+  final PostMedia media;
+}
+
 class Post {
   Post({
     required this.id,
     required this.channelId,
     required this.channelName,
-    required this.text,
-    required this.hasImage,
+    required this.blocks,
     required this.isAnonymous,
     required this.author,
     required this.forwardedCount,
@@ -41,8 +122,9 @@ class Post {
     id: json['id'] as int,
     channelId: json['channel_id'] as int,
     channelName: json['channel_name'] as String,
-    text: json['text'] as String,
-    hasImage: json['has_image'] as bool,
+    blocks: (json['blocks'] as List<dynamic>)
+        .map((b) => PostBlock.fromJson(b as Map<String, dynamic>))
+        .toList(),
     isAnonymous: json['is_anonymous'] as bool,
     author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
     forwardedCount: json['forwarded_count'] as int,
@@ -54,8 +136,7 @@ class Post {
   final int id;
   final int channelId;
   final String channelName;
-  final String text;
-  final bool hasImage;
+  final List<PostBlock> blocks;
   final bool isAnonymous;
   final PostAuthor author;
   final int forwardedCount;
@@ -65,6 +146,22 @@ class Post {
   // subscription status.
   final String? subscriptionKind;
   final DateTime created;
+
+  /// All the post's text blocks, joined into one string — used for the feed
+  /// card's 2-line preview and for history search/highlighting
+  /// (`post_history_screen.dart`). The full, in-order block-by-block layout is
+  /// only rendered in the detail sheet.
+  String get previewText =>
+      blocks.whereType<PostTextBlock>().map((b) => b.text).join(' ');
+
+  /// Every attached image/video, in the order its block appears — the
+  /// equivalent of the old flat `media` list, for call sites (feed card
+  /// thumbnail, "+N" badge) that just need "the attachments", not their
+  /// position among the text.
+  List<PostMedia> get mediaItems =>
+      blocks.whereType<PostMediaBlock>().map((b) => b.media).toList();
+
+  bool get hasMedia => mediaItems.isNotEmpty;
 
   /// Whether this post should get the supporter visual treatment.
   bool get isSupporterPost => subscriptionKind == 'supporter';

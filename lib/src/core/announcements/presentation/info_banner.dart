@@ -113,7 +113,7 @@ class _Card extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     // The Material 3 token pair meant for exactly this — a floating surface
     // that reads as an overlay, not another panel blending into the app,
-    // in both light and dark theme. Same convention as SpeechBubbleTooltip.
+    // in both light and dark theme.
     final background = theme.colorScheme.inverseSurface;
     final foreground = theme.colorScheme.onInverseSurface;
 

@@ -1,9 +1,15 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/media/post_media_format.dart';
+import '../../../core/media/presentation/crop_media_screen.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
@@ -12,11 +18,84 @@ import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
 import '../../economy/application/economy_providers.dart';
 import '../../economy/data/economy.dart';
-import '../../economy/presentation/economy_status_bar.dart';
+import '../../economy/presentation/economy_header_status.dart';
 import '../../feed/application/feed_providers.dart';
+import '../../feed/data/feed_repository.dart'
+    show ComposerBlockInput, PickedMedia;
 import '../../history/application/history_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import 'channel_picker_sheet.dart';
+import 'video_orientation_sheet.dart';
+
+/// One photo/video picked in the composer, before upload — mirrors `PostMedia`'s
+/// shape closely enough to preview it, but stays local until `_submit` turns it
+/// into a `PickedMedia` for `FeedRepository.createPost`.
+///
+/// Every item carries an [orientation], because every published attachment is
+/// one of two fixed shapes (see `core/media/post_media_format.dart`). How it got
+/// one differs by kind, and that difference is the whole design: a **photo** is
+/// already cropped to it — `bytes` are the cropper's output, not the picker's —
+/// while a **video** only records the choice, since a Flutter client has no
+/// encoder and the crop happens server-side during the transcode.
+class _PickedItem {
+  _PickedItem({
+    required this.bytes,
+    required this.filename,
+    required this.contentType,
+    required this.isVideo,
+    required this.orientation,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String contentType;
+  final bool isVideo;
+  final PostMediaOrientation orientation;
+
+  double get aspectRatio => orientation.ratio;
+}
+
+/// One row in the composer, article-style: a paragraph of text or one picked
+/// photo/video. `_blocks` holds these in display order; dragging a row (via its
+/// handle) reorders them, which is how a photo ends up "between" two
+/// paragraphs - see `_onReorder`.
+sealed class _ComposerBlock {}
+
+class _TextBlock extends _ComposerBlock {
+  _TextBlock([String initial = ''])
+    : controller = TextEditingController(text: initial);
+
+  final TextEditingController controller;
+}
+
+class _MediaBlock extends _ComposerBlock {
+  _MediaBlock(this.item);
+
+  final _PickedItem item;
+}
+
+/// Up to POST_MEDIA_MAX_FILES total per post (see the backend's
+/// POST_MEDIA_MAX_FILES) — kept in sync manually since the composer has no
+/// config endpoint to read it from; matches the current backend default.
+const _kMaxMediaItems = 5;
+
+/// Only videos need guessing now: a photo is re-encoded by the cropper, so its
+/// content type is `image/png` by construction rather than by inference.
+String _guessVideoContentType(XFile file) {
+  final mime = file.mimeType;
+  if (mime != null) return mime;
+  return file.name.split('.').last.toLowerCase() == 'mov'
+      ? 'video/quicktime'
+      : 'video/mp4';
+}
+
+/// `holiday.heic` -> `holiday.png`. The cropper's output is always PNG, so
+/// carrying the source extension over would name the file a lie.
+String _asPngFilename(String original) {
+  final dot = original.lastIndexOf('.');
+  final base = dot > 0 ? original.substring(0, dot) : original;
+  return '$base.png';
+}
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -26,10 +105,10 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
-  final _textController = TextEditingController();
   int? _selectedChannelId;
   bool _isAnonymous = false;
   bool _isSubmitting = false;
+  final List<_ComposerBlock> _blocks = [_TextBlock()];
 
   @override
   void initState() {
@@ -40,24 +119,61 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
+    for (final block in _blocks) {
+      if (block is _TextBlock) block.controller.dispose();
+    }
     super.dispose();
   }
 
+  int get _mediaCount => _blocks.whereType<_MediaBlock>().length;
+  int get _remainingMediaSlots => _kMaxMediaItems - _mediaCount;
+
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
-    final text = _textController.text.trim();
     final l10n = AppLocalizations.of(context);
     if (channelId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.createPostPickChannelError)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.createPostPickChannelError)));
       return;
     }
-    if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.createPostEmptyTextError)),
-      );
+
+    // Walk the blocks in order, building the parallel (block, file) lists the
+    // repository sends - a media block's `file_index` is its position in
+    // `media`, not in `_blocks`. Empty/whitespace-only paragraphs are dropped
+    // silently rather than rejected - an easy thing to leave behind while
+    // rearranging blocks.
+    final blockInputs = <ComposerBlockInput>[];
+    final media = <PickedMedia>[];
+    for (final block in _blocks) {
+      switch (block) {
+        case _TextBlock():
+          final text = block.controller.text.trim();
+          if (text.isNotEmpty) blockInputs.add(ComposerBlockInput.text(text));
+        case _MediaBlock():
+          blockInputs.add(
+            ComposerBlockInput.media(
+              media.length,
+              // Photos arrive already cropped, so their shape is settled and
+              // the backend only validates it; a video's crop is still ahead.
+              orientation: block.item.isVideo
+                  ? block.item.orientation.wireValue
+                  : null,
+            ),
+          );
+          media.add(
+            PickedMedia(
+              bytes: block.item.bytes,
+              filename: block.item.filename,
+              contentType: block.item.contentType,
+            ),
+          );
+      }
+    }
+    if (blockInputs.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.createPostEmptyPostError)));
       return;
     }
 
@@ -67,8 +183,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           .read(feedRepositoryProvider)
           .createPost(
             channelId: channelId,
-            text: text,
+            blocks: blockInputs,
             isAnonymous: _isAnonymous,
+            media: media,
           );
       // Posting spent tokens; sync the balance and refresh the (now higher) price.
       ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
@@ -77,8 +194,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ref.invalidate(postedHistoryProvider);
       ref.invalidate(statsProvider);
       if (!mounted) return;
-      _textController.clear();
-      setState(() => _isAnonymous = false);
+      for (final block in _blocks) {
+        if (block is _TextBlock) block.controller.dispose();
+      }
+      setState(() {
+        _isAnonymous = false;
+        _blocks
+          ..clear()
+          ..add(_TextBlock());
+      });
       context.go('/feed');
     } catch (error) {
       if (!mounted) return;
@@ -101,6 +225,171 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
   }
 
+  /// Pick photos, then crop each one to a published shape before it is kept.
+  ///
+  /// The crop is mandatory rather than offered: the backend rejects any other
+  /// aspect ratio outright (`post_media_invalid_aspect_ratio`), so a "skip"
+  /// would only produce an upload that fails later. Backing out of the cropper
+  /// therefore drops *that* photo and moves on to the next, rather than
+  /// cancelling the whole selection — picking five and rethinking one is a
+  /// normal thing to do.
+  Future<void> _addPhotos() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context);
+    final remaining = _remainingMediaSlots;
+    if (remaining <= 0) return;
+
+    final List<XFile> files;
+    try {
+      files = await ImagePicker().pickMultiImage(
+        // Bounds what the cropper has to decode. Above kPostCropLongestSide, so
+        // zooming in still has real pixels to sample.
+        maxWidth: 2048,
+        maxHeight: 2048,
+        limit: remaining,
+      );
+    } catch (error) {
+      showErrorSnackBarOn(messenger, l10n, error);
+      return;
+    }
+    if (files.isEmpty) return;
+
+    final added = <_PickedItem>[];
+    for (final file in files.take(remaining)) {
+      final ui.Image decoded;
+      try {
+        decoded = await decodeImageBytes(await file.readAsBytes());
+      } catch (_) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(l10n.errorPostMediaInvalidType)),
+          );
+        continue;
+      }
+
+      final CropResult? cropped;
+      try {
+        cropped = await navigator.push<CropResult>(
+          MaterialPageRoute(
+            builder: (_) => CropMediaScreen(
+              image: decoded,
+              aspects: [
+                CropAspect(
+                  ratio: kPostMediaPortraitRatio,
+                  label: l10n.composerFormatPortrait,
+                  icon: Icons.crop_portrait,
+                ),
+                CropAspect(
+                  ratio: kPostMediaLandscapeRatio,
+                  label: l10n.composerFormatLandscape,
+                  icon: Icons.crop_landscape,
+                ),
+              ],
+              // Start on whichever shape the photo is already closest to, so
+              // the common case is one confirmation rather than a decision.
+              initialAspectIndex:
+                  nearestPostOrientation(decoded.width / decoded.height) ==
+                      PostMediaOrientation.portrait
+                  ? 0
+                  : 1,
+              outputLongestSide: kPostCropLongestSide,
+              title: l10n.composerCropPhotoTitle,
+              hint: l10n.composerCropPhotoHint,
+            ),
+            fullscreenDialog: true,
+          ),
+        );
+      } finally {
+        decoded.dispose();
+      }
+      if (cropped == null) continue;
+
+      added.add(
+        _PickedItem(
+          bytes: cropped.bytes,
+          filename: _asPngFilename(file.name),
+          contentType: 'image/png',
+          isVideo: false,
+          orientation: nearestPostOrientation(cropped.aspectRatio),
+        ),
+      );
+    }
+
+    if (!mounted || added.isEmpty) return;
+    // Appended at the end, not inserted at a cursor - the user drags a block
+    // to where it belongs (see the class docstring on _ComposerBlock).
+    setState(() => _blocks.addAll(added.map(_MediaBlock.new)));
+  }
+
+  Future<void> _addVideo() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (_remainingMediaSlots <= 0) return;
+
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickVideo(
+        source: ImageSource.gallery,
+        // Client-side courtesy only, matching the backend's
+        // POST_VIDEO_MAX_DURATION_SECONDS default — the server still measures
+        // and enforces the real cap itself via ffprobe.
+        maxDuration: const Duration(seconds: 60),
+      );
+    } catch (error) {
+      showErrorSnackBarOn(messenger, l10n, error);
+      return;
+    }
+    if (file == null) return;
+    // Bound to a plain local: `file` is a deferred-initialised final, which Dart
+    // will not carry a promotion for into the closure below.
+    final picked = file;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+
+    // Asked after picking, not before: by now the author has committed to a
+    // clip, and the question ("which shape?") is only answerable with one in
+    // mind. Dismissing cancels adding it rather than defaulting silently — the
+    // backend would happily guess, but then the crop is a surprise.
+    final orientation = await showVideoOrientationSheet(context);
+    if (orientation == null || !mounted) return;
+
+    setState(
+      () => _blocks.add(
+        _MediaBlock(
+          _PickedItem(
+            bytes: bytes,
+            filename: picked.name,
+            contentType: _guessVideoContentType(picked),
+            isVideo: true,
+            orientation: orientation,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addTextBlock() {
+    setState(() => _blocks.add(_TextBlock()));
+  }
+
+  void _removeBlock(int index) {
+    setState(() {
+      final block = _blocks.removeAt(index);
+      if (block is _TextBlock) block.controller.dispose();
+    });
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    // `onReorderItem`, not the deprecated `onReorder`: newIndex already
+    // accounts for the item being removed from oldIndex first.
+    setState(() {
+      final block = _blocks.removeAt(oldIndex);
+      _blocks.insert(newIndex, block);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final channelsAsync = ref.watch(channelsNotifierProvider);
@@ -109,7 +398,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.createPostTitle)),
+      appBar: AppBar(
+        title: Text(l10n.createPostTitle),
+        // The price rides in the title bar rather than in a bar of its own: the
+        // composer's scarce resource is vertical space for what is being
+        // written. See `EconomyHeaderStatus`.
+        actions: const [
+          EconomyHeaderStatus(variant: EconomyBarVariant.composer),
+          SizedBox(width: 8),
+        ],
+      ),
       body: ViewTip(
         tipKey: 'tip.create',
         message: l10n.createPostTipMessage,
@@ -147,48 +445,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
-  /// Shown above the composer when the user can't yet afford the current price:
-  /// posting is admission-priced in tokens, earned by reviewing.
-  Widget _buildAffordabilityBanner(BuildContext context, Economy economy) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final needed = (economy.postPrice - economy.tokenBalance).clamp(
-      0,
-      economy.postPrice,
-    );
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.toll_outlined,
-            size: 18,
-            color: theme.colorScheme.onErrorContainer,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              l10n.createPostNeedMoreTokens(needed, economy.postPrice),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onErrorContainer,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.go('/feed'),
-            child: Text(l10n.feedTitle),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEditor(
     BuildContext context,
     List<Channel> channels,
@@ -199,10 +455,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
-            l10n.createPostNoChannels,
-            textAlign: TextAlign.center,
-          ),
+          child: Text(l10n.createPostNoChannels, textAlign: TextAlign.center),
         ),
       );
     }
@@ -215,75 +468,159 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const EconomyStatusBar(),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!economy.canAffordPost)
-                  _buildAffordabilityBanner(context, economy),
-                _ChannelSelectorButton(
-                  channel: selectedChannel,
-                  onTap: () => _pickChannel(channels),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    maxLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    decoration: InputDecoration(
-                      hintText: l10n.createPostHint,
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                const Divider(),
-                Row(
-                  children: [
-                    FilterChip(
-                      label: Text(l10n.postAnonymous),
-                      avatar: Icon(
-                        _isAnonymous ? Icons.visibility_off : Icons.visibility,
-                        size: 16,
-                      ),
-                      selected: _isAnonymous,
-                      onSelected: (value) =>
-                          setState(() => _isAnonymous = value),
-                    ),
-                    const Spacer(),
-                    if (_isSubmitting)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 12),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    TextButton(
-                      onPressed: (_isSubmitting || !economy.canAffordPost)
-                          ? null
-                          : _submit,
-                      child: const Text('Relay'),
-                    ),
-                  ],
-                ),
-              ],
+    final needed = (economy.postPrice - economy.tokenBalance).clamp(
+      0,
+      economy.postPrice,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
+              itemCount: _blocks.length,
+              onReorderItem: _onReorder,
+              itemBuilder: (context, index) => _buildBlockRow(context, index),
             ),
           ),
-        ),
-      ],
+          Row(
+            children: [
+              IconButton(
+                tooltip: l10n.createPostAddPhoto,
+                onPressed: _remainingMediaSlots <= 0 ? null : _addPhotos,
+                icon: const Icon(Icons.photo_outlined),
+              ),
+              IconButton(
+                tooltip: l10n.createPostAddVideo,
+                onPressed: _remainingMediaSlots <= 0 ? null : _addVideo,
+                icon: const Icon(Icons.videocam_outlined),
+              ),
+              IconButton(
+                tooltip: l10n.createPostAddText,
+                onPressed: _addTextBlock,
+                icon: const Icon(Icons.notes_outlined),
+              ),
+              if (_mediaCount > 0)
+                Text(
+                  '$_mediaCount/$_kMaxMediaItems',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+            ],
+          ),
+          const Divider(height: 8),
+          // Only when it applies, and right above the button it explains —
+          // the disabled Relay button is otherwise the only thing saying no,
+          // and it can't say why.
+          if (!economy.canAffordPost)
+            _ShortOnTokensHint(
+              needed: needed,
+              onEarnTokens: () => context.go('/feed'),
+            ),
+          Row(
+            children: [
+              FilterChip(
+                label: Text(l10n.postAnonymous),
+                avatar: Icon(
+                  _isAnonymous ? Icons.visibility_off : Icons.visibility,
+                  size: 16,
+                ),
+                selected: _isAnonymous,
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                onSelected: (value) => setState(() => _isAnonymous = value),
+              ),
+              const SizedBox(width: 8),
+              // The channel picker used to be a full-width labelled field at
+              // the top of the editor — a whole row spent on one word that is
+              // usually chosen once. As a chip it sits in the row it belongs
+              // to: the three decisions made at the moment of publishing.
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _ChannelSelectorChip(
+                    channel: selectedChannel,
+                    onTap: () => _pickChannel(channels),
+                  ),
+                ),
+              ),
+              if (_isSubmitting)
+                const Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              TextButton(
+                onPressed: (_isSubmitting || !economy.canAffordPost)
+                    ? null
+                    : _submit,
+                child: const Text('Relay'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlockRow(BuildContext context, int index) {
+    final block = _blocks[index];
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      key: ValueKey(block),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ReorderableDragStartListener(
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, right: 4),
+              child: Icon(
+                Icons.drag_indicator,
+                size: 20,
+                color: Theme.of(context).colorScheme.outline,
+                semanticLabel: l10n.createPostReorderBlock,
+              ),
+            ),
+          ),
+          Expanded(
+            child: switch (block) {
+              _TextBlock() => TextField(
+                controller: block.controller,
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: l10n.createPostHint,
+                  border: InputBorder.none,
+                ),
+              ),
+              _MediaBlock() => _ComposerMediaTile(item: block.item),
+            },
+          ),
+          IconButton(
+            tooltip: l10n.createPostRemoveMedia,
+            iconSize: 18,
+            onPressed: () => _removeBlock(index),
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Tappable field that shows the currently selected channel (or a prompt) and
-/// opens the searchable channel picker.
-class _ChannelSelectorButton extends StatelessWidget {
-  const _ChannelSelectorButton({required this.channel, required this.onTap});
+/// The chosen channel as a chip, sitting in the publish row.
+///
+/// Unpicked it is outlined in the primary colour and reads as a prompt, which
+/// is the whole of what the old labelled field's extra row was buying: a
+/// required choice that is visibly still open.
+class _ChannelSelectorChip extends StatelessWidget {
+  const _ChannelSelectorChip({required this.channel, required this.onTap});
 
   final Channel? channel;
   final VoidCallback onTap;
@@ -292,40 +629,112 @@ class _ChannelSelectorButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final hasSelection = channel != null;
-    final color = hasSelection ? AppColors.channelColor(channel!.name) : null;
+    final selected = channel;
+    final color = selected == null
+        ? theme.colorScheme.primary
+        : AppColors.channelColor(selected.name);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: l10n.createPostChannelLabel,
-          border: const OutlineInputBorder(),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 14,
+    return ActionChip(
+      onPressed: onTap,
+      tooltip: l10n.createPostChannelLabel,
+      avatar: selected == null
+          ? Icon(Icons.tag, size: 16, color: color)
+          : CircleAvatar(backgroundColor: color, radius: 6),
+      label: Text(
+        selected?.name ?? l10n.createPostSelectChannel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      shape: const StadiumBorder(),
+      side: BorderSide(color: color),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+/// The one case where the composer still owes an explanation: the Relay button
+/// is disabled and nothing else on screen says why.
+///
+/// A line, not a panel — and only while it applies. The permanent "you need
+/// more tokens" banner it replaces was on screen for everyone, including the
+/// people it did not concern.
+class _ShortOnTokensHint extends StatelessWidget {
+  const _ShortOnTokensHint({required this.needed, required this.onEarnTokens});
+
+  final int needed;
+  final VoidCallback onEarnTokens;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Row(
+      children: [
+        Icon(Icons.info_outline, size: 16, color: theme.colorScheme.error),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            l10n.economyComposerShort(needed),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
           ),
         ),
-        child: Row(
-          children: [
-            if (color != null) ...[
-              CircleAvatar(backgroundColor: color, radius: 7),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: Text(
-                hasSelection ? channel!.name : l10n.createPostSelectChannel,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: hasSelection
-                      ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            Icon(Icons.expand_more, color: theme.colorScheme.onSurfaceVariant),
-          ],
+        TextButton(
+          onPressed: onEarnTokens,
+          child: Text(l10n.economyComposerEarnAction),
         ),
+      ],
+    );
+  }
+}
+
+/// One picked photo/video, as a full-width row in the block editor.
+///
+/// Drawn at the shape it will actually publish in — for a photo that is exactly
+/// the cropper's output, and for a video it is the frame the server will crop
+/// to. So the composer is a preview of the post, not an approximation of it.
+///
+/// Video still shows a neutral tile rather than a decoded frame: extracting one
+/// would mean spinning up a player per picked clip inside a list the author is
+/// dragging rows around in.
+class _ComposerMediaTile extends StatelessWidget {
+  const _ComposerMediaTile({required this.item});
+
+  final _PickedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: AspectRatio(
+        aspectRatio: item.aspectRatio,
+        child: item.isVideo
+            ? ColoredBox(
+                color: Colors.black87,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.play_circle_outline,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.composerVideoWillBeCropped,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Image.memory(item.bytes, fit: BoxFit.cover),
       ),
     );
   }

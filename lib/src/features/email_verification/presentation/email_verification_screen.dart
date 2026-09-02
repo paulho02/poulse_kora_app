@@ -15,6 +15,11 @@ import '../application/email_verification_providers.dart';
 /// `REQUIRE_EMAIL_VERIFICATION` on - see the `/verify-email` redirect in
 /// `routing/app_router.dart`. Blocks nothing on its own; the router is what
 /// keeps the user here until `profileProvider` reports verified.
+///
+/// Sends a code every time it opens (see [_sendInitialCode]) rather than
+/// waiting for the user to hit "resend" - the account may have landed here
+/// with no code ever sent at all, e.g. `REQUIRE_EMAIL_VERIFICATION` turned on
+/// after this account registered.
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({super.key});
 
@@ -31,10 +36,48 @@ class _EmailVerificationScreenState
   int _cooldownSecondsRemaining = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _sendInitialCode();
+  }
+
+  @override
   void dispose() {
     _codeController.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
+  }
+
+  /// Fires the moment this screen mounts, e.g. right after registration or on
+  /// a login that lands here. Deliberately reuses the resend endpoint rather
+  /// than a dedicated one - it already no-ops (`is_verified: true`) for an
+  /// already-verified account and rate-limits via the same cooldown.
+  ///
+  /// The common path (registration, which already mailed a code and started
+  /// the cooldown - see backend `UserManager.on_after_register`) hits
+  /// `resend_cooldown` here every time; that's expected, not a failure, so it
+  /// starts the countdown silently instead of alarming the user with an error
+  /// they didn't cause. Any other failure (e.g. offline) is left silent too -
+  /// the manual "resend" button is still there to retry.
+  Future<void> _sendInitialCode() async {
+    final defaultCooldown = ref
+        .read(appConfigProvider)
+        .value
+        ?.emailVerificationResendCooldownSeconds;
+    try {
+      await ref.read(emailVerificationProvider.notifier).resend();
+      if (!mounted) return;
+      _startCooldown(defaultCooldown ?? 60);
+    } catch (error) {
+      if (!mounted) return;
+      final relayError = asRelayException(error);
+      if (relayError.error == 'resend_cooldown') {
+        final retryAfter = relayError.detail['retry_after'];
+        _startCooldown(
+          retryAfter is int ? retryAfter : (defaultCooldown ?? 60),
+        );
+      }
+    }
   }
 
   void _startCooldown(int seconds) {

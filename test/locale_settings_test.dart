@@ -44,7 +44,9 @@ void main() {
   group('LocaleSettingsStore / localeOverrideProvider', () {
     late ProviderContainer container;
 
-    Future<void> setUpContainer([Map<String, Object> initial = const {}]) async {
+    Future<void> setUpContainer([
+      Map<String, Object> initial = const {},
+    ]) async {
       SharedPreferences.setMockInitialValues(initial);
       final prefs = await SharedPreferences.getInstance();
       container = ProviderContainer(
@@ -53,10 +55,13 @@ void main() {
       addTearDown(container.dispose);
     }
 
-    test('defaults to null (follow device locale) with nothing persisted', () async {
-      await setUpContainer();
-      expect(container.read(localeOverrideProvider), isNull);
-    });
+    test(
+      'defaults to null (follow device locale) with nothing persisted',
+      () async {
+        await setUpContainer();
+        expect(container.read(localeOverrideProvider), isNull);
+      },
+    );
 
     test('reads a persisted override synchronously on build', () async {
       await setUpContainer({'settings.localeOverride': 'de'});
@@ -65,9 +70,7 @@ void main() {
 
     test('setOverride persists the choice and updates state', () async {
       await setUpContainer();
-      await container
-          .read(localeOverrideProvider.notifier)
-          .setOverride('de');
+      await container.read(localeOverrideProvider.notifier).setOverride('de');
 
       expect(container.read(localeOverrideProvider), 'de');
 

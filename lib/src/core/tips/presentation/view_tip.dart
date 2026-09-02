@@ -62,7 +62,7 @@ class _ViewTipState extends ConsumerState<ViewTip> {
               ? Padding(
                   // Bottom inset too, not just top/sides: without it the card
                   // sits flush against whatever the screen puts right below
-                  // it (e.g. `EconomyStatusBar`'s own border), reading as one
+                  // it (e.g. the feed's channel filter bar), reading as one
                   // fused block instead of two distinct pieces.
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                   child: _TipCard(

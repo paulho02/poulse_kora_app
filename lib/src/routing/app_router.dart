@@ -61,32 +61,61 @@ class _RouterRefreshNotifier extends ChangeNotifier {
       final isLoggedIn = next.value ?? false;
       if (wasLoggedIn != isLoggedIn) notifyListeners();
 
-      // `profileProvider` must not be subscribed to before there is a token —
-      // merely listening to an `AsyncNotifierProvider` runs its `build()`,
-      // which calls `GET /users/me` unconditionally. Attaching this listener
-      // eagerly in the constructor (instead of gating it on `loggedIn`) was
-      // firing that fetch — and its guaranteed 401 — on every cold start,
-      // before the user had even reached the login screen.
-      if (isLoggedIn && !_profileListenerAttached) {
-        _profileListenerAttached = true;
-        ref.listen(profileProvider, (previous, next) {
-          final prevData = previous?.value?.data;
-          final nextData = next.value?.data;
-          final relevantChange =
-              prevData?.isVerified != nextData?.isVerified ||
-              prevData?.onboardingCompleted != nextData?.onboardingCompleted;
-          if (relevantChange) notifyListeners();
-        });
-      }
+      if (isLoggedIn) _attachProfileListener(ref);
     });
     ref.listen(appConfigProvider, (previous, next) {
       final prevRequire = previous?.value?.requireEmailVerification;
       final nextRequire = next.value?.requireEmailVerification;
       if (prevRequire != nextRequire) notifyListeners();
     });
+    // A live `unverified_user` 403 is authoritative over whatever
+    // `appConfigProvider` cached at app start (see that provider's doc) - e.g.
+    // `REQUIRE_EMAIL_VERIFICATION` flipped on mid-session. Always a
+    // false->true transition since the notifier only ever sets it once, so no
+    // need to compare previous/next.
+    ref.listen(serverConfirmedVerificationRequiredProvider, (previous, next) {
+      notifyListeners();
+    });
+
+    // `routerProvider` (and thus this notifier) is only built once
+    // `authReadyProvider` resolves (see `app.dart`), which is itself gated on
+    // `authNotifierProvider` finishing its cold-start token read. So on a
+    // cold start with an existing stored token, `authNotifierProvider` is
+    // *already* `AsyncData(true)` by the time the `ref.listen` above is
+    // attached — there is no future logged-out -> logged-in transition left
+    // to observe, so that callback would never fire and the profile listener
+    // below would never attach. Without it, `redirect` never learns that
+    // `profileProvider` resolved (e.g. to `isVerified: false`), so an
+    // existing unverified user reopening the app stays on `/feed` and hits
+    // the raw `unverified_user` error from every request instead of being
+    // routed to `/verify-email`. Covering that here, once, at construction
+    // time closes the gap; the listener inside the callback above still
+    // covers a live login/registration happening after this notifier exists.
+    if (ref.read(authNotifierProvider).value ?? false) {
+      _attachProfileListener(ref);
+    }
   }
 
   var _profileListenerAttached = false;
+
+  // `profileProvider` must not be subscribed to before there is a token —
+  // merely listening to an `AsyncNotifierProvider` runs its `build()`, which
+  // calls `GET /users/me` unconditionally. Only ever called once logged in,
+  // and only once total, since re-attaching would otherwise double-fire
+  // whenever this runs from both the constructor's upfront check and a
+  // subsequent auth transition.
+  void _attachProfileListener(Ref ref) {
+    if (_profileListenerAttached) return;
+    _profileListenerAttached = true;
+    ref.listen(profileProvider, (previous, next) {
+      final prevData = previous?.value?.data;
+      final nextData = next.value?.data;
+      final relevantChange =
+          prevData?.isVerified != nextData?.isVerified ||
+          prevData?.onboardingCompleted != nextData?.onboardingCompleted;
+      if (relevantChange) notifyListeners();
+    });
+  }
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -116,9 +145,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       // - `is_verified` can legitimately stay false forever with the flag
       // off, so this must not force the verify screen in that case. Also
       // fails open (treats as "not required") if the public config hasn't
-      // loaded yet.
+      // loaded yet. ORed with `serverConfirmedVerificationRequiredProvider`
+      // so a stale cached `false` (e.g. the flag was turned on after this
+      // config fetch) can't mask an actual `unverified_user` rejection the
+      // user just hit.
       final requireEmailVerification =
-          ref.read(appConfigProvider).value?.requireEmailVerification ?? false;
+          (ref.read(appConfigProvider).value?.requireEmailVerification ??
+              false) ||
+          ref.read(serverConfirmedVerificationRequiredProvider);
       final needsEmailVerification =
           requireEmailVerification && profile?.isVerified == false;
 

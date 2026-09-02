@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:poulse_kora_app/src/core/avatars/application/avatar_providers.dart';
-import 'package:poulse_kora_app/src/core/avatars/data/avatar_cache.dart';
 import 'package:poulse_kora_app/src/core/avatars/presentation/user_avatar.dart';
+import 'package:poulse_kora_app/src/core/media/data/authenticated_byte_cache.dart';
 
 /// Serves whatever bytes the test currently wants, and counts requests.
 class _FakeAdapter implements HttpClientAdapter {
@@ -35,14 +35,14 @@ class _FakeAdapter implements HttpClientAdapter {
 
 const _url = '/api/v1/users/abc/profile-picture';
 
-AvatarCache _cacheWith(_FakeAdapter adapter) {
+AuthenticatedByteCache _cacheWith(_FakeAdapter adapter) {
   final dio = Dio(BaseOptions(baseUrl: 'http://test/api/v1'));
   dio.httpClientAdapter = adapter;
-  return AvatarCache(dio);
+  return AuthenticatedByteCache(dio);
 }
 
 void main() {
-  group('AvatarCache', () {
+  group('AuthenticatedByteCache', () {
     test('strips the API prefix the backend puts on the URL', () async {
       final adapter = _FakeAdapter([1, 2, 3]);
       await _cacheWith(adapter).load(_url);
@@ -81,23 +81,25 @@ void main() {
       expect(adapter.calls, 2);
     });
 
-    test('evict and refresh notify listeners; clear deliberately does not',
-        () async {
-      final cache = _cacheWith(_FakeAdapter([1]));
-      var notifications = 0;
-      cache.addListener(() => notifications++);
+    test(
+      'evict and refresh notify listeners; clear deliberately does not',
+      () async {
+        final cache = _cacheWith(_FakeAdapter([1]));
+        var notifications = 0;
+        cache.addListener(() => notifications++);
 
-      cache.evict(_url);
-      expect(notifications, 1);
+        cache.evict(_url);
+        expect(notifications, 1);
 
-      cache.refresh();
-      expect(notifications, 2);
+        cache.refresh();
+        expect(notifications, 2);
 
-      // Silent on purpose: a session boundary is throwing the token away, so
-      // waking on-screen avatars would only fire requests destined to 401.
-      cache.clear();
-      expect(notifications, 2);
-    });
+        // Silent on purpose: a session boundary is throwing the token away, so
+        // waking on-screen avatars would only fire requests destined to 401.
+        cache.clear();
+        expect(notifications, 2);
+      },
+    );
   });
 
   group('UserAvatar', () {

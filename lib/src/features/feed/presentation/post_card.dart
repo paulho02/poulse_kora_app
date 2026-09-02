@@ -9,6 +9,7 @@ import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 import 'post_author_avatar.dart';
+import 'post_media_thumbnail.dart';
 
 /// Shared height for the Drop / Forward action buttons so they always match.
 const double _actionButtonHeight = 40;
@@ -190,25 +191,25 @@ class _PostCardState extends ConsumerState<PostCard>
               ),
               const SizedBox(height: 10),
               Text(
-                post.text,
+                post.previewText,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium,
               ),
-              if (post.hasImage) ...[
+              if (post.hasMedia) ...[
                 const SizedBox(height: 10),
-                Container(
-                  height: 80,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    l10n.postImagePlaceholder,
-                    style: theme.textTheme.labelSmall,
-                  ),
+                Stack(
+                  children: [
+                    PostMediaThumbnail(media: post.mediaItems.first),
+                    if (post.mediaItems.length > 1)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: PostMediaCountBadge(
+                          count: post.mediaItems.length - 1,
+                        ),
+                      ),
+                  ],
                 ),
               ],
               const SizedBox(height: 12),
@@ -324,4 +325,3 @@ class _DropButton extends StatelessWidget {
     );
   }
 }
-

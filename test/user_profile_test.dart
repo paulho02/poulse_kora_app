@@ -96,7 +96,7 @@ void main() {
           overrides: {
             'profile_picture_url':
                 '/api/v1/users/ce1b6b1e-0000-4000-8000-000000000000'
-                    '/profile-picture',
+                '/profile-picture',
           },
         ),
       );
@@ -123,7 +123,10 @@ void main() {
       final withPicture = UserProfile.fromJson(
         json(overrides: {'profile_picture_url': '/api/v1/users/x/pp'}),
       );
-      expect(withPicture.copyWith(bio: 'hi').profilePictureUrl, '/api/v1/users/x/pp');
+      expect(
+        withPicture.copyWith(bio: 'hi').profilePictureUrl,
+        '/api/v1/users/x/pp',
+      );
     });
   });
 }

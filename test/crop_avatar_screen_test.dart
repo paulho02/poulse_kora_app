@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
+import 'package:poulse_kora_app/src/core/media/presentation/crop_media_screen.dart';
 import 'package:poulse_kora_app/src/features/profile/presentation/crop_avatar_screen.dart';
 
 /// A plain red bitmap, big enough that the crop has something to sample.
@@ -49,11 +50,10 @@ Widget _host(ui.Image image, void Function(Uint8List?) onResult) {
     home: Builder(
       builder: (context) => ElevatedButton(
         onPressed: () async {
-          onResult(
-            await Navigator.of(context).push<Uint8List>(
-              MaterialPageRoute(builder: (_) => CropAvatarScreen(image: image)),
-            ),
+          final result = await Navigator.of(context).push<CropResult>(
+            MaterialPageRoute(builder: (_) => CropAvatarScreen(image: image)),
           );
+          onResult(result?.bytes);
         },
         child: const Text('open'),
       ),

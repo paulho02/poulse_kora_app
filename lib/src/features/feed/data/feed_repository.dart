@@ -1,9 +1,58 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/cache/cached.dart';
 import '../../../core/cache/cached_fetch.dart';
 import '../../../core/cache/json_cache.dart';
 import 'post.dart';
+
+/// One image or video picked in the composer, ready to upload — see
+/// `create_post/presentation/create_post_screen.dart`.
+class PickedMedia {
+  PickedMedia({
+    required this.bytes,
+    required this.filename,
+    required this.contentType,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String contentType;
+}
+
+/// One block of a post being composed - mirrors the backend's `PostBlockIn`.
+/// A media block names its index into the parallel `media: List<PickedMedia>`
+/// passed to `FeedRepository.createPost`, not the bytes themselves.
+class ComposerBlockInput {
+  ComposerBlockInput.text(this.text)
+    : type = 'text',
+      mediaIndex = null,
+      orientation = null;
+  ComposerBlockInput.media(this.mediaIndex, {this.orientation})
+    : type = 'media',
+      text = null;
+
+  final String type;
+  final String? text;
+  final int? mediaIndex;
+
+  /// `"landscape"` / `"portrait"`, and only meaningful for a **video**: the
+  /// backend center-crops the clip to that shape inside the transcode it runs
+  /// anyway, because a Flutter client cannot re-encode video. A photo is
+  /// cropped locally before upload and its shape is already final, so this is
+  /// ignored for one.
+  final String? orientation;
+
+  Map<String, dynamic> toJson() => type == 'text'
+      ? {'type': 'text', 'text': text}
+      : {
+          'type': 'media',
+          'file_index': mediaIndex,
+          if (orientation != null) 'orientation': orientation,
+        };
+}
 
 class PostReviewResult {
   PostReviewResult({
@@ -95,20 +144,41 @@ class FeedRepository {
     );
   }
 
+  /// `POST /posts` is multipart on the backend (it accepts up to
+  /// POST_MEDIA_MAX_FILES image/video attachments in one request/one
+  /// transaction — see the backend's app/api/posts.py), so this always sends a
+  /// multipart body, media or not. `blocks` is itself a JSON-encoded list (a
+  /// `Form` field, not a file) - multipart has no native way to carry a nested
+  /// list of objects; the backend parses it back with the same shape.
   Future<CreatePostResult> createPost({
     required int channelId,
-    required String text,
-    bool hasImage = false,
+    required List<ComposerBlockInput> blocks,
     bool isAnonymous = false,
+    List<PickedMedia> media = const [],
   }) async {
+    final form = FormData.fromMap({
+      'channel_id': channelId.toString(),
+      'blocks': jsonEncode(blocks.map((b) => b.toJson()).toList()),
+      'is_anonymous': isAnonymous.toString(),
+    });
+    // `form.files.add(...)`, not another `FormData.fromMap` entry: repeated
+    // keys in a map collapse, and the backend expects every file under the
+    // same repeated "files" field.
+    for (final item in media) {
+      form.files.add(
+        MapEntry(
+          'files',
+          MultipartFile.fromBytes(
+            item.bytes,
+            filename: item.filename,
+            contentType: DioMediaType.parse(item.contentType),
+          ),
+        ),
+      );
+    }
     final response = await _dio.post<Map<String, dynamic>>(
       '/posts',
-      data: {
-        'channel_id': channelId,
-        'text': text,
-        'has_image': hasImage,
-        'is_anonymous': isAnonymous,
-      },
+      data: form,
     );
     return CreatePostResult.fromJson(response.data!);
   }

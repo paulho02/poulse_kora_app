@@ -19,3 +19,30 @@ final appConfigProvider = FutureProvider<PublicAppConfig?>((ref) async {
     return null;
   }
 });
+
+/// Set the moment any request comes back `unverified_user` (see backend
+/// `get_verified_user`) - proof positive that the backend enforces
+/// verification *right now*, regardless of what [appConfigProvider] cached at
+/// app start. Covers `REQUIRE_EMAIL_VERIFICATION` being turned on mid-session
+/// (or turned on between app launches without a fresh `/config` fetch
+/// happening to notice): without this, a blocked request had no way to get
+/// the user to `/verify-email` at all - the router only reacts to
+/// `appConfigProvider`/`profileProvider` actually changing value, and a stale
+/// cached `false` never does. See `routing/app_router.dart`.
+///
+/// Deliberately one-way for the life of a session (reset only at session
+/// boundaries, see `_invalidateSessionScoped`) rather than cleared once
+/// `is_verified` flips true - it's ANDed with `profile.isVerified == false`
+/// everywhere it's read, so a stuck `true` is harmless once verified, and
+/// clearing it would just reopen the same race this exists to close.
+class ServerConfirmedVerificationRequiredNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void markConfirmed() => state = true;
+}
+
+final serverConfirmedVerificationRequiredProvider =
+    NotifierProvider<ServerConfirmedVerificationRequiredNotifier, bool>(
+      ServerConfirmedVerificationRequiredNotifier.new,
+    );
