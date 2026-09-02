@@ -109,6 +109,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
             ref.read(economyProvider.notifier).refresh(),
           ]),
           child: Column(
+            // Explicit instead of relying on the default (`center`): with
+            // `center`, this Column's own width comes from the widest of its
+            // children, and once `ViewTip`'s tip card is dismissed its
+            // sibling placeholder is a zero-height `SizedBox(width:
+            // double.infinity)` - which, through `ViewTip`'s own Column,
+            // ends up making our width ambiguous and the chip row area
+            // collapse to its content width and get centered by *its*
+            // ancestor instead of spanning full width. `stretch` makes this
+            // Column's own width unambiguous regardless of what an ancestor
+            // we don't control does.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (subscribedChannels.isNotEmpty)
                 _ChannelFilter(
@@ -136,6 +147,23 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                         );
                       }
                       if (posts.isEmpty) {
+                        // A channel filter isn't the reason there's nothing in
+                        // the *whole* queue — only mention it (and offer to
+                        // clear it) when it's plausibly why this one channel
+                        // looks empty, so the user doesn't wonder where their
+                        // posts went.
+                        final filtered = selectedChannel;
+                        if (filtered != null) {
+                          return _ScrollableEmptyState(
+                            icon: Icons.filter_alt_off_outlined,
+                            title: l10n.feedEmptyFilteredTitle(filtered.name),
+                            subtitle: l10n.feedEmptyFilteredSubtitle,
+                            actionLabel: l10n.feedEmptyFilteredAction,
+                            onAction: () => ref
+                                .read(selectedChannelFilterProvider.notifier)
+                                .set(null),
+                          );
+                        }
                         return _ScrollableEmptyState(
                           icon: Icons.check_circle_outline,
                           title: l10n.feedEmptyCaughtUpTitle,
