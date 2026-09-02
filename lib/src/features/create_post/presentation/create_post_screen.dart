@@ -13,6 +13,7 @@ import '../../../core/media/presentation/crop_media_screen.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/tips/presentation/tip_dialog.dart';
 import '../../../core/tips/presentation/view_tip.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
@@ -370,6 +371,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
+  /// Turning anonymity *on* is the one direction that needs explaining — what
+  /// the reader loses sight of, and what we still store. Shown as a tip
+  /// (`showTipDialog`) rather than a plain dialog so it silences itself once
+  /// the user has read it, and comes back with "Reset tutorial hints".
+  void _onAnonymousChanged(bool value) {
+    setState(() => _isAnonymous = value);
+    if (!value) return;
+    final l10n = AppLocalizations.of(context);
+    showTipDialog(
+      context: context,
+      ref: ref,
+      tipKey: 'tip.anonymousPost',
+      title: l10n.postAnonymousDisclaimerTitle,
+      message: l10n.postAnonymousDisclaimerBody,
+      icon: Icons.visibility_off_outlined,
+    );
+  }
+
   void _addTextBlock() {
     setState(() => _blocks.add(_TextBlock()));
   }
@@ -531,7 +550,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   selected: _isAnonymous,
                   showCheckmark: false,
                   visualDensity: VisualDensity.compact,
-                  onSelected: (value) => setState(() => _isAnonymous = value),
+                  onSelected: _onAnonymousChanged,
                 ),
                 const SizedBox(width: 8),
                 // The channel picker used to be a full-width labelled field at
