@@ -28,6 +28,84 @@ void main() {
       expect(media.isVideo, isTrue);
       expect(media.durationSeconds, 12.5);
     });
+
+    test('dimensions become the aspect ratio a block is laid out at', () {
+      final media = PostMedia.fromJson({
+        'id': 3,
+        'media_type': 'image',
+        'content_type': 'image/jpeg',
+        'url': '/a',
+        'duration_seconds': null,
+        'width': 1024,
+        'height': 1280,
+      });
+      expect(media.aspectRatio, closeTo(0.8, 0.0001));
+    });
+
+    test('media from before dimensions existed reports an unknown shape', () {
+      // Old rows are not backfilled and may be any shape, so callers letterbox
+      // rather than assuming one of the two fixed ratios — null is the signal
+      // that makes that possible, and must not become a default.
+      final media = PostMedia.fromJson({
+        'id': 4,
+        'media_type': 'image',
+        'content_type': 'image/jpeg',
+        'url': '/a',
+        'duration_seconds': null,
+      });
+      expect(media.aspectRatio, isNull);
+    });
+
+    test('a zero dimension is treated as unknown, not as a ratio', () {
+      final media = PostMedia.fromJson({
+        'id': 5,
+        'media_type': 'image',
+        'content_type': 'image/jpeg',
+        'url': '/a',
+        'duration_seconds': null,
+        'width': 0,
+        'height': 0,
+      });
+      expect(media.aspectRatio, isNull);
+    });
+
+    test(
+      'previewUrl is the poster for video and the file itself for a photo',
+      () {
+        final video = PostMedia.fromJson({
+          'id': 6,
+          'media_type': 'video',
+          'content_type': 'video/mp4',
+          'url': '/media/6',
+          'duration_seconds': 3.0,
+          'poster_url': '/media/6/poster',
+        });
+        expect(video.previewUrl, '/media/6/poster');
+
+        final photo = PostMedia.fromJson({
+          'id': 7,
+          'media_type': 'image',
+          'content_type': 'image/jpeg',
+          'url': '/media/7',
+          'duration_seconds': null,
+        });
+        expect(photo.previewUrl, '/media/7');
+      },
+    );
+
+    test('a video whose poster extraction failed has nothing to preview', () {
+      // Extraction is deliberately non-fatal server-side, so this is a state
+      // the UI has to render (a neutral tile), not an error.
+      final media = PostMedia.fromJson({
+        'id': 8,
+        'media_type': 'video',
+        'content_type': 'video/mp4',
+        'url': '/media/8',
+        'duration_seconds': 3.0,
+        'poster_url': null,
+      });
+      expect(media.previewUrl, isNull);
+    });
   });
 
   group('PostBlock.fromJson', () {

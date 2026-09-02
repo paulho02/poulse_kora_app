@@ -64,26 +64,70 @@ Future<FeedRepository> _repository(_CapturingAdapter adapter) async {
 
 void main() {
   group('FeedRepository.createPost', () {
-    test('sends a multipart request with no files field when there is no media', () async {
-      final adapter = _CapturingAdapter();
-      final repo = await _repository(adapter);
+    test(
+      'sends a multipart request with no files field when there is no media',
+      () async {
+        final adapter = _CapturingAdapter();
+        final repo = await _repository(adapter);
 
-      await repo.createPost(
-        channelId: 2,
-        blocks: [ComposerBlockInput.text('hello')],
-        isAnonymous: true,
-      );
+        await repo.createPost(
+          channelId: 2,
+          blocks: [ComposerBlockInput.text('hello')],
+          isAnonymous: true,
+        );
 
-      final form = adapter.lastFormData!;
-      expect(adapter.lastRequest!.method, 'POST');
-      final fields = {for (final e in form.fields) e.key: e.value};
-      expect(fields['channel_id'], '2');
-      expect(fields['is_anonymous'], 'true');
-      expect(jsonDecode(fields['blocks']!), [
-        {'type': 'text', 'text': 'hello'},
-      ]);
-      expect(form.files, isEmpty);
-    });
+        final form = adapter.lastFormData!;
+        expect(adapter.lastRequest!.method, 'POST');
+        final fields = {for (final e in form.fields) e.key: e.value};
+        expect(fields['channel_id'], '2');
+        expect(fields['is_anonymous'], 'true');
+        expect(jsonDecode(fields['blocks']!), [
+          {'type': 'text', 'text': 'hello'},
+        ]);
+        expect(form.files, isEmpty);
+      },
+    );
+
+    test(
+      'a video block carries its orientation, a photo block does not',
+      () async {
+        // The one thing about a file the client decides server-side: a video is
+        // center-cropped to this shape during the backend's transcode, because a
+        // Flutter client has no encoder. A photo is already cropped locally, so
+        // sending an orientation for one would be noise the backend ignores.
+        final adapter = _CapturingAdapter();
+        final repo = await _repository(adapter);
+
+        await repo.createPost(
+          channelId: 1,
+          blocks: [
+            ComposerBlockInput.media(0),
+            ComposerBlockInput.media(1, orientation: 'portrait'),
+          ],
+          media: [
+            PickedMedia(
+              bytes: Uint8List.fromList([1]),
+              filename: 'a.png',
+              contentType: 'image/png',
+            ),
+            PickedMedia(
+              bytes: Uint8List.fromList([2]),
+              filename: 'b.mp4',
+              contentType: 'video/mp4',
+            ),
+          ],
+        );
+
+        final form = adapter.lastFormData!;
+        final blocksField = form.fields
+            .firstWhere((e) => e.key == 'blocks')
+            .value;
+        expect(jsonDecode(blocksField), [
+          {'type': 'media', 'file_index': 0},
+          {'type': 'media', 'file_index': 1, 'orientation': 'portrait'},
+        ]);
+      },
+    );
 
     test('encodes a mix of text and media blocks, media by file_index', () async {
       final adapter = _CapturingAdapter();
@@ -111,7 +155,9 @@ void main() {
       );
 
       final form = adapter.lastFormData!;
-      final blocksField = form.fields.firstWhere((e) => e.key == 'blocks').value;
+      final blocksField = form.fields
+          .firstWhere((e) => e.key == 'blocks')
+          .value;
       expect(jsonDecode(blocksField), [
         {'type': 'text', 'text': 'intro'},
         {'type': 'media', 'file_index': 0},
@@ -121,10 +167,10 @@ void main() {
       // entry would have collapsed them.
       expect(form.files.map((e) => e.key), ['files', 'files']);
       expect(form.files.map((e) => e.value.filename), ['a.jpg', 'b.mp4']);
-      expect(
-        form.files.map((e) => e.value.contentType?.mimeType),
-        ['image/jpeg', 'video/mp4'],
-      );
+      expect(form.files.map((e) => e.value.contentType?.mimeType), [
+        'image/jpeg',
+        'video/mp4',
+      ]);
     });
 
     test('returns the parsed post/price/balance', () async {

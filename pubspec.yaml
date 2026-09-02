@@ -55,11 +55,14 @@ dependencies:
   # see features/profile/presentation/profile_picture_tile.dart. Also used to pick
   # post photos/videos (features/create_post).
   image_picker: ^1.2.3
-  # Post video playback (feed/presentation/post_media_gallery.dart). Wrapped in
-  # chewie for a ready-made play/pause/seek/fullscreen overlay instead of a
-  # hand-built scrubber.
+  # Post video playback (feed/presentation/inline_media_block.dart). The
+  # play/pause/scrub overlay on top of it is ours
+  # (core/media/presentation/video_player_surface.dart) — chewie's stock controls
+  # were built for long-form video and sat on top of a 60-second clip.
   video_player: ^2.10.0
-  chewie: ^1.11.3
+  # Keeps the screen awake while a clip plays; was a transitive dependency of
+  # chewie, which did the same, and is direct now that chewie is gone.
+  wakelock_plus: ^1.3.0
   # Web-only video playback path (core/media/data/media_video_source_web.dart):
   # the browser's native <video> element cannot send a custom Authorization
   # header, so authenticated video on web is fetched as bytes and handed to the

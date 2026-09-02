@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/features/profile/presentation/crop_avatar_screen.dart';
+import 'package:poulse_kora_app/src/core/media/presentation/crop_geometry.dart';
 
 void main() {
   group('cropSourceRect', () {
     test('an untouched square image crops to the whole image', () {
       final rect = cropSourceRect(
         transform: Matrix4.identity(),
-        viewportSize: 300,
-        imageWidth: 100,
-        imageHeight: 100,
+        viewport: const Size.square(300),
+        imageSize: const Size(100, 100),
       );
       expect(rect, const Rect.fromLTRB(0, 0, 100, 100));
     });
@@ -21,9 +20,8 @@ void main() {
       // picture off to one side.
       final rect = cropSourceRect(
         transform: Matrix4.identity(),
-        viewportSize: 100,
-        imageWidth: 200,
-        imageHeight: 100,
+        viewport: const Size.square(100),
+        imageSize: const Size(200, 100),
       );
       expect(rect, const Rect.fromLTRB(50, 0, 150, 100));
     });
@@ -31,9 +29,8 @@ void main() {
     test('a tall image starts framed on its centre too', () {
       final rect = cropSourceRect(
         transform: Matrix4.identity(),
-        viewportSize: 100,
-        imageWidth: 100,
-        imageHeight: 400,
+        viewport: const Size.square(100),
+        imageSize: const Size(100, 400),
       );
       expect(rect, const Rect.fromLTRB(0, 150, 100, 250));
     });
@@ -43,9 +40,8 @@ void main() {
       // quarter, so exactly a quarter of the source is kept.
       final rect = cropSourceRect(
         transform: Matrix4.identity()..scaleByDouble(2.0, 2.0, 1.0, 1.0),
-        viewportSize: 100,
-        imageWidth: 100,
-        imageHeight: 100,
+        viewport: const Size.square(100),
+        imageSize: const Size(100, 100),
       );
       expect(rect, const Rect.fromLTRB(0, 0, 50, 50));
     });
@@ -56,9 +52,8 @@ void main() {
         transform: Matrix4.identity()
           ..scaleByDouble(2.0, 2.0, 1.0, 1.0)
           ..translateByDouble(-20.0, -10.0, 0.0, 1.0),
-        viewportSize: 100,
-        imageWidth: 100,
-        imageHeight: 100,
+        viewport: const Size.square(100),
+        imageSize: const Size(100, 100),
       );
       expect(rect, const Rect.fromLTRB(20, 10, 70, 60));
     });
@@ -68,10 +63,10 @@ void main() {
       // area inside it — so without clamping a wide image could yield negative
       // coordinates and `drawImageRect` would sample outside the bitmap.
       final rect = cropSourceRect(
-        transform: Matrix4.identity()..translateByDouble(500.0, 500.0, 0.0, 1.0),
-        viewportSize: 100,
-        imageWidth: 200,
-        imageHeight: 100,
+        transform: Matrix4.identity()
+          ..translateByDouble(500.0, 500.0, 0.0, 1.0),
+        viewport: const Size.square(100),
+        imageSize: const Size(200, 100),
       );
       expect(rect.left, greaterThanOrEqualTo(0));
       expect(rect.top, greaterThanOrEqualTo(0));
@@ -84,9 +79,8 @@ void main() {
       // stretch the picture.
       final rect = cropSourceRect(
         transform: Matrix4.identity()..scaleByDouble(1.7, 1.7, 1.0, 1.0),
-        viewportSize: 100,
-        imageWidth: 640,
-        imageHeight: 480,
+        viewport: const Size.square(100),
+        imageSize: const Size(640, 480),
       );
       expect(rect.width, closeTo(rect.height, 0.0001));
     });

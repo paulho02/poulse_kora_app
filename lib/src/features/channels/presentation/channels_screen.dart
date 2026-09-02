@@ -136,7 +136,9 @@ class _ChannelTile extends ConsumerWidget {
           }
         },
         child: Text(
-          channel.isSubscribed ? l10n.channelsJoinedButton : l10n.channelsJoinButton,
+          channel.isSubscribed
+              ? l10n.channelsJoinedButton
+              : l10n.channelsJoinButton,
         ),
       ),
     );

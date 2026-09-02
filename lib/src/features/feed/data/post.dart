@@ -29,6 +29,9 @@ class PostMedia {
     required this.contentType,
     required this.url,
     required this.durationSeconds,
+    required this.width,
+    required this.height,
+    required this.posterUrl,
   });
 
   factory PostMedia.fromJson(Map<String, dynamic> json) => PostMedia(
@@ -37,6 +40,9 @@ class PostMedia {
     contentType: json['content_type'] as String,
     url: json['url'] as String,
     durationSeconds: (json['duration_seconds'] as num?)?.toDouble(),
+    width: json['width'] as int?,
+    height: json['height'] as int?,
+    posterUrl: json['poster_url'] as String?,
   );
 
   final int id;
@@ -45,7 +51,33 @@ class PostMedia {
   final String url;
   final double? durationSeconds;
 
+  /// Pixel size of the stored file, or null for anything uploaded before the
+  /// backend started measuring it. Everything published since is one of two
+  /// fixed shapes, but old rows are *not* backfilled and may be anything — so
+  /// null means "unknown, letterbox it", never "assume the default".
+  final int? width;
+  final int? height;
+
+  /// A still frame to show in place of an unplayed video. Null for images
+  /// (which are their own preview) and for a video whose frame extraction
+  /// failed server-side, which is a tolerated outcome rather than an error.
+  final String? posterUrl;
+
   bool get isVideo => mediaType == 'video';
+
+  /// The shape to lay this block out in, or null when it isn't known yet — see
+  /// [width]. Callers letterbox rather than guessing, since a wrong guess crops
+  /// an old post's photo instead of merely padding it.
+  double? get aspectRatio {
+    final w = width;
+    final h = height;
+    if (w == null || h == null || w <= 0 || h <= 0) return null;
+    return w / h;
+  }
+
+  /// What to fetch to show this item *without* playing it: a photo is its own
+  /// preview, a video has a poster frame (when one exists).
+  String? get previewUrl => isVideo ? posterUrl : url;
 }
 
 /// One paragraph of text or one attached image/video, in the post's display
@@ -53,10 +85,13 @@ class PostMedia {
 /// `PostBlock`), article-style, rather than a text blob with a media strip
 /// bolted on the end.
 sealed class PostBlock {
-  factory PostBlock.fromJson(Map<String, dynamic> json) => switch (json['type']) {
-    'media' => PostMediaBlock(PostMedia.fromJson(json['media'] as Map<String, dynamic>)),
-    _ => PostTextBlock(json['text'] as String),
-  };
+  factory PostBlock.fromJson(Map<String, dynamic> json) =>
+      switch (json['type']) {
+        'media' => PostMediaBlock(
+          PostMedia.fromJson(json['media'] as Map<String, dynamic>),
+        ),
+        _ => PostTextBlock(json['text'] as String),
+      };
 }
 
 class PostTextBlock implements PostBlock {

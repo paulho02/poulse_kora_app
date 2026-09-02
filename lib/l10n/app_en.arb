@@ -1,52 +1,45 @@
 {
   "@@locale": "en",
-
   "infoBannerDontShowAgain": "Don't show again",
   "@infoBannerDontShowAgain": {},
-
   "infoBannerDismiss": "Dismiss",
   "@infoBannerDismiss": {},
-
   "settingsLanguageSectionHeader": "Language",
   "@settingsLanguageSectionHeader": {},
-
   "settingsLanguageDialogTitle": "Choose language",
   "@settingsLanguageDialogTitle": {},
-
   "settingsLanguageSystemDefault": "System default",
   "@settingsLanguageSystemDefault": {},
-
   "settingsLanguageEnglish": "English",
   "@settingsLanguageEnglish": {},
-
   "settingsLanguageGerman": "German",
   "@settingsLanguageGerman": {},
-
   "passwordTooShort": "Password must be at least {minLength} characters long.",
   "@passwordTooShort": {
-    "placeholders": { "minLength": { "type": "int" } }
+    "placeholders": {
+      "minLength": {
+        "type": "int"
+      }
+    }
   },
-
   "passwordMissingVariety": "Password must include at least {requiredCategories} of: lowercase letters, uppercase letters, numbers, and symbols.",
   "@passwordMissingVariety": {
-    "placeholders": { "requiredCategories": { "type": "int" } }
+    "placeholders": {
+      "requiredCategories": {
+        "type": "int"
+      }
+    }
   },
-
   "errorOffline": "You're offline. This needs a connection — try again once you're back.",
   "@errorOffline": {},
-
   "errorTimeout": "The server took too long to respond. Check your connection and try again.",
   "@errorTimeout": {},
-
   "errorLoginBadCredentials": "That email or password isn't right. Check both and try again.",
   "@errorLoginBadCredentials": {},
-
   "errorEmailAlreadyExists": "An account with that email already exists. Try logging in instead.",
   "@errorEmailAlreadyExists": {},
-
   "errorInvalidPasswordGeneric": "That password isn't strong enough. Try a longer one with a mix of letters, numbers, and symbols.",
   "@errorInvalidPasswordGeneric": {},
-
   "errorChangePasswordWrongCurrentPassword": "That's not your current password.",
   "@errorChangePasswordWrongCurrentPassword": {},
   "errorLoginUseGoogle": "This account signs in with Google. Use the Google button below.",
@@ -65,71 +58,69 @@
   "@errorGoogleSignInFailed": {},
   "errorGoogleOauthDisabled": "Google sign-in isn't available right now.",
   "@errorGoogleOauthDisabled": {},
-
   "errorUnverifiedUser": "Verify your email to continue.",
   "@errorUnverifiedUser": {},
-
   "errorInvalidCodeRemaining": "{remaining, plural, one{That code isn't right. 1 try left.} other{That code isn't right. {remaining} tries left.}}",
   "@errorInvalidCodeRemaining": {
-    "placeholders": { "remaining": { "type": "int" } }
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
   },
-
   "errorInvalidCodeExhausted": "That code isn't right, and you're out of tries. Request a new code.",
   "@errorInvalidCodeExhausted": {},
-
   "errorInvalidCodeGeneric": "That code isn't right. Try again.",
   "@errorInvalidCodeGeneric": {},
-
   "errorVerificationCodeExpired": "That code has expired. Request a new one.",
   "@errorVerificationCodeExpired": {},
-
   "errorTooManyVerificationAttempts": "Too many wrong tries. Request a new code and try again.",
   "@errorTooManyVerificationAttempts": {},
-
   "errorResendCooldownWait": "{seconds, plural, one{You can request another code in 1 second.} other{You can request another code in {seconds} seconds.}}",
   "@errorResendCooldownWait": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
-
   "errorResendCooldownGeneric": "Please wait a moment before requesting another code.",
   "@errorResendCooldownGeneric": {},
-
   "errorEmailSendFailed": "We couldn't send the email. Please try again in a moment.",
   "@errorEmailSendFailed": {},
-
   "errorInsufficientTokens": "Not enough tokens to post (need {price}, you have {balance}). Review posts in your feed to earn more.",
   "@errorInsufficientTokens": {
     "placeholders": {
-      "price": { "type": "int" },
-      "balance": { "type": "int" }
+      "price": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
     }
   },
-
   "errorChannelNotFound": "That channel doesn't exist anymore. Pick another one.",
   "@errorChannelNotFound": {},
-
   "errorNotInQueue": "That post is no longer in your queue. Pull down to refresh your feed.",
   "@errorNotInQueue": {},
-
   "errorAlreadyReviewed": "You've already reviewed that post. Pull down to refresh your feed.",
   "@errorAlreadyReviewed": {},
-
   "errorPostNotFound": "That post is no longer available.",
   "@errorPostNotFound": {},
-
   "errorRateLimitedWait": "{seconds, plural, one{You're going a bit fast. Try again in 1 second.} other{You're going a bit fast. Try again in {seconds} seconds.}}",
   "@errorRateLimitedWait": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
-
   "errorRateLimitedGeneric": "You're going a bit fast. Take a moment, then try again.",
   "@errorRateLimitedGeneric": {},
-
   "errorProfilePictureInvalidType": "That file type isn't supported. Pick a JPEG, PNG or WebP image.",
   "@errorProfilePictureInvalidType": {},
   "errorProfilePictureTooLarge": "That image is too large. Pick one under 2 MB.",
   "@errorProfilePictureTooLarge": {},
-
   "errorPostMediaTooManyFiles": "You can attach up to 5 photos or videos per post.",
   "@errorPostMediaTooManyFiles": {},
   "errorPostMediaInvalidType": "That file couldn't be used. Try a different photo or video.",
@@ -146,39 +137,32 @@
   "@errorPostBlocksEmpty": {},
   "errorPostBlocksTooMany": "This post has too many parts. Remove a few and try again.",
   "@errorPostBlocksTooMany": {},
-
   "errorUnauthorized": "Your session has expired. Please sign in again.",
   "@errorUnauthorized": {},
-
   "errorForbidden": "You don't have permission to do that.",
   "@errorForbidden": {},
-
   "errorValidationWithDetail": "Check your input: {detail}",
   "@errorValidationWithDetail": {
-    "placeholders": { "detail": { "type": "String" } }
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
   },
-
   "errorValidationGeneric": "That didn't look right. Check your input and try again.",
   "@errorValidationGeneric": {},
-
   "errorInternalError": "Something went wrong on our end. Please try again in a moment.",
   "@errorInternalError": {},
-
   "errorUnknown": "Something went wrong. Please try again.",
   "@errorUnknown": {},
-
   "errorTitleOffline": "You're offline",
   "@errorTitleOffline": {},
-
   "errorTitleSessionExpired": "Session expired",
   "@errorTitleSessionExpired": {},
-
   "errorTitleGeneric": "Couldn't load this",
   "@errorTitleGeneric": {},
-
   "errorStateTryAgain": "Try again",
   "@errorStateTryAgain": {},
-
   "commonEmail": "Email",
   "@commonEmail": {},
   "commonUsername": "Username",
@@ -193,24 +177,30 @@
   "@commonLogOut": {},
   "commonCancel": "Cancel",
   "@commonCancel": {},
-
   "validationEmailRequired": "Email is required",
   "@validationEmailRequired": {},
   "validationUsernameRequired": "Username is required",
   "@validationUsernameRequired": {},
   "validationUsernameTooShort": "Username must be at least {minLength} characters long.",
   "@validationUsernameTooShort": {
-    "placeholders": { "minLength": { "type": "int" } }
+    "placeholders": {
+      "minLength": {
+        "type": "int"
+      }
+    }
   },
   "validationPasswordRequired": "Password is required",
   "@validationPasswordRequired": {},
   "validationPasswordMinLength": "Password must be at least {minLength} characters",
   "@validationPasswordMinLength": {
-    "placeholders": { "minLength": { "type": "int" } }
+    "placeholders": {
+      "minLength": {
+        "type": "int"
+      }
+    }
   },
   "validationPasswordsDoNotMatch": "Passwords don't match",
   "@validationPasswordsDoNotMatch": {},
-
   "settingsTitle": "Settings",
   "@settingsTitle": {},
   "settingsSectionAlgorithm": "Algorithm",
@@ -219,7 +209,11 @@
   "@settingsReviewGate": {},
   "settingsReviewGatePosts": "{count, plural, one{1 post} other{{count} posts}}",
   "@settingsReviewGatePosts": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "settingsQueuePriority": "Queue priority",
   "@settingsQueuePriority": {},
@@ -259,13 +253,16 @@
   "@settingsGoogleConnectedSubtitle": {},
   "settingsGoogleConnectedAs": "Signed in with {email}",
   "@settingsGoogleConnectedAs": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "settingsEmailContactOnly": "For messages to you — not for signing in",
   "@settingsEmailContactOnly": {},
   "settingsConnectGoogleUnsupported": "Connect Google from the app rather than the browser.",
   "@settingsConnectGoogleUnsupported": {},
-
   "profilePictureChoose": "Choose a picture",
   "@profilePictureChoose": {},
   "profilePictureChange": "Change picture",
@@ -278,12 +275,10 @@
   "@profilePictureRemoved": {},
   "profilePictureEditTooltip": "Change your profile picture",
   "@profilePictureEditTooltip": {},
-
   "cropAvatarTitle": "Crop picture",
   "@cropAvatarTitle": {},
   "cropAvatarHint": "Drag to reposition, pinch or scroll to zoom. The circle is what others will see.",
   "@cropAvatarHint": {},
-
   "changePasswordTitle": "Change Password",
   "@changePasswordTitle": {},
   "changePasswordCurrentPasswordLabel": "Current password",
@@ -296,7 +291,6 @@
   "@changePasswordSubmit": {},
   "changePasswordSuccess": "Your password has been changed.",
   "@changePasswordSuccess": {},
-
   "authLogIn": "Log in",
   "@authLogIn": {},
   "authShowPassword": "Show password",
@@ -319,18 +313,29 @@
   "@authLinkGoogleTitle": {},
   "authLinkGoogleBody": "{email} already has an account with a password. Continuing links it to Google permanently: from then on you sign in with Google, and your password stops working. This can't be undone.",
   "@authLinkGoogleBody": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "authLinkGoogleConfirm": "Link with Google",
   "@authLinkGoogleConfirm": {},
   "authLinkGoogleSettingsBody": "From now on you'll sign in with Google instead of your password. Your password stops working, and this can't be undone. The Google account doesn't have to use the same address — {email} stays your contact address.",
   "@authLinkGoogleSettingsBody": {
-    "placeholders": { "email": { "type": "String" } }
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
-
   "serverSettingsTooltipCustom": "Server: {url}",
   "@serverSettingsTooltipCustom": {
-    "placeholders": { "url": { "type": "String" } }
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "serverSettingsTooltipDefault": "Server settings",
   "@serverSettingsTooltipDefault": {},
@@ -348,7 +353,6 @@
   "@serverSettingsUrlRequired": {},
   "serverSettingsUrlInvalid": "Enter a valid http(s) URL",
   "@serverSettingsUrlInvalid": {},
-
   "statsTitle": "Statistics",
   "@statsTitle": {},
   "statsTipMessage": "Track your review streak, trust score, and how far your forwards have spread.",
@@ -369,7 +373,11 @@
   "@statsNoPostsYet": {},
   "statsTotalPosts": "{count, plural, one{1 post total} other{{count} posts total}}",
   "@statsTotalPosts": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "statsReviewed": "Reviewed",
   "@statsReviewed": {},
@@ -395,7 +403,6 @@
   "@statsWeekdaySat": {},
   "statsWeekdaySun": "S",
   "@statsWeekdaySun": {},
-
   "emailVerifyTitle": "Verify your email",
   "@emailVerifyTitle": {},
   "emailVerifyInstructions": "We've sent a verification code to your email. Enter it below to continue.",
@@ -408,25 +415,28 @@
   "@emailVerifyButton": {},
   "emailVerifyResendIn": "{seconds, plural, one{Resend code in 1s} other{Resend code in {seconds}s}}",
   "@emailVerifyResendIn": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "emailVerifyResendPrompt": "Didn't get a code? Resend",
   "@emailVerifyResendPrompt": {},
   "emailVerifyResendSnackbar": "A new code is on its way.",
   "@emailVerifyResendSnackbar": {},
-
   "feedTitle": "Feed",
   "@feedTitle": {},
-  "feedTitleWithCount": "{count, plural, one{Feed · 1 open post} other{Feed · {count} open posts}}",
-  "@feedTitleWithCount": {
-    "placeholders": { "count": { "type": "int" } }
-  },
   "feedReloadTooltip": "Reload feed",
   "@feedReloadTooltip": {},
   "feedTipMessage": "This is your feed — review each post and forward or drop it. Nothing here is ranked by an algorithm.",
   "@feedTipMessage": {},
   "feedAllChannelsChip": "All",
   "@feedAllChannelsChip": {},
+  "feedAllChannelsLabel": "All channels",
+  "@feedAllChannelsLabel": {},
+  "feedShowChannelFilter": "Show channel filter",
+  "@feedShowChannelFilter": {},
   "feedEmptyNoChannelsTitle": "Join a channel to get started",
   "@feedEmptyNoChannelsTitle": {},
   "feedEmptyNoChannelsSubtitle": "Subscribe to channels to start seeing posts in your feed.",
@@ -437,7 +447,6 @@
   "@feedEmptyCaughtUpTitle": {},
   "feedEmptyCaughtUpSubtitle": "No posts to review right now.",
   "@feedEmptyCaughtUpSubtitle": {},
-
   "postAnonymous": "Anonymous",
   "@postAnonymous": {},
   "postUnknownAuthor": "Unknown",
@@ -448,13 +457,23 @@
   "@postSupporterBadge": {},
   "postMediaPlayVideo": "Play video",
   "@postMediaPlayVideo": {},
+  "postMediaPauseVideo": "Pause video",
+  "@postMediaPauseVideo": {},
+  "postMediaMute": "Mute",
+  "@postMediaMute": {},
+  "postMediaUnmute": "Unmute",
+  "@postMediaUnmute": {},
   "postForward": "Forward",
   "@postForward": {},
   "postDrop": "Drop",
   "@postDrop": {},
   "postAutoDropsIn": "{hours, plural, one{Auto-drops in 1h} other{Auto-drops in {hours}h}}",
   "@postAutoDropsIn": {
-    "placeholders": { "hours": { "type": "int" } }
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
   },
   "postDetailHeader": "POST DETAIL",
   "@postDetailHeader": {},
@@ -464,21 +483,36 @@
   "@postJustNow": {},
   "postTimeAgoSuffix": "{time} ago",
   "@postTimeAgoSuffix": {
-    "placeholders": { "time": { "type": "String" } }
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
   },
   "postDetailPostedAgo": "Posted {postedAgo}",
   "@postDetailPostedAgo": {
-    "placeholders": { "postedAgo": { "type": "String" } }
+    "placeholders": {
+      "postedAgo": {
+        "type": "String"
+      }
+    }
   },
   "postDetailHoursLeft": "{hours, plural, one{1 h left} other{{hours} h left}}",
   "@postDetailHoursLeft": {
-    "placeholders": { "hours": { "type": "int" } }
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
   },
   "historyDetailReviewedAgo": "Reviewed {reviewedAgo}",
   "@historyDetailReviewedAgo": {
-    "placeholders": { "reviewedAgo": { "type": "String" } }
+    "placeholders": {
+      "reviewedAgo": {
+        "type": "String"
+      }
+    }
   },
-
   "createPostPickChannelError": "Pick a channel to post to.",
   "@createPostPickChannelError": {},
   "createPostEmptyPostError": "Add some text or a photo/video before relaying.",
@@ -487,13 +521,6 @@
   "@createPostTitle": {},
   "createPostTipMessage": "Posting costs tokens, earned by reviewing others' posts — that keeps posting tied to participating.",
   "@createPostTipMessage": {},
-  "createPostNeedMoreTokens": "{needed, plural, one{Need 1 more token to post at the current price of {price}. Review posts in your feed to earn more.} other{Need {needed} more tokens to post at the current price of {price}. Review posts in your feed to earn more.}}",
-  "@createPostNeedMoreTokens": {
-    "placeholders": {
-      "needed": { "type": "int" },
-      "price": { "type": "int" }
-    }
-  },
   "createPostNoChannels": "No channels are available to post to yet.",
   "@createPostNoChannels": {},
   "createPostHint": "What's worth sharing?",
@@ -512,7 +539,6 @@
   "@createPostAddText": {},
   "createPostReorderBlock": "Drag to reorder",
   "@createPostReorderBlock": {},
-
   "channelsTitle": "Channels",
   "@channelsTitle": {},
   "channelsTipMessage": "Channels are topics you follow. What you join here is what fills your Feed.",
@@ -525,7 +551,6 @@
   "@channelsJoinedButton": {},
   "channelsJoinButton": "Join",
   "@channelsJoinButton": {},
-
   "onboardingSlide1Title": "Welcome to Relay",
   "@onboardingSlide1Title": {},
   "onboardingSlide1Body": "Posts move through the channels you follow, carried from person to person rather than pushed by a central feed.",
@@ -555,13 +580,21 @@
   "onboardingChannelsSelectedCount": "{selected}/{max} selected",
   "@onboardingChannelsSelectedCount": {
     "placeholders": {
-      "selected": { "type": "int" },
-      "max": { "type": "int" }
+      "selected": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "onboardingChannelsMaxReached": "You can pick up to {max} to start — join more anytime from Channels.",
   "@onboardingChannelsMaxReached": {
-    "placeholders": { "max": { "type": "int" } }
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
   },
   "onboardingDisclaimerTitle": "Before you dive in",
   "@onboardingDisclaimerTitle": {},
@@ -577,7 +610,6 @@
   "@onboardingDisclaimerPoint5": {},
   "onboardingDisclaimerConfirm": "Got it!",
   "@onboardingDisclaimerConfirm": {},
-
   "profileTitle": "Profile",
   "@profileTitle": {},
   "profileTipMessage": "Manage your account, bio, and app preferences here.",
@@ -586,7 +618,6 @@
   "@profileStatCreated": {},
   "profileStatTrust": "Trust",
   "@profileStatTrust": {},
-
   "historyPostedTitle": "My Posts",
   "@historyPostedTitle": {},
   "historyReviewedTitle": "My Reviews",
@@ -597,6 +628,8 @@
   "@historySearchTooltip": {},
   "historyJumpToDateTooltip": "Jump to date",
   "@historyJumpToDateTooltip": {},
+  "historyRefreshTooltip": "Refresh",
+  "@historyRefreshTooltip": {},
   "historyNoMatches": "No matches found",
   "@historyNoMatches": {},
   "historyEmptyPosted": "You haven't posted anything yet.",
@@ -613,12 +646,10 @@
   "@historyReviewKindForward": {},
   "historyReviewKindDrop": "Dropped",
   "@historyReviewKindDrop": {},
-
   "profileDarkMode": "Dark Mode",
   "@profileDarkMode": {},
   "profileSignOut": "Sign Out",
   "@profileSignOut": {},
-
   "betaPoint1": "Relay is in beta. You're using an early version of the app while it's still being built.",
   "@betaPoint1": {},
   "betaPoint2": "Bugs and rough edges are expected. If something breaks or feels off, that's the beta, not you.",
@@ -633,36 +664,113 @@
   "@betaVersionTitle": {},
   "betaGotIt": "Got it",
   "@betaGotIt": {},
-
   "offlineReconnecting": "You're offline — reconnecting…",
   "@offlineReconnecting": {},
   "offlineBackOnline": "Back online",
   "@offlineBackOnline": {},
-
-  "economyTokenBalance": "{count, plural, one{1 token} other{{count} tokens}}",
-  "@economyTokenBalance": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "economyPriceApprox": "~{price} to post",
-  "@economyPriceApprox": {
-    "placeholders": { "price": { "type": "int" } }
-  },
-  "economyPrice": "{price} to post",
-  "@economyPrice": {
-    "placeholders": { "price": { "type": "int" } }
-  },
-  "economyPriceExpired": "The price just expired — refreshing it now.",
-  "@economyPriceExpired": {},
-  "economyPriceExplainer": "The price to post rises when the app is busy. It's locked in for {countdown} — after that it may change.",
-  "@economyPriceExplainer": {
-    "placeholders": { "countdown": { "type": "String" } }
-  },
-
   "tipDismiss": "Dismiss",
   "@tipDismiss": {},
-
   "navCreate": "Create",
   "@navCreate": {},
   "navStats": "Stats",
-  "@navStats": {}
+  "@navStats": {},
+  "commonGotIt": "Got it",
+  "@commonGotIt": {},
+  "economyReadyToPost": "Enough to post",
+  "@economyReadyToPost": {},
+  "economyTokensToGo": "{needed, plural, one{1 more token to post} other{{needed} more tokens to post}}",
+  "@economyTokensToGo": {
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      }
+    }
+  },
+  "economyComposerCost": "This post costs {price} of your {balance} tokens",
+  "@economyComposerCost": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "economyComposerShort": "{needed, plural, one{You need 1 more token to post} other{You need {needed} more tokens to post}}",
+  "@economyComposerShort": {
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      }
+    }
+  },
+  "economyPillHeldFor": "held for {countdown}",
+  "@economyPillHeldFor": {
+    "placeholders": {
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "economyPillCheckingPrice": "checking price…",
+  "@economyPillCheckingPrice": {},
+  "economyPillOfBalance": "of your {balance}",
+  "@economyPillOfBalance": {
+    "placeholders": {
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "economyPillShort": "{needed, plural, one{1 more needed} other{{needed} more needed}}",
+  "@economyPillShort": {
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      }
+    }
+  },
+  "economyComposerEarnAction": "Earn tokens",
+  "@economyComposerEarnAction": {},
+  "economyExplainerBalance": "{balance, plural, one{You have 1 token} other{You have {balance} tokens}}",
+  "@economyExplainerBalance": {
+    "placeholders": {
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "economyExplainerPrice": "{price, plural, one{A post costs 1 token right now} other{A post costs {price} tokens right now}}",
+  "@economyExplainerPrice": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "economyExplainerTitle": "How posting works",
+  "@economyExplainerTitle": {},
+  "economyExplainerEarn": "Every post you review — forward or drop — earns you a token.",
+  "@economyExplainerEarn": {},
+  "economyExplainerCost": "Publishing spends tokens. It costs more when lots of people are posting at once, so nobody can flood the feed.",
+  "@economyExplainerCost": {},
+  "economyExplainerLock": "The price you're quoted is held for a few minutes, so it can't change while you're writing.",
+  "@economyExplainerLock": {},
+  "composerCropPhotoTitle": "Crop photo",
+  "@composerCropPhotoTitle": {},
+  "composerCropPhotoHint": "Drag to reposition, pinch or scroll to zoom. Photos are published upright or wide so every post fits the feed the same way.",
+  "@composerCropPhotoHint": {},
+  "composerFormatPortrait": "Upright",
+  "@composerFormatPortrait": {},
+  "composerFormatLandscape": "Wide",
+  "@composerFormatLandscape": {},
+  "composerVideoFormatTitle": "How should this video be shown?",
+  "@composerVideoFormatTitle": {},
+  "composerVideoFormatHint": "Videos are trimmed to fit one of these shapes, from the middle of the picture.",
+  "@composerVideoFormatHint": {},
+  "composerVideoWillBeCropped": "Trimmed to fit when you post",
+  "@composerVideoWillBeCropped": {},
+  "errorPostMediaInvalidAspectRatio": "That photo isn't one of the allowed shapes. Crop it upright or wide and try again.",
+  "@errorPostMediaInvalidAspectRatio": {}
 }

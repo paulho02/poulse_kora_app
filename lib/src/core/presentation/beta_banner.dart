@@ -85,11 +85,7 @@ class BetaBanner extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.science_outlined,
-                        size: 15,
-                        color: foreground,
-                      ),
+                      Icon(Icons.science_outlined, size: 15, color: foreground),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(

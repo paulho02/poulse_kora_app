@@ -16,7 +16,7 @@ final economyRepositoryProvider = Provider<EconomyRepository>((ref) {
 /// Shared source of truth for the posting economy (spendable tokens + live
 /// price), mirroring [ReviewGateStatusNotifier]. Seeded from `GET
 /// /posts/economy`, then patched locally after a review earns a token or a post
-/// spends tokens, so the header status bar stays current without extra network
+/// spends tokens, so the header pill stays current without extra network
 /// round-trips. Price is refreshed on load / pull-to-refresh — not real-time.
 class EconomyNotifier extends Notifier<Cached<Economy>?> {
   @override
@@ -29,7 +29,7 @@ class EconomyNotifier extends Notifier<Cached<Economy>?> {
 
   /// Swallows connectivity failures — this is fired from screen build/init, so an
   /// uncaught rejection offline would become an unhandled error the user can do
-  /// nothing about. The status bar falls back to the cached figures instead, and
+  /// nothing about. The pill falls back to the cached figures instead, and
   /// the offline banner already explains why they may be behind.
   Future<void> refresh() async {
     try {

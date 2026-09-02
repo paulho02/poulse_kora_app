@@ -135,6 +135,10 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorPostMediaTotalTooLarge;
     case 'post_media_video_too_long':
       return l10n.errorPostMediaVideoTooLong;
+    // Only reachable if a photo skipped the cropper: the backend fixes the two
+    // allowed shapes and rejects anything else rather than cropping for you.
+    case 'post_media_invalid_aspect_ratio':
+      return l10n.errorPostMediaInvalidAspectRatio;
     case 'post_blocks_invalid':
       return l10n.errorPostBlocksInvalid;
     case 'post_blocks_empty':

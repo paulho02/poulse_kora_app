@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/avatars/presentation/user_avatar.dart';
+import '../../../core/media/presentation/crop_media_screen.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../application/profile_providers.dart';
 import '../data/user_profile.dart';
@@ -62,7 +63,7 @@ class _EditableProfileAvatarState extends ConsumerState<EditableProfileAvatar> {
 
     final ui.Image decoded;
     try {
-      decoded = await _decode(await file.readAsBytes());
+      decoded = await decodeImageBytes(await file.readAsBytes());
     } catch (_) {
       // Flutter's own decoder rejecting the file is the format check: it covers
       // everything the app could actually display, which is a better question
@@ -78,9 +79,9 @@ class _EditableProfileAvatarState extends ConsumerState<EditableProfileAvatar> {
       return;
     }
 
-    final Uint8List? cropped;
+    final CropResult? cropped;
     try {
-      cropped = await navigator.push<Uint8List>(
+      cropped = await navigator.push<CropResult>(
         MaterialPageRoute(
           builder: (_) => CropAvatarScreen(image: decoded),
           fullscreenDialog: true,
@@ -92,17 +93,7 @@ class _EditableProfileAvatarState extends ConsumerState<EditableProfileAvatar> {
     // Backed out of the crop screen.
     if (cropped == null) return;
 
-    await _upload(messenger, l10n, cropped);
-  }
-
-  Future<ui.Image> _decode(Uint8List bytes) async {
-    final codec = await ui.instantiateImageCodec(bytes);
-    try {
-      final frame = await codec.getNextFrame();
-      return frame.image;
-    } finally {
-      codec.dispose();
-    }
+    await _upload(messenger, l10n, cropped.bytes);
   }
 
   Future<void> _upload(

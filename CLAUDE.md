@@ -96,16 +96,144 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   Setting a picture lives on the profile header's own avatar (`EditableProfileAvatar`), not in
   Settings — the profile view already shows the picture, so a settings row would be a second,
   less obvious answer to "where do I change this?". Picking is followed by `CropAvatarScreen`,
-  which **always re-encodes to a 512px PNG**. That is what makes the upload's declared content type
-  true by construction: `image_picker` re-encodes differently per platform (its web resizer goes
-  through a canvas and emits PNG, Android emits JPEG, and neither renames the file), so anything
-  derived from the picker's own output would have been a guess. Format validation is likewise
-  Flutter's decoder rejecting the bytes, rather than an extension or magic-number check. The crop
-  geometry is the one part that can be subtly wrong, so it is a pure function (`cropSourceRect`)
-  tested on its own rather than only through the widget.
+  a thin wrapper over the shared `core/media/presentation/crop_media_screen.dart`, which
+  **always re-encodes to PNG** (512px square, here). That is what makes the upload's declared
+  content type true by construction: `image_picker` re-encodes differently per platform (its web
+  resizer goes through a canvas and emits PNG, Android emits JPEG, and neither renames the file),
+  so anything derived from the picker's own output would have been a guess. Format validation is
+  likewise Flutter's decoder rejecting the bytes (`decodeImageBytes`), rather than an extension or
+  magic-number check. The crop geometry is the one part that can be subtly wrong, so it lives in
+  `core/media/presentation/crop_geometry.dart` as pure functions (`cropSourceRect`, `fitAspectRatio`,
+  `outputSizeFor`) tested on their own rather than only through the widget.
+- `core/media/` — **post attachments**. Three rules, all downstream of one decision: every
+  published attachment is one of **two fixed shapes**, 4:3 wide or 4:5 upright
+  (`post_media_format.dart`, mirroring the backend's `POST_MEDIA_*_RATIO` — kept in sync by hand,
+  and a drift surfaces as a `post_media_invalid_aspect_ratio` rejection rather than silently).
+  A single-column feed reads far better for it, and a media block can size itself from
+  `PostMedia.width/height` before a byte has arrived instead of reflowing as each image decodes.
+  - **A photo is cropped here; a video is not.** The composer pushes `CropMediaScreen` per picked
+    photo — mandatory, not offered, since the backend rejects any other ratio, so a "skip" would
+    only build an upload that fails later; backing out drops *that* photo and moves on. A Flutter
+    client has no video encoder, so a clip instead gets `showVideoOrientationSheet` and the server
+    center-crops it inside the transcode it already runs (`ComposerBlockInput.orientation`, sent
+    for videos only).
+  - **A video is never a black rectangle.** The backend stores a poster frame beside every clip;
+    `PostMedia.previewUrl` resolves to it, and `PostMediaPreview` renders it — so a feed card and
+    an unplayed inline block both show a real frame, at the cost of one small JPEG from its own
+    route rather than any of the clip's bytes. Both `posterUrl` and `width`/`height` are nullable
+    (old rows, and deliberately non-fatal poster extraction), and **null means "unknown shape,
+    letterbox it"** — never "assume a default", which would crop an old post's photo in half.
+  - **The player chrome is ours, not chewie's** (`core/media/presentation/video_player_surface.dart`,
+    mounted by `InlineMediaBlock` once the poster is tapped). chewie's material controls are built
+    for long-form video — two ten-second seek buttons flanking play, an options bar, and a
+    `black54` sheet over the whole frame — and all of it is driven by chewie's `PlayerNotifier`,
+    so it sat on top of a clip of at most a minute whether it was playing or paused. The rule here
+    is that **playing means nothing on screen**: the chrome auto-hides ~2.2s after the last touch,
+    a tap brings it back, and a *paused* clip keeps it (hiding it would leave a still frame with no
+    way back in). Two further consequences of the same rule, and neither should be undone: **every
+    control sits in one row along the bottom edge**, play/pause included, so nothing is ever drawn
+    on the picture (a centred play glyph belongs on the *poster*, where it is the only affordance
+    there is, not over moving video), and **the clip loops** rather than ending on a frozen frame
+    under a replay button — pausing is how it stops. A bottom gradient rather than a full-surface
+    scrim, for the same reason the poster frame exists: a clip is never a dark rectangle, and a
+    scrim would put that back. `wakelock_plus` is a direct dependency because chewie held the
+    screen awake and a 60-second clip still needs that.
+  - **Exactly one clip plays at a time, and only while it is on screen.** `InlineMediaBlock`
+    claims `activeVideoProvider` (`core/media/application/active_video.dart`) whenever its player
+    starts — from the controller, not from the button, so every entry point counts — and pauses
+    itself the moment someone else claims it; it also pauses when less than a quarter of the block
+    is left in the viewport (via the enclosing `ScrollPosition`) and when the app is backgrounded.
+    This is not tidiness: leaving a scrolled-past clip running is what produced both playback bugs
+    a post with several videos used to have — a clip heard but not seen (its audio under the one
+    being watched), and a clip stuck on a spinner forever (two authenticated streams competing for
+    Android's decoders). The blocks *pause* rather than tear the controller down, so scrolling back
+    resumes where you left off instead of returning to the poster with the download to redo.
+  - A feed card is a *preview*, so `PostMediaThumbnail` clamps to `minAspectRatio` (square): a 4:5
+    photo at true shape is ~440dp tall on a phone and pushes the drop/forward buttons off screen.
+    The full shape is what the opened post shows.
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.
+
+### Reading a post
+
+Opening a post is a **full-screen route**, not a bottom sheet: `slideUpRoute`
+(`core/presentation/slide_up_route.dart`) keeps the slide-from-bottom motion a sheet had, because
+that part was right, and drops the size cap, because a post is mostly media and a sheet kept a
+barrier and rounded corners over the top of the picture however far it was dragged.
+`PostDetailScaffold` is the shared chrome for both the feed's reviewable post and history's
+read-only one, which used to be near-identical copies. Two things follow from having the whole
+screen and should not be undone: media is **full-bleed** (text keeps its reading margin —
+`PostBlocksView`'s `fullBleed`), and the drop/forward footer is **pinned** rather than appended
+after the article, so acting on a long post no longer means scrolling to the end of something you
+had already decided about.
+
+### Refreshing history
+
+`PostHistoryScreen` offers both an app-bar button and pull-to-refresh, and the button drives the
+`RefreshIndicator` through its `GlobalKey` rather than running its own fetch — one gesture, one
+spinner, one code path (it falls back to the provider only before a first page exists, when there
+is no indicator mounted). Two details are load-bearing and were exactly where the gesture used to
+die: the **empty state lives inside the indicator** (a bare `Center` cannot be pulled, and "you
+haven't posted anything yet" is precisely when someone pulls to check again), and the
+`ScrollablePositionedList` is given **`AlwaysScrollableScrollPhysics`** (default physics refuse the
+drag on a list that fits on screen, so the shortest histories were the un-refreshable ones). Both
+are covered by `test/history_refresh_test.dart`. A refresh invalidates the provider, which drops
+every loaded page and resets the pager's `hasMore` — deliberate, so an exhausted history can be
+paged again.
+
+### The token economy in the UI
+
+`EconomyHeaderStatus` takes an `EconomyBarVariant` and states **one fact** per screen, as a pill
+among the app bar's `actions`: a number, the clause that says what the number means, and a bar
+filling toward affording a post. The **feed** variant is the balance and how far it is from a post
+("12 · 2 more tokens to post"). The **composer** variant is `−3`, what this post takes off that
+balance, and its clause is the **price-lock countdown** ("−3 · held for 4:32") — the composer is
+the screen you sit in for minutes while the quote's window runs out, so that is where the clock
+belongs, and it stays worded as the promise it is rather than shown as a bare `4:32`, which reads
+as a deadline to race. The clause gives way to "2 more needed" (and the pill to `errorContainer`)
+when the balance can't cover the post, since how long an unaffordable price holds is nobody's
+question; it falls back to "of your 12" for a cached quote with no expiry, and to "checking price…"
+once expired or stale — which is also when `_ComposerPill` re-fetches. A full bar means "you can
+post", which is why the feed never needs the price as a number.
+
+What changed is *how much room this gets*, not what it says: both variants used to be full-width
+bars stacked under the app bar, a permanent row of chrome on the two screens with the least space
+to spare. Two rules keep it that way. The clause is **one line, width-capped** against the screen
+(`_labelCap`) — app bar actions get unbounded width, so nothing else would stop a long translation
+from pushing the title off the left edge, and the full sentence is on the tooltip either way.
+Anything longer than that clause belongs in `showEconomyExplainerSheet`, reachable by tapping
+either pill — that is the one place the model is spelled out, and it opens with the live figures
+precisely because no bar states them any more. New economy copy goes there rather than growing the
+pill.
+
+Two things the bars used to do still need doing and now happen elsewhere. The composer's price
+quote expires, so `_ComposerPill` keeps a timer and re-fetches when it lapses (retrying, since
+`refresh()` swallows connectivity failures) — it just no longer renders a countdown. And "you
+need 2 more tokens", which was permanent chrome for everyone including the people it didn't
+concern, is now `_ShortOnTokensHint`: one line, only while it applies, directly above the disabled
+Relay button it explains.
+
+### Chrome that yields to content
+
+Both main screens are mostly other people's content, and the rule for anything else on them is
+that it has to earn a permanent row. Three consequences worth keeping:
+
+- **The feed's channel filter has two sizes.** `_ChannelFilter` cross-fades between the row of
+  chips and a one-line summary of what is being read, driven by `UserScrollNotification`
+  *direction* rather than by scroll offset: reaching back up for the filter is then the same
+  gesture as reaching back up the feed, instead of a header that snaps open at some magic pixel.
+  The collapsed line is the same control — tapping it brings the chips back, so the filter is
+  never more than one tap away from wherever the feed has been scrolled to. Note the listener
+  ignores horizontal notifications, since the chip row is itself a scroll view.
+- **The feed's app bar dropped the open-post count.** It was a number nobody acts on (the queue is
+  whatever it is, and the count moves on its own), and the title bar was worth more as the place
+  the token pill lives.
+- **The composer's publish row holds all three publishing decisions**: anonymous, channel, Relay.
+  The channel picker used to be a full-width labelled field above the editor — a whole row for one
+  word chosen once — and is now `_ChannelSelectorChip`, outlined in the primary colour while
+  unpicked so a required-but-open choice still looks like one. The picker sheet behind it is
+  unchanged.
 
 ### Offline behaviour
 

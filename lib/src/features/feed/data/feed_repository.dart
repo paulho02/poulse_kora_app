@@ -26,16 +26,32 @@ class PickedMedia {
 /// A media block names its index into the parallel `media: List<PickedMedia>`
 /// passed to `FeedRepository.createPost`, not the bytes themselves.
 class ComposerBlockInput {
-  ComposerBlockInput.text(this.text) : type = 'text', mediaIndex = null;
-  ComposerBlockInput.media(this.mediaIndex) : type = 'media', text = null;
+  ComposerBlockInput.text(this.text)
+    : type = 'text',
+      mediaIndex = null,
+      orientation = null;
+  ComposerBlockInput.media(this.mediaIndex, {this.orientation})
+    : type = 'media',
+      text = null;
 
   final String type;
   final String? text;
   final int? mediaIndex;
 
+  /// `"landscape"` / `"portrait"`, and only meaningful for a **video**: the
+  /// backend center-crops the clip to that shape inside the transcode it runs
+  /// anyway, because a Flutter client cannot re-encode video. A photo is
+  /// cropped locally before upload and its shape is already final, so this is
+  /// ignored for one.
+  final String? orientation;
+
   Map<String, dynamic> toJson() => type == 'text'
       ? {'type': 'text', 'text': text}
-      : {'type': 'media', 'file_index': mediaIndex};
+      : {
+          'type': 'media',
+          'file_index': mediaIndex,
+          if (orientation != null) 'orientation': orientation,
+        };
 }
 
 class PostReviewResult {

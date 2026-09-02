@@ -7,10 +7,7 @@ import 'package:web/web.dart' as web;
 /// request (headers included) ever leaving the page - see `videoSourceFor` in
 /// `media_video_source.dart` for why this exists.
 String createBlobUrl(Uint8List bytes, String mimeType) {
-  final blob = web.Blob(
-    [bytes.toJS].toJS,
-    web.BlobPropertyBag(type: mimeType),
-  );
+  final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: mimeType));
   return web.URL.createObjectURL(blob);
 }
 

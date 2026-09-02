@@ -81,23 +81,25 @@ void main() {
       expect(adapter.calls, 2);
     });
 
-    test('evict and refresh notify listeners; clear deliberately does not',
-        () async {
-      final cache = _cacheWith(_FakeAdapter([1]));
-      var notifications = 0;
-      cache.addListener(() => notifications++);
+    test(
+      'evict and refresh notify listeners; clear deliberately does not',
+      () async {
+        final cache = _cacheWith(_FakeAdapter([1]));
+        var notifications = 0;
+        cache.addListener(() => notifications++);
 
-      cache.evict(_url);
-      expect(notifications, 1);
+        cache.evict(_url);
+        expect(notifications, 1);
 
-      cache.refresh();
-      expect(notifications, 2);
+        cache.refresh();
+        expect(notifications, 2);
 
-      // Silent on purpose: a session boundary is throwing the token away, so
-      // waking on-screen avatars would only fire requests destined to 401.
-      cache.clear();
-      expect(notifications, 2);
-    });
+        // Silent on purpose: a session boundary is throwing the token away, so
+        // waking on-screen avatars would only fire requests destined to 401.
+        cache.clear();
+        expect(notifications, 2);
+      },
+    );
   });
 
   group('UserAvatar', () {

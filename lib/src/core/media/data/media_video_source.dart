@@ -7,7 +7,8 @@ import 'package:video_player/video_player.dart';
 
 import '../../config/app_config.dart';
 import '../../providers.dart';
-import 'blob_url_stub.dart' if (dart.library.js_interop) 'blob_url_web.dart'
+import 'blob_url_stub.dart'
+    if (dart.library.js_interop) 'blob_url_web.dart'
     as blob_url;
 
 /// A playable video, plus how to release whatever platform resource backs it
@@ -64,7 +65,6 @@ Future<VideoSource> videoSourceFor(WidgetRef ref, String mediaUrl) async {
 
 /// Mirrors `AuthenticatedByteCache._toApiRelativePath`: the backend returns an
 /// absolute API path, but Dio's `baseUrl` already ends in the same prefix.
-String _toApiRelativePath(String url) =>
-    url.startsWith(AppConfig.apiPath)
+String _toApiRelativePath(String url) => url.startsWith(AppConfig.apiPath)
     ? url.substring(AppConfig.apiPath.length)
     : url;
