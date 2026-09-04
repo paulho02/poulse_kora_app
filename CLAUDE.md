@@ -75,24 +75,42 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   that feature-level providers build on top of.
 - `routing/app_router.dart` — `go_router` config as a Riverpod provider (`routerProvider`), so
   routes can later depend on auth state (e.g. redirect logic reading `tokenStorageProvider`).
-- `core/avatars/` — profile pictures. The backend serves them from an **authenticated** route, so
-  they are deliberately *not* `Image.network`: `AvatarCache` fetches the bytes through the same Dio
-  client as every other call and renders them with `Image.memory`. That cache is a long-lived
-  mutable object behind a plain `Provider`, not a `FutureProvider.family`, because it has to outlive
-  the widgets watching it — feed cards are disposed and rebuilt constantly while scrolling, and an
-  auto-disposed family would re-request every image on every scroll. Three consequences to keep:
-  failures (offline included) are cached as "no picture" so an offline feed can't storm the network,
-  which is why `app.dart` calls `refresh()` on `backOnline`; the cache is also cleared at every
-  session boundary, since it holds one account's faces; and because the URL is derived from the user
-  id it does **not** change when a picture is replaced, so `ProfileNotifier` evicts the entry
-  explicitly after an upload or delete. That last point is why the cache is a `ChangeNotifier`:
-  eviction has to reach avatars *already on screen*, which cannot notice a swap by diffing their own
-  unchanged inputs — without the notification a replaced picture stayed stale until an app restart.
-  Hence two spellings of "drop everything": `refresh()` notifies (reconnect — the widgets needing
-  another try are the mounted ones) and `clear()` stays silent (logout — waking them would only fire
-  requests against a token being thrown away). `UserAvatar` renders picture-or-fallback and
-  `MonogramAvatar` is the coloured initial; `features/feed/presentation/post_author_avatar.dart`
-  wraps both with the anonymity rule for the three places a post is drawn.
+- **Media loading** (`core/media/presentation/network_media_image.dart`) — every image in the app,
+  avatars and post photos alike, is a plain `Image.network` on the URL the backend returned.
+  That is only true because media moved out of Postgres and into an S3-compatible bucket: the
+  backend now returns **presigned URLs** whose query-string signature *is* the authorization
+  (see `app/core/storage.py` in the backend repo). Three rules follow, and all three are the
+  opposite of what this app used to do:
+  - **Never attach the bearer token, and never rewrite the URL.** S3 rejects a request carrying
+    both a query signature and an `Authorization` header, and the signature covers the path and
+    the query, so touching either 403s every image. This replaced an `AuthenticatedByteCache`
+    that fetched bytes through Dio and rendered `Image.memory`, plus its API-relative path
+    munging — both existed purely because the old routes required the token.
+    `test/network_media_image_test.dart` pins it.
+  - **No hand-written cache.** Flutter's `ImageCache` (and the browser's HTTP cache on web) does
+    it, and does it better. It works here only because the backend keeps a presigned URL
+    byte-identical for ~15 min instead of re-signing per request, and stamps every object
+    `Cache-Control: private, max-age=86400, immutable`. The one thing Flutter cannot do by
+    itself is re-resolve a *settled* failure, which is what `mediaReloadProvider` is for:
+    `app.dart` calls `reload()` on `backOnline` (an image that failed while offline would
+    otherwise stay a fallback all session) and at every session boundary (the image cache is
+    keyed by URL and would happily paint the previous account's faces).
+  - **A replaced profile picture needs no eviction.** Every upload writes a new object key, so
+    the URL genuinely changes and the widget reloads because its inputs did. The old URL was
+    derived from the user id and identical before and after, which is why `ProfileNotifier` used
+    to have to evict explicitly and the cache had to be a `ChangeNotifier` to reach avatars
+    already on screen. All of that is gone.
+  On web this is also what dodges CORS: a cross-origin byte fetch needs CORS on the bucket, and
+  a Railway Bucket offers no way to set one (its credentials have no `s3:PutBucketCors`). So
+  images pass `webHtmlElementStrategy: fallback` — normal byte-fetching, dropping to an `<img>`
+  element only if the fetch is blocked — and video needs nothing, since `video_player_web`
+  renders into a bare `<video>` element, which is not CORS-gated.
+- `core/avatars/` — profile pictures. `UserAvatar` renders picture-or-fallback over
+  `NetworkMediaImage` and `MonogramAvatar` is the coloured initial;
+  `features/feed/presentation/post_author_avatar.dart` wraps both with the anonymity rule for the
+  three places a post is drawn. There is deliberately no spinner: an avatar is decoration around a
+  name that already reads fine, and swapping a spinner for an image makes every feed card jitter
+  on scroll.
   Setting a picture lives on the profile header's own avatar (`EditableProfileAvatar`), not in
   Settings — the profile view already shows the picture, so a settings row would be a second,
   less obvious answer to "where do I change this?". Picking is followed by `CropAvatarScreen`,
@@ -117,12 +135,18 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
     client has no video encoder, so a clip instead gets `showVideoOrientationSheet` and the server
     center-crops it inside the transcode it already runs (`ComposerBlockInput.orientation`, sent
     for videos only).
-  - **A video is never a black rectangle.** The backend stores a poster frame beside every clip;
-    `PostMedia.previewUrl` resolves to it, and `PostMediaPreview` renders it — so a feed card and
-    an unplayed inline block both show a real frame, at the cost of one small JPEG from its own
-    route rather than any of the clip's bytes. Both `posterUrl` and `width`/`height` are nullable
+  - **A video is never a black rectangle.** The backend stores a poster frame as its own object
+    beside every clip; `PostMedia.previewUrl` resolves to it, and `PostMediaPreview` renders it —
+    so a feed card and an unplayed inline block both show a real frame, at the cost of one small
+    JPEG rather than any of the clip's bytes. Both `posterUrl` and `width`/`height` are nullable
     (old rows, and deliberately non-fatal poster extraction), and **null means "unknown shape,
     letterbox it"** — never "assume a default", which would crop an old post's photo in half.
+  - **The player is pointed straight at the media URL, on every platform.** That deleted a
+    web-only path worth remembering: while media came from an authenticated backend route, a
+    browser `<video>` could not fetch it (an element cannot carry an `Authorization` header), so
+    web downloaded the whole clip through Dio and handed the player a `blob:` URL — up to
+    `POST_VIDEO_MAX_BYTES` in memory before the first frame. A presigned URL needs no header, so
+    the browser now streams it with range requests like every other platform already did.
   - **The player chrome is ours, not chewie's** (`core/media/presentation/video_player_surface.dart`,
     mounted by `InlineMediaBlock` once the poster is tapped). chewie's material controls are built
     for long-form video — two ten-second seek buttons flanking play, an options bar, and a
@@ -145,8 +169,8 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
     is left in the viewport (via the enclosing `ScrollPosition`) and when the app is backgrounded.
     This is not tidiness: leaving a scrolled-past clip running is what produced both playback bugs
     a post with several videos used to have — a clip heard but not seen (its audio under the one
-    being watched), and a clip stuck on a spinner forever (two authenticated streams competing for
-    Android's decoders). The blocks *pause* rather than tear the controller down, so scrolling back
+    being watched), and a clip stuck on a spinner forever (two streams competing for Android's
+    decoders). The blocks *pause* rather than tear the controller down, so scrolling back
     resumes where you left off instead of returning to the poster with the download to redo.
   - A feed card is a *preview*, so `PostMediaThumbnail` clamps to `minAspectRatio` (square): a 4:5
     photo at true shape is ~440dp tall on a phone and pushes the drop/forward buttons off screen.

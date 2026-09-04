@@ -1,88 +1,33 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../core/media/application/media_providers.dart';
-import '../../../core/media/data/authenticated_byte_cache.dart';
+import '../../../core/media/presentation/network_media_image.dart';
 import '../data/post.dart';
 
-/// Rectangular equivalent of `UserAvatar` for a post-media *image*'s bytes -
-/// fetched through the authenticated Dio client and memoized in
-/// `postMediaImageCacheProvider`, the same shape as avatars for the same reason
-/// (the serving route requires the bearer token).
+/// Rectangular equivalent of `UserAvatar` for a post-media *image* — and for a
+/// video's **poster frame**, which is just another image URL, so an unplayed clip
+/// costs one small JPEG rather than a video fetch.
 ///
-/// Also renders a video's **poster frame**, which is just another authenticated
-/// image URL - so an unplayed clip costs one small JPEG, not a video fetch.
-class PostMediaImage extends ConsumerStatefulWidget {
+/// A plain network image, like every other image in the app now: these URLs are
+/// presigned and carry their own authorization, so there is no token to attach
+/// and no byte cache to keep. See [NetworkMediaImage].
+class PostMediaImage extends StatelessWidget {
   const PostMediaImage({super.key, required this.url, this.fit = BoxFit.cover});
 
   final String url;
   final BoxFit fit;
 
   @override
-  ConsumerState<PostMediaImage> createState() => _PostMediaImageState();
-}
-
-class _PostMediaImageState extends ConsumerState<PostMediaImage> {
-  Uint8List? _bytes;
-  late final AuthenticatedByteCache _cache;
-
-  @override
-  void initState() {
-    super.initState();
-    _cache = ref.read(postMediaImageCacheProvider)
-      ..addListener(_onCacheChanged);
-    _resolve();
-  }
-
-  @override
-  void dispose() {
-    _cache.removeListener(_onCacheChanged);
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant PostMediaImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      _bytes = null;
-      _resolve();
-    }
-  }
-
-  void _onCacheChanged() {
-    final url = widget.url;
-    if (_cache.isResolved(url)) return;
-    _cache.load(url).then((bytes) {
-      if (!mounted || widget.url != url) return;
-      setState(() => _bytes = bytes);
-    });
-  }
-
-  void _resolve() {
-    final url = widget.url;
-    if (_cache.isResolved(url)) {
-      _bytes = _cache.peek(url);
-      return;
-    }
-    _cache.load(url).then((bytes) {
-      if (!mounted || widget.url != url) return;
-      setState(() => _bytes = bytes);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bytes = _bytes;
-    if (bytes == null) {
-      return ColoredBox(
+    return NetworkMediaImage(
+      url: url,
+      fit: fit,
+      fallback: ColoredBox(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      );
-    }
-    return Image.memory(bytes, fit: widget.fit);
+      ),
+    );
   }
 }
 
@@ -120,7 +65,7 @@ class PostMediaPreview extends StatelessWidget {
 /// the only place a post's media appears before the detail view is opened —
 /// tapping the card is the sole entry point into the real player, so nothing
 /// here autoplays or streams video: a clip shows its poster frame, which is a
-/// small JPEG on its own route.
+/// small JPEG stored as its own object.
 ///
 /// Sized by the item's real aspect ratio when the backend reported one, so a
 /// portrait photo reads as portrait on the card instead of being squashed into
@@ -160,7 +105,7 @@ class PostMediaThumbnail extends StatelessWidget {
 /// unplayed clip looks like the photo it is a moment of rather than a black
 /// rectangle. Still never a decoded frame *from the clip itself* — that would
 /// mean downloading video bytes to render a scrolling-list card, which is
-/// exactly what the poster route exists to avoid.
+/// exactly what the poster exists to avoid.
 class _VideoPreviewTile extends StatelessWidget {
   const _VideoPreviewTile({required this.media});
 

@@ -63,12 +63,6 @@ dependencies:
   # Keeps the screen awake while a clip plays; was a transitive dependency of
   # chewie, which did the same, and is direct now that chewie is gone.
   wakelock_plus: ^1.3.0
-  # Web-only video playback path (core/media/data/media_video_source_web.dart):
-  # the browser's native <video> element cannot send a custom Authorization
-  # header, so authenticated video on web is fetched as bytes and handed to the
-  # player as a blob: URL instead. Already a transitive dependency (via
-  # google_sign_in_web); made direct because this code calls its API itself.
-  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

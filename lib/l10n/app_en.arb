@@ -121,6 +121,8 @@
   "@errorProfilePictureInvalidType": {},
   "errorProfilePictureTooLarge": "That image is too large. Pick one under 2 MB.",
   "@errorProfilePictureTooLarge": {},
+  "errorMediaStorageUnavailable": "We couldn't store that file just now. Please try again in a moment.",
+  "@errorMediaStorageUnavailable": {},
   "errorPostMediaTooManyFiles": "You can attach up to 5 photos or videos per post.",
   "@errorPostMediaTooManyFiles": {},
   "errorPostMediaInvalidType": "That file couldn't be used. Try a different photo or video.",

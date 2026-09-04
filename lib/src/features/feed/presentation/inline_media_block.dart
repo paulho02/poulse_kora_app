@@ -4,7 +4,6 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/media/application/active_video.dart';
-import '../../../core/media/data/media_video_source.dart';
 import '../../../core/media/presentation/video_player_surface.dart';
 import '../data/post.dart';
 import 'post_media_thumbnail.dart'
@@ -39,11 +38,20 @@ const _kPauseBelowVisibleFraction = 0.25;
 ///
 /// A video starts as its **poster frame** under a play button and only creates a
 /// real [VideoPlayerController] once tapped — lazy per block, so opening a
-/// text-heavy post with several videos doesn't fire several concurrent
-/// authenticated video fetches just because the view was opened. The poster is
-/// what stops an unplayed clip from being a black rectangle; it costs one small
-/// JPEG from its own route, never a byte of the clip. Once playing, the chrome
-/// is [VideoPlayerSurface] — see there for why it isn't chewie's.
+/// text-heavy post with several videos doesn't fire several concurrent video
+/// fetches just because the view was opened. The poster is what stops an
+/// unplayed clip from being a black rectangle; it costs one small JPEG of its
+/// own, never a byte of the clip. Once playing, the chrome is
+/// [VideoPlayerSurface] — see there for why it isn't chewie's.
+///
+/// The player is pointed straight at the media's presigned URL, on every
+/// platform. That is new, and it deleted a whole web-only path: while media came
+/// from an authenticated backend route, a browser `<video>` could not fetch it
+/// (an element cannot carry an `Authorization` header), so web downloaded the
+/// entire clip through Dio and handed the player a `blob:` URL — up to
+/// `POST_VIDEO_MAX_BYTES` in memory before the first frame. A presigned URL needs
+/// no header, so the browser streams it natively with range requests like every
+/// other platform already did.
 ///
 /// A clip then loops until **something takes it off screen or out of focus**:
 /// the viewer pauses it, another clip is started ([activeVideoProvider]), it is
@@ -51,8 +59,8 @@ const _kPauseBelowVisibleFraction = 0.25;
 /// are not polish — a post can hold five media items, and leaving a scrolled-past
 /// clip running is what produced the two bugs this block used to have: a clip
 /// heard but not seen (its audio under the one you were actually watching) and a
-/// clip stuck on a spinner (two authenticated streams competing for Android's
-/// decoders). Pausing is deliberate where tearing the controller down would also
+/// clip stuck on a spinner (two streams competing for Android's decoders).
+/// Pausing is deliberate where tearing the controller down would also
 /// work: scrolling back finds the clip where you left it, one tap from resuming,
 /// instead of back at its poster with the download to do again.
 class InlineMediaBlock extends ConsumerStatefulWidget {
@@ -75,7 +83,6 @@ class InlineMediaBlock extends ConsumerStatefulWidget {
 class _InlineMediaBlockState extends ConsumerState<InlineMediaBlock>
     with WidgetsBindingObserver {
   VideoPlayerController? _videoController;
-  void Function()? _videoCleanup;
   bool _loading = false;
   bool _failed = false;
 
@@ -115,7 +122,6 @@ class _InlineMediaBlockState extends ConsumerState<InlineMediaBlock>
     // so every block is already paused, and the next claim overwrites it.
     _videoController?.removeListener(_onPlaybackChanged);
     _videoController?.dispose();
-    _videoCleanup?.call();
     super.dispose();
   }
 
@@ -177,27 +183,29 @@ class _InlineMediaBlockState extends ConsumerState<InlineMediaBlock>
       _failed = false;
     });
     try {
-      final source = await videoSourceFor(ref, widget.media.url);
-      await source.controller.initialize().timeout(_kVideoInitTimeout);
+      // The URL is presigned and self-authorizing, so the player fetches it
+      // itself — progressively, over range requests — on web and native alike.
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.media.url),
+      );
+      await controller.initialize().timeout(_kVideoInitTimeout);
       if (!mounted) {
-        await source.controller.dispose();
-        source.dispose?.call();
+        await controller.dispose();
         return;
       }
-      source.controller.addListener(_onPlaybackChanged);
+      controller.addListener(_onPlaybackChanged);
       setState(() {
-        _videoController = source.controller;
-        _videoCleanup = source.dispose;
+        _videoController = controller;
         _loading = false;
       });
       // A post's clip runs to a minute at most, so it loops rather than ending
       // on a frozen last frame with a replay button over it — the same reason
       // the chrome lives along the bottom edge: watching is never interrupted
       // by something drawn on the picture. Pausing is still how it stops.
-      await source.controller.setLooping(true);
+      await controller.setLooping(true);
       // Tapping the poster *is* the request to play, so the surface is only ever
       // mounted onto a clip already running.
-      await source.controller.play();
+      await controller.play();
     } catch (_) {
       if (!mounted) return;
       setState(() {

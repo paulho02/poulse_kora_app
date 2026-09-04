@@ -146,6 +146,13 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'post_blocks_too_many':
       return l10n.errorPostBlocksTooMany;
 
+    // The bucket holding uploaded media was unreachable (see the backend's
+    // `app/core/storage.py`). Worth its own copy rather than falling through to
+    // the generic message: nothing about the file was wrong, so "try a different
+    // photo" would send someone off fixing the one thing that is fine.
+    case 'media_storage_unavailable':
+      return l10n.errorMediaStorageUnavailable;
+
     // ---- generic ------------------------------------------------------------
     case 'unauthorized':
       return l10n.errorUnauthorized;

@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/avatars/application/avatar_providers.dart';
 import '../../../core/cache/cached.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
@@ -80,27 +79,19 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
           filename: filename,
           contentType: contentType,
         );
-    _evictAvatar(updated.profilePictureUrl);
+    // No cache eviction here any more: every upload writes a *new* object key,
+    // so the URL on `updated` differs from the one on screen and the avatar
+    // reloads because its inputs genuinely changed. While pictures lived at a
+    // URL derived from the user id, that URL was identical before and after and
+    // nothing could notice the swap without being told.
     state = AsyncData(Cached.live(updated));
   }
 
   Future<void> removeProfilePicture() async {
-    final previousUrl = state.value?.data.profilePictureUrl;
     final updated = await ref
         .read(profileRepositoryProvider)
         .deleteProfilePicture();
-    _evictAvatar(previousUrl);
     state = AsyncData(Cached.live(updated));
-  }
-
-  /// Drop the cached bytes for a picture that just changed.
-  ///
-  /// Required because the URL is built from the user id and so stays byte-for-byte
-  /// identical across uploads — without this the cache would happily keep serving
-  /// the picture that was just replaced (or deleted).
-  void _evictAvatar(String? url) {
-    if (url == null) return;
-    ref.read(avatarCacheProvider).evict(url);
   }
 
   /// Set the account's username.

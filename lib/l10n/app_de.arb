@@ -41,6 +41,7 @@
   "errorRateLimitedGeneric": "Das geht gerade etwas zu schnell. Warte einen Moment und versuch es dann erneut.",
   "errorProfilePictureInvalidType": "Dieser Dateityp wird nicht unterstützt. Wähle ein JPEG-, PNG- oder WebP-Bild.",
   "errorProfilePictureTooLarge": "Das Bild ist zu groß. Wähle eines unter 2 MB.",
+  "errorMediaStorageUnavailable": "Die Datei konnte gerade nicht gespeichert werden. Bitte versuche es gleich noch einmal.",
   "errorPostMediaTooManyFiles": "Du kannst bis zu 5 Fotos oder Videos pro Beitrag anhängen.",
   "errorPostMediaInvalidType": "Diese Datei konnte nicht verwendet werden. Versuche ein anderes Foto oder Video.",
   "errorPostMediaTooLarge": "Diese Datei ist zu groß.",

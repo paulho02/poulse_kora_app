@@ -1,24 +1,27 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../media/data/authenticated_byte_cache.dart';
+import '../../media/presentation/network_media_image.dart';
 import '../../theme/app_colors.dart';
-import '../application/avatar_providers.dart';
 
 /// A user's profile picture, with [fallback] shown until — or unless — there is
 /// one to display.
 ///
-/// The picture is fetched as bytes through the authenticated Dio client and
-/// memoized (see [AuthenticatedByteCache]); it cannot be an `Image.network`,
-/// because the backend route requires the bearer token.
+/// A plain network image: the backend hands out a presigned bucket URL that
+/// carries its own authorization, so this no longer needs the bearer token, the
+/// Dio client, or the memo cache that existed to make those workable. See
+/// [NetworkMediaImage].
+///
+/// A replaced picture arrives on its own now, too. Every upload writes a new
+/// object key, so the URL genuinely changes and this widget's inputs change with
+/// it — which is why there is no eviction call anywhere any more. It used to be
+/// derived from the user id, identical before and after, and nothing on screen
+/// could notice the swap.
 ///
 /// There is deliberately no spinner. An avatar is decoration around a name that
 /// is already legible, so a loading state would be more distracting than the
 /// monogram it replaces a moment later — and swapping a spinner for an image
 /// would make every feed card jitter on scroll.
-class UserAvatar extends ConsumerStatefulWidget {
+class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,
     required this.imageUrl,
@@ -36,78 +39,16 @@ class UserAvatar extends ConsumerStatefulWidget {
   final Widget fallback;
 
   @override
-  ConsumerState<UserAvatar> createState() => _UserAvatarState();
-}
-
-class _UserAvatarState extends ConsumerState<UserAvatar> {
-  Uint8List? _bytes;
-  late final AuthenticatedByteCache _cache;
-
-  @override
-  void initState() {
-    super.initState();
-    _cache = ref.read(avatarCacheProvider)..addListener(_onCacheChanged);
-    _resolve();
-  }
-
-  @override
-  void dispose() {
-    _cache.removeListener(_onCacheChanged);
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(UserAvatar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.imageUrl != widget.imageUrl) {
-      _bytes = null;
-      _resolve();
-    }
-  }
-
-  /// The cache dropped something. If it was ours, fetch it again.
-  ///
-  /// This is what makes a replaced picture appear immediately: the URL is
-  /// unchanged, so [didUpdateWidget] above cannot detect the swap and this
-  /// notification is the only signal that arrives.
-  void _onCacheChanged() {
-    final url = widget.imageUrl;
-    if (url == null || _cache.isResolved(url)) return;
-
-    // Note the old pixels are left on screen while the new ones load, rather
-    // than blanking to the monogram first — that would read as the picture
-    // being lost for a moment every time it is changed.
-    _cache.load(url).then((bytes) {
-      if (!mounted || widget.imageUrl != url) return;
-      setState(() => _bytes = bytes);
-    });
-  }
-
-  void _resolve() {
-    final url = widget.imageUrl;
-    if (url == null) return;
-
-    // Synchronous hit: assign directly rather than going through the future, so
-    // an already-cached picture is painted on the first frame instead of
-    // flashing the monogram for one frame on every rebuild.
-    if (_cache.isResolved(url)) {
-      _bytes = _cache.peek(url);
-      return;
-    }
-
-    _cache.load(url).then((bytes) {
-      if (!mounted || widget.imageUrl != url) return;
-      setState(() => _bytes = bytes);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bytes = _bytes;
-    if (bytes == null) return widget.fallback;
-    return CircleAvatar(
-      radius: widget.radius,
-      backgroundImage: MemoryImage(bytes),
+    final url = imageUrl;
+    if (url == null) return fallback;
+    return ClipOval(
+      child: NetworkMediaImage(
+        url: url,
+        fallback: fallback,
+        width: radius * 2,
+        height: radius * 2,
+      ),
     );
   }
 }
