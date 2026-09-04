@@ -98,6 +98,16 @@ String _asPngFilename(String original) {
   return '$base.png';
 }
 
+/// A publishing precondition the author hasn't met yet.
+///
+/// Shown as a line inside the toolbar rather than as a snackbar, because the
+/// composer's controls now sit at the *bottom* of the screen and a snackbar is
+/// drawn over exactly them - "pick a channel" covered the channel chip it was
+/// asking the author to tap, so the message had to time out before it could be
+/// acted on. Stored as a case rather than as resolved text so it survives a
+/// locale change.
+enum _PublishBlocker { noChannel, emptyPost }
+
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
 
@@ -107,6 +117,7 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   int? _selectedChannelId;
+  _PublishBlocker? _blocker;
   bool _isAnonymous = false;
   bool _isSubmitting = false;
   final List<_ComposerBlock> _blocks = [_TextBlock()];
@@ -131,11 +142,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
-    final l10n = AppLocalizations.of(context);
     if (channelId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.createPostPickChannelError)));
+      setState(() => _blocker = _PublishBlocker.noChannel);
       return;
     }
 
@@ -172,9 +180,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
     }
     if (blockInputs.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.createPostEmptyPostError)));
+      setState(() => _blocker = _PublishBlocker.emptyPost);
       return;
     }
 
@@ -200,6 +206,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
       setState(() {
         _isAnonymous = false;
+        // The channel is cleared along with everything else: the composer is a
+        // tab in the shell's IndexedStack, so its state outlives the post it
+        // was written for, and a channel left selected is inherited silently by
+        // the next one - noticed only after relaying to the wrong place.
+        _selectedChannelId = null;
+        _blocker = null;
         _blocks
           ..clear()
           ..add(_TextBlock());
@@ -216,13 +228,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _pickChannel(List<Channel> channels) async {
+    // Drop focus before the sheet opens, and again once it closes: a modal
+    // route hands focus back to whatever held it, so picking a channel popped
+    // the keyboard up over a post that was already written. Reopening it made
+    // sense while the picker came *before* the editor; from the publish row,
+    // the next thing the author wants is the Relay button, not the keyboard.
+    FocusManager.instance.primaryFocus?.unfocus();
     final selected = await showChannelPickerSheet(
       context,
       channels: channels,
       selectedId: _selectedChannelId,
     );
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (selected != null) {
-      setState(() => _selectedChannelId = selected.id);
+      setState(() {
+        _selectedChannelId = selected.id;
+        if (_blocker == _PublishBlocker.noChannel) _blocker = null;
+      });
     }
   }
 
@@ -321,7 +344,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (!mounted || added.isEmpty) return;
     // Appended at the end, not inserted at a cursor - the user drags a block
     // to where it belongs (see the class docstring on _ComposerBlock).
-    setState(() => _blocks.addAll(added.map(_MediaBlock.new)));
+    setState(() {
+      _blocks.addAll(added.map(_MediaBlock.new));
+      _clearEmptyPostBlocker();
+    });
   }
 
   Future<void> _addVideo() async {
@@ -356,8 +382,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final orientation = await showVideoOrientationSheet(context);
     if (orientation == null || !mounted) return;
 
-    setState(
-      () => _blocks.add(
+    setState(() {
+      _blocks.add(
         _MediaBlock(
           _PickedItem(
             bytes: bytes,
@@ -367,8 +393,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             orientation: orientation,
           ),
         ),
-      ),
-    );
+      );
+      _clearEmptyPostBlocker();
+    });
   }
 
   /// Turning anonymity *on* is the one direction that needs explaining — what
@@ -389,8 +416,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
+  /// Adding to the article can only make the "add something first" line stale,
+  /// so it clears with the edit rather than waiting for the next Relay press.
+  /// Call from inside a `setState`.
+  void _clearEmptyPostBlocker() {
+    if (_blocker == _PublishBlocker.emptyPost) _blocker = null;
+  }
+
   void _addTextBlock() {
-    setState(() => _blocks.add(_TextBlock()));
+    setState(() {
+      _blocks.add(_TextBlock());
+      _clearEmptyPostBlocker();
+    });
   }
 
   void _removeBlock(int index) {
@@ -539,6 +576,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 needed: needed,
                 onEarnTokens: () => context.go('/feed'),
               ),
+            if (_blocker != null) _PublishBlockerHint(blocker: _blocker!),
             Row(
               children: [
                 FilterChip(
@@ -562,6 +600,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     alignment: Alignment.centerLeft,
                     child: _ChannelSelectorChip(
                       channel: selectedChannel,
+                      hasError: _blocker == _PublishBlocker.noChannel,
                       onTap: () => _pickChannel(channels),
                     ),
                   ),
@@ -638,6 +677,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             child: switch (block) {
               _TextBlock() => TextField(
                 controller: block.controller,
+                onChanged: (_) {
+                  if (_blocker == _PublishBlocker.emptyPost) {
+                    setState(_clearEmptyPostBlocker);
+                  }
+                },
                 maxLines: null,
                 decoration: InputDecoration(
                   hintText: l10n.createPostHint,
@@ -665,9 +709,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 /// is the whole of what the old labelled field's extra row was buying: a
 /// required choice that is visibly still open.
 class _ChannelSelectorChip extends StatelessWidget {
-  const _ChannelSelectorChip({required this.channel, required this.onTap});
+  const _ChannelSelectorChip({
+    required this.channel,
+    required this.hasError,
+    required this.onTap,
+  });
 
   final Channel? channel;
+
+  /// Relay was pressed with no channel picked - the chip turns error-coloured
+  /// so the hint line above it has something to point at.
+  final bool hasError;
   final VoidCallback onTap;
 
   @override
@@ -676,7 +728,7 @@ class _ChannelSelectorChip extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final selected = channel;
     final color = selected == null
-        ? theme.colorScheme.primary
+        ? (hasError ? theme.colorScheme.error : theme.colorScheme.primary)
         : AppColors.channelColor(selected.name);
 
     return ActionChip(
@@ -731,6 +783,46 @@ class _ShortOnTokensHint extends StatelessWidget {
           child: Text(l10n.economyComposerEarnAction),
         ),
       ],
+    );
+  }
+}
+
+/// The "one thing still missing before this can be relayed" line, in the row
+/// above the Relay button it explains.
+///
+/// A line rather than a snackbar, for the reason given on [_PublishBlocker]:
+/// a snackbar covers the toolbar, and the toolbar holds the very control the
+/// message is asking the author to use.
+class _PublishBlockerHint extends StatelessWidget {
+  const _PublishBlockerHint({required this.blocker});
+
+  final _PublishBlocker blocker;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final message = switch (blocker) {
+      _PublishBlocker.noChannel => l10n.createPostPickChannelError,
+      _PublishBlocker.emptyPost => l10n.createPostEmptyPostError,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: theme.colorScheme.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

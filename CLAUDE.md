@@ -257,7 +257,22 @@ that it has to earn a permanent row. Three consequences worth keeping:
   The channel picker used to be a full-width labelled field above the editor — a whole row for one
   word chosen once — and is now `_ChannelSelectorChip`, outlined in the primary colour while
   unpicked so a required-but-open choice still looks like one. The picker sheet behind it is
-  unchanged.
+  unchanged, but three things about it follow from the move to the *bottom* of the screen and
+  should stay that way:
+  - **Publish preconditions are a line in the toolbar, not a snackbar** (`_PublishBlocker` /
+    `_PublishBlockerHint`). A snackbar is drawn over the bottom of the screen, which is now
+    where the controls are: "pick a channel" landed squarely on the channel chip it was asking
+    the author to tap, so the message had to time out before it could be acted on. The blocker
+    is held as an enum case rather than resolved text so a locale change can't strand it, and
+    it clears as soon as it stops being true (picking a channel, adding a block, typing).
+  - **Opening the picker drops keyboard focus**, before and after — a modal route hands focus
+    back to whatever held it, which reopened the keyboard over a post that was already written.
+    Reopening it made sense while the picker came *before* the editor; from the publish row the
+    next thing wanted is Relay.
+  - **A successful post clears the channel too.** The composer is a tab in the shell's
+    `IndexedStack`, so its state outlives the post it was written for and used to keep the last
+    channel selected until an app restart — inherited silently by the next post, and noticed
+    only after relaying to the wrong place.
 
 ### Offline behaviour
 
