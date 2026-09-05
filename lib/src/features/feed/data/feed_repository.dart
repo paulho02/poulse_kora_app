@@ -54,6 +54,31 @@ class ComposerBlockInput {
         };
 }
 
+/// A cheap look at the server-side review queue: which posts are in it, and how
+/// many it can ever hold.
+class FeedQueueStatus {
+  const FeedQueueStatus({required this.postIds, required this.capacity});
+
+  factory FeedQueueStatus.fromJson(Map<String, dynamic> json) =>
+      FeedQueueStatus(
+        postIds: (json['post_ids'] as List<dynamic>).cast<int>(),
+        capacity: json['capacity'] as int,
+      );
+
+  /// The whole queue, in the order the feed renders it. Ids rather than a count
+  /// so a client that remembers what it has already pulled can tell "something
+  /// new arrived" from "the same posts, minus the ones I reviewed" exactly, and
+  /// so never fetches the feed for nothing.
+  final List<int> postIds;
+
+  /// The queue's server-side cap. What separates "nothing has been published for
+  /// you yet" from "your queue is full" — opposite things to tell a reader, and
+  /// the second also means no arrival is possible until they review something.
+  final int capacity;
+
+  bool get isFull => postIds.length >= capacity;
+}
+
 class PostReviewResult {
   PostReviewResult({
     required this.postId,
@@ -119,22 +144,20 @@ class FeedRepository {
   /// not queue: reviewing is guarded server-side by the Redis queue and posting is
   /// priced at request time, so a deferred replay could fail or overcharge long
   /// after the user believed it succeeded.
-  Future<Cached<List<Post>>> fetchFeed({
-    int? channelId,
-    int skip = 0,
-    int limit = 20,
-  }) {
+  Future<Cached<List<Post>>> fetchFeed({int? channelId}) {
     return fetchCached<List<Post>>(
       cache: _cache,
       key: CacheKeys.feed(channelId),
       fetchJson: () async {
+        // No `skip`/`limit`: the review queue is capped server-side
+        // (FEED_QUEUE_MAX_SLOTS) and the backend defaults `limit` to that cap, so
+        // one request is always the whole queue. Paging it would be worse than
+        // pointless — holding only part of it, the top-up below could not tell a
+        // post that just arrived from one it had simply never asked for, and would
+        // refetch on every poll forever.
         final response = await _dio.get<List<dynamic>>(
           '/posts/feed',
-          queryParameters: {
-            'channel_id': ?channelId,
-            'skip': skip,
-            'limit': limit,
-          },
+          queryParameters: {'channel_id': ?channelId},
         );
         return response.data!;
       },
@@ -181,6 +204,19 @@ class FeedRepository {
       data: form,
     );
     return CreatePostResult.fromJson(response.data!);
+  }
+
+  /// What is in the review queue right now, without rendering any of it — the
+  /// poll behind the feed topping itself up (see the backend's
+  /// `GET /posts/feed/status`).
+  ///
+  /// Deliberately *not* cached: this is the question the cache exists to answer
+  /// cheaply, and a disk copy replayed as an answer would have the feed announce
+  /// arrivals that are not there. A caller treats a failure as "no news" and asks
+  /// again on the next tick.
+  Future<FeedQueueStatus> fetchFeedStatus() async {
+    final response = await _dio.get<Map<String, dynamic>>('/posts/feed/status');
+    return FeedQueueStatus.fromJson(response.data!);
   }
 
   Future<PostReviewResult> reviewPost(int postId, String kind) async {

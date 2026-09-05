@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,17 +24,89 @@ class FeedScreen extends ConsumerStatefulWidget {
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
 }
 
+/// How close to the bottom counts as "about to run out", and so worth asking
+/// the server whether anything has arrived. Roughly a card's height, so the
+/// question is asked while there is still something left to read.
+const double _endOfFeedSlack = 400;
+
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   /// Whether the channel filter shows its full row of chips, or the one-line
   /// summary it collapses into while reading. See [_onUserScroll].
   bool _filterExpanded = true;
 
+  /// Whether this is the tab being looked at, and whether the app is in front.
+  /// The feed only watches for arrivals when both hold — see [_syncWatching].
+  bool _onScreen = false;
+  bool _resumed = true;
+
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
-    // Seed the token pill once; refreshed on pull-to-refresh and the app-bar
-    // reload below.
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        _resumed = state == AppLifecycleState.resumed;
+        _syncWatching();
+      },
+    );
+    // Seed the token pill once; refreshed on pull-to-refresh and whenever a
+    // poll actually brings something in.
     Future.microtask(() => ref.read(economyProvider.notifier).ensureLoaded());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // `StatefulShellRoute.indexedStack` keeps every tab mounted and turns the
+    // ticker off on the ones you cannot see, so this — not `initState` — is
+    // where the feed learns whether it is the tab being read.
+    _onScreen = TickerMode.valuesOf(context).enabled;
+    _syncWatching();
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    ref.read(feedNotifierProvider.notifier).stopWatching();
+    super.dispose();
+  }
+
+  void _syncWatching() {
+    final feed = ref.read(feedNotifierProvider.notifier);
+    if (_onScreen && _resumed) {
+      feed.startWatching();
+    } else {
+      feed.stopWatching();
+    }
+  }
+
+  /// Reaching the end of the list is a reader saying "more, please" — the same
+  /// gesture as an infinite scroll, answered by asking the queue rather than by
+  /// paging (there is no next page; there is only what has arrived since).
+  ///
+  /// Keyed on the scroll *settling* rather than on every update, so a fling
+  /// down the feed asks once instead of once a frame.
+  bool _onScrollEnd(ScrollEndNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification.metrics.extentAfter > _endOfFeedSlack) return false;
+    unawaited(ref.read(feedNotifierProvider.notifier).checkForArrivals());
+    return false;
+  }
+
+  /// Pull-to-refresh. Says so when it fails instead of letting the list vanish:
+  /// `refresh` leaves the posts already on screen alone and throws, so the
+  /// reader keeps reading and merely learns the reload did not land.
+  Future<void> _refresh(AppLocalizations l10n) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await Future.wait([
+        ref.read(feedNotifierProvider.notifier).refresh(),
+        ref.read(economyProvider.notifier).refresh(),
+      ]);
+    } catch (error) {
+      showErrorSnackBarOn(messenger, l10n, error);
+    }
   }
 
   /// Collapse the filter while scrolling into the feed, restore it on the way
@@ -84,30 +158,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       appBar: AppBar(
         // No open-post count: it was a number nobody acts on, and the title bar
         // is worth more as the one place the token balance lives.
+        //
+        // No reload button either. The feed watches the queue while it is on
+        // screen and appends what arrives, so a button whose whole job is
+        // "check again" would be advertising a chore that no longer exists —
+        // and its presence is most of what made this read as a static list.
+        // Pull-to-refresh stays, for impatience rather than necessity.
         title: Text(l10n.feedTitle),
-        actions: [
-          const EconomyHeaderStatus(),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: l10n.feedReloadTooltip,
-            onPressed: feedAsync.isLoading
-                ? null
-                : () => Future.wait([
-                    ref.read(feedNotifierProvider.notifier).refresh(),
-                    ref.read(economyProvider.notifier).refresh(),
-                  ]),
-          ),
-        ],
+        actions: const [EconomyHeaderStatus()],
       ),
       body: ViewTip(
         tipKey: 'tip.feed',
         message: l10n.feedTipMessage,
         child: RefreshIndicator(
           // Pull-to-refresh (scroll up) also fetches the latest token balance/price.
-          onRefresh: () => Future.wait([
-            ref.read(feedNotifierProvider.notifier).refresh(),
-            ref.read(economyProvider.notifier).refresh(),
-          ]),
+          onRefresh: () => _refresh(l10n),
           child: Column(
             // Explicit instead of relying on the default (`center`): with
             // `center`, this Column's own width comes from the widest of its
@@ -132,71 +197,82 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   onExpand: () => setState(() => _filterExpanded = true),
                 ),
               Expanded(
-                child: NotificationListener<UserScrollNotification>(
-                  onNotification: _onUserScroll,
-                  child: feedAsync.when(
-                    data: (feed) {
-                      final posts = feed.data;
-                      if (subscribedChannels.isEmpty) {
-                        return _ScrollableEmptyState(
-                          icon: Icons.forum_outlined,
-                          title: l10n.feedEmptyNoChannelsTitle,
-                          subtitle: l10n.feedEmptyNoChannelsSubtitle,
-                          actionLabel: l10n.feedEmptyNoChannelsAction,
-                          onAction: () => context.go('/channels'),
-                        );
-                      }
-                      if (posts.isEmpty) {
-                        // A channel filter isn't the reason there's nothing in
-                        // the *whole* queue — only mention it (and offer to
-                        // clear it) when it's plausibly why this one channel
-                        // looks empty, so the user doesn't wonder where their
-                        // posts went.
-                        final filtered = selectedChannel;
-                        if (filtered != null) {
+                child: NotificationListener<ScrollEndNotification>(
+                  onNotification: _onScrollEnd,
+                  child: NotificationListener<UserScrollNotification>(
+                    onNotification: _onUserScroll,
+                    child: feedAsync.when(
+                      data: (feed) {
+                        final posts = feed.data;
+                        if (subscribedChannels.isEmpty) {
                           return _ScrollableEmptyState(
-                            icon: Icons.filter_alt_off_outlined,
-                            title: l10n.feedEmptyFilteredTitle(filtered.name),
-                            subtitle: l10n.feedEmptyFilteredSubtitle,
-                            actionLabel: l10n.feedEmptyFilteredAction,
-                            onAction: () => ref
-                                .read(selectedChannelFilterProvider.notifier)
-                                .set(null),
+                            icon: Icons.forum_outlined,
+                            title: l10n.feedEmptyNoChannelsTitle,
+                            subtitle: l10n.feedEmptyNoChannelsSubtitle,
+                            actionLabel: l10n.feedEmptyNoChannelsAction,
+                            onAction: () => context.go('/channels'),
                           );
                         }
-                        return _ScrollableEmptyState(
-                          icon: Icons.check_circle_outline,
-                          title: l10n.feedEmptyCaughtUpTitle,
-                          subtitle: l10n.feedEmptyCaughtUpSubtitle,
-                        );
-                      }
-                      return Column(
-                        children: [
-                          // Says so when these posts came off disk, so nobody acts on
-                          // a queue that may have moved on without them.
-                          if (feed.staleLabel != null)
-                            StaleDataNotice(label: feed.staleLabel!),
-                          Expanded(
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              itemCount: posts.length,
-                              itemBuilder: (context, index) => PostCard(
-                                key: ValueKey(posts[index].id),
-                                post: posts[index],
+                        if (posts.isEmpty) {
+                          // A channel filter isn't the reason there's nothing in
+                          // the *whole* queue — only mention it (and offer to
+                          // clear it) when it's plausibly why this one channel
+                          // looks empty, so the user doesn't wonder where their
+                          // posts went.
+                          final filtered = selectedChannel;
+                          if (filtered != null) {
+                            return _ScrollableEmptyState(
+                              icon: Icons.filter_alt_off_outlined,
+                              title: l10n.feedEmptyFilteredTitle(filtered.name),
+                              subtitle: l10n.feedEmptyFilteredSubtitle,
+                              actionLabel: l10n.feedEmptyFilteredAction,
+                              onAction: () => ref
+                                  .read(selectedChannelFilterProvider.notifier)
+                                  .set(null),
+                            );
+                          }
+                          return _ScrollableEmptyState(
+                            icon: Icons.check_circle_outline,
+                            title: l10n.feedEmptyCaughtUpTitle,
+                            subtitle: l10n.feedEmptyCaughtUpSubtitle,
+                          );
+                        }
+                        return Column(
+                          children: [
+                            // Says so when these posts came off disk, so nobody acts on
+                            // a queue that may have moved on without them.
+                            if (feed.staleLabel != null)
+                              StaleDataNotice(label: feed.staleLabel!),
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                // One past the end for the footer: scrolling off
+                                // the last post should land on a statement about
+                                // what happens next, not on a hard stop that
+                                // looks like the app forgot to load more.
+                                itemCount: posts.length + 1,
+                                itemBuilder: (context, index) =>
+                                    index == posts.length
+                                    ? const _EndOfFeedNotice()
+                                    : PostCard(
+                                        key: ValueKey(posts[index].id),
+                                        post: posts[index],
+                                      ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    // Only reached with no cached feed at all — otherwise the
-                    // repository served the saved copy above.
-                    error: (error, _) => ErrorStateView(
-                      error: error,
-                      onRetry: () =>
-                          ref.read(feedNotifierProvider.notifier).refresh(),
+                          ],
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      // Only reached with no cached feed at all — otherwise the
+                      // repository served the saved copy above.
+                      error: (error, _) => ErrorStateView(
+                        error: error,
+                        onRetry: () => _refresh(l10n),
+                      ),
                     ),
                   ),
                 ),
@@ -275,10 +351,7 @@ class _ChannelFilter extends StatelessWidget {
           ],
         ),
       ),
-      secondChild: _CollapsedChannelFilter(
-        selected: selected,
-        onTap: onExpand,
-      ),
+      secondChild: _CollapsedChannelFilter(selected: selected, onTap: onExpand),
     );
   }
 }
@@ -378,6 +451,37 @@ class _ChannelChip extends StatelessWidget {
         // Fully rounded (pill) tags with the channel color as the border.
         shape: const StadiumBorder(),
         side: BorderSide(color: outline),
+      ),
+    );
+  }
+}
+
+/// The line under the last post, saying what happens when you run out.
+///
+/// A feed that simply stops at the last card reads as unfinished — the reader
+/// cannot tell "that's all there is for now" from "it failed to load the rest",
+/// and the only way to find out used to be reloading. This says which it is, and
+/// distinguishes the two states worth distinguishing: a full queue is work
+/// waiting to be done, an empty one is a queue waiting on other people.
+class _EndOfFeedNotice extends ConsumerWidget {
+  const _EndOfFeedNotice();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final status = ref.watch(feedQueueStatusProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 20, 32, 36),
+      child: Text(
+        status != null && status.isFull
+            ? l10n.feedQueueFullNotice
+            : l10n.feedUpToDateNotice,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

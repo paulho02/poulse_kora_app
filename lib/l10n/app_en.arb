@@ -429,8 +429,6 @@
   "@emailVerifyResendSnackbar": {},
   "feedTitle": "Feed",
   "@feedTitle": {},
-  "feedReloadTooltip": "Reload feed",
-  "@feedReloadTooltip": {},
   "feedTipMessage": "This is your feed — review each post and forward or drop it. Nothing here is ranked by an algorithm.",
   "@feedTipMessage": {},
   "feedAllChannelsChip": "All",
@@ -447,8 +445,16 @@
   "@feedEmptyNoChannelsAction": {},
   "feedEmptyCaughtUpTitle": "All caught up",
   "@feedEmptyCaughtUpTitle": {},
-  "feedEmptyCaughtUpSubtitle": "No posts to review right now.",
+  "feedEmptyCaughtUpSubtitle": "Nothing to review right now. New posts show up here on their own.",
   "@feedEmptyCaughtUpSubtitle": {},
+  "feedUpToDateNotice": "You're up to date. New posts show up here on their own.",
+  "@feedUpToDateNotice": {
+    "description": "Footer under the last post in the feed, when the review queue still has room for more."
+  },
+  "feedQueueFullNotice": "That's your queue for now — review a few to make room for more.",
+  "@feedQueueFullNotice": {
+    "description": "Footer under the last post in the feed, when the review queue is at its server-side capacity and nothing more can arrive until the reader reviews something."
+  },
   "feedEmptyFilteredTitle": "No posts in {channelName}",
   "@feedEmptyFilteredTitle": {
     "placeholders": {

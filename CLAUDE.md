@@ -284,6 +284,50 @@ question in that mode is "can I afford it yet", not "what does it cost". And whi
 being read with a spinner once per window. Nothing in this paragraph runs while the switch is off,
 including the economy fetch and the timer.
 
+### The feed keeps itself current
+
+The review queue is something the backend's worker *pushes into*, so a client that fetches once
+holds a list that can only ever shrink — which is what made the feed feel like a page to reload
+rather than something to keep reading. `FeedNotifier` (`features/feed/application/`) closes that
+gap, and four decisions in it are load-bearing:
+
+- **It polls `GET /posts/feed/status`, not the feed.** That route answers with the queue's post
+  ids and costs one `LRANGE` server-side, so the common answer ("nothing new") is cheap enough
+  to ask every 20 seconds. `_accountedFor` — every id this session has already pulled *or* been
+  told about — is what keeps it cheap: without it, a channel filter alone would guarantee a
+  wasted full feed fetch on every tick, since the status lists the whole queue while a filtered
+  list holds part of it, and the difference would read as news forever.
+- **Arrivals are appended, never spliced in or pruned out.** The server hands the queue back
+  newest-first; inserting where the server puts it would shove the post being read down the
+  screen mid-sentence, which is the opposite of continuous. And removal stays
+  `applyReviewResult`'s job alone, so a card already playing its exit animation is never yanked
+  out from under it by a poll landing the beat after the review was accepted.
+- **It watches only while someone is watching.** Polling starts when the feed is the visible tab
+  *and* the app is in front, and stops otherwise. Tab visibility comes from
+  `TickerMode.valuesOf(context).enabled` in `didChangeDependencies` —
+  `StatefulShellRoute.indexedStack` keeps every tab mounted and only turns the ticker off on the
+  ones you cannot see, so `initState` cannot tell you this. The other half of the reason is
+  honesty: the same request marks the user active for the backend's price formula, so a poll
+  that kept running in the background would be a lie about who is here. `_watching` is tracked
+  apart from the timer itself because `build` re-runs whenever the channel filter changes and
+  takes its `onDispose` with it — without that, choosing a channel would quietly leave the feed
+  static for the rest of the session.
+- **Three things ask ahead of the timer**: reviewing down to the last few posts (a review is the
+  one moment a queue slot is *guaranteed* to have just freed up server-side, so the worker may
+  be placing something right now), settling a scroll near the bottom (the infinite-scroll
+  gesture, answered by asking the queue — there is no next page, only what has arrived since),
+  and coming back to the tab or the app.
+
+Where the list ends, `_EndOfFeedNotice` says which ending it is: a full queue is work waiting to
+be done, an empty one is a queue waiting on other people. A feed that just stops at the last card
+cannot be told apart from one that failed to load the rest — which is exactly the doubt the
+reload button used to exist to answer.
+
+Worth knowing when this feels wrong: none of it creates *supply*. A queue that is genuinely empty
+stays empty until someone posts or forwards, because reach is what an author paid for
+(`FEED_FANOUT` recipients per operation) and handing out undelivered posts on demand would be an
+economy change, not a UX one. See the backend's CLAUDE.md and the todo.
+
 ### Chrome that yields to content
 
 Both main screens are mostly other people's content, and the rule for anything else on them is
@@ -296,9 +340,15 @@ that it has to earn a permanent row. Three consequences worth keeping:
   The collapsed line is the same control — tapping it brings the chips back, so the filter is
   never more than one tap away from wherever the feed has been scrolled to. Note the listener
   ignores horizontal notifications, since the chip row is itself a scroll view.
-- **The feed's app bar dropped the open-post count.** It was a number nobody acts on (the queue is
-  whatever it is, and the count moves on its own), and the title bar was worth more as the place
-  the token pill lives.
+- **The feed's app bar dropped the open-post count, and then the reload button.** The count was a
+  number nobody acts on (the queue is whatever it is, and the count moves on its own), and the
+  title bar was worth more as the place the token pill lives. The reload button went for a
+  stronger reason: the feed now keeps itself current (above), so a control whose whole job is
+  "check again" would be advertising a chore that no longer exists — and its presence was most
+  of what made the feed read as a static list. Pull-to-refresh stays, for impatience rather than
+  necessity, and it no longer blanks the list to a spinner: `FeedNotifier.refresh` writes no
+  `AsyncLoading` and throws on failure instead, so a failed reload leaves the reader where they
+  were and merely says so.
 - **The composer's publish row holds all three publishing decisions**: anonymous, channel, Relay.
   The channel picker used to be a full-width labelled field above the editor — a whole row for one
   word chosen once — and is now `_ChannelSelectorChip`, outlined in the primary colour while
