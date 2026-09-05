@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -197,6 +198,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       // Posting spent tokens; sync the balance and refresh the (now higher) price.
       ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
       await ref.read(economyProvider.notifier).refresh();
+      // The channel's own price moved too — this post is one more op on its
+      // backlog, which is exactly what its price is measured from.
+      unawaited(ref.read(channelsNotifierProvider.notifier).refreshPrices());
       ref.invalidate(feedNotifierProvider);
       ref.invalidate(postedHistoryProvider);
       ref.invalidate(statsProvider);
@@ -457,6 +461,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     // own empty-channels/loading/error branches, which render no toolbar).
     final showToolbar =
         economy != null && channels != null && channels.isNotEmpty;
+    // Resolved once here rather than in `_buildToolbar` alone: the pill needs
+    // it too, because the price this post will be charged is the *channel's*,
+    // not the global rate the economy endpoint quotes.
+    final selectedChannel = _channelById(channels, _selectedChannelId);
 
     return Scaffold(
       appBar: AppBar(
@@ -464,9 +472,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         // The price rides in the title bar rather than in a bar of its own: the
         // composer's scarce resource is vertical space for what is being
         // written. See `EconomyHeaderStatus`.
-        actions: const [
-          EconomyHeaderStatus(variant: EconomyBarVariant.composer),
-          SizedBox(width: 8),
+        actions: [
+          EconomyHeaderStatus(
+            variant: EconomyBarVariant.composer,
+            priceOverride: selectedChannel?.postPrice,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ViewTip(
@@ -509,9 +520,36 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       // behind the keyboard. The Scaffold still slides this bar up above the
       // keyboard on its own via `resizeToAvoidBottomInset`.
       bottomNavigationBar: showToolbar
-          ? _buildToolbar(context, channels, economy.data)
+          ? _buildToolbar(
+              context,
+              channels,
+              // Everything the toolbar decides — the affordability hint, whether
+              // Relay is enabled — has to weigh the balance against the price
+              // that will actually be charged.
+              _effectiveEconomy(economy.data, selectedChannel),
+              selectedChannel,
+            )
           : null,
     );
+  }
+
+  static Channel? _channelById(List<Channel>? channels, int? id) {
+    if (channels == null || id == null) return null;
+    for (final channel in channels) {
+      if (channel.id == id) return channel;
+    }
+    return null;
+  }
+
+  /// The economy as it applies to *this* post: the viewer's balance, priced
+  /// against the chosen channel.
+  ///
+  /// Falls back to the global quote while no channel is chosen — and while the
+  /// channel's own price is unknown, which is a list cached before per-channel
+  /// pricing existed rather than a channel that is somehow free.
+  static Economy _effectiveEconomy(Economy economy, Channel? channel) {
+    final price = channel?.postPrice;
+    return price == null ? economy : economy.copyWith(postPrice: price);
   }
 
   /// Everything that is not the article being written: the block-adding
@@ -521,16 +559,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     BuildContext context,
     List<Channel> channels,
     Economy economy,
+    Channel? selectedChannel,
   ) {
     final l10n = AppLocalizations.of(context);
-
-    Channel? selectedChannel;
-    for (final c in channels) {
-      if (c.id == _selectedChannelId) {
-        selectedChannel = c;
-        break;
-      }
-    }
 
     final needed = (economy.postPrice - economy.tokenBalance).clamp(
       0,

@@ -25,6 +25,21 @@ class ChannelsNotifier extends AsyncNotifier<Cached<List<Channel>>> {
     );
   }
 
+  /// Re-fetch without blanking the list, for the price refresh that runs on a
+  /// timer while channel prices are on screen (see `ChannelsScreen`).
+  ///
+  /// [refresh] is right for a pull-to-refresh, where an empty list under the
+  /// spinner is what was asked for. Here it would replace a list someone is
+  /// reading with a spinner once every price window, so this keeps the current
+  /// data on screen until new data actually arrives — and keeps it if none
+  /// does, since a background refresh that fails offline should cost nothing.
+  Future<void> refreshPrices() async {
+    final next = await AsyncValue.guard(
+      () => ref.read(channelsRepositoryProvider).fetchChannels(),
+    );
+    if (next case AsyncData()) state = next;
+  }
+
   /// Optimistically flips `isSubscribed` locally, then confirms with the
   /// backend — reverting the local change if the request fails (including when
   /// the failure is simply that we're offline).

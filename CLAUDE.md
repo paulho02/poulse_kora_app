@@ -258,6 +258,32 @@ need 2 more tokens", which was permanent chrome for everyone including the peopl
 concern, is now `_ShortOnTokensHint`: one line, only while it applies, directly above the disabled
 Relay button it explains.
 
+**Posting is priced per channel, so there are two prices and they mean different things.**
+`GET /posts/economy` quotes a *global reference rate* — the right number for the feed pill, which
+is about the balance rather than about any one channel. What a post actually costs is the price on
+the channel it goes to (`Channel.postPrice`, from `GET /channels`), which the backend holds for the
+same window as the global one and charges verbatim. So the composer passes
+`EconomyHeaderStatus(priceOverride: selectedChannel?.postPrice)` and derives its affordability
+state — the Relay button, `_ShortOnTokensHint` — from `_effectiveEconomy`, never from the raw
+global figure. Dropping that override would show a price nobody is ever charged, and it would look
+entirely normal on screen; `test/channel_pricing_test.dart` is what stops that. `postPrice` is
+nullable (a channel list cached before per-channel pricing) and null means **unknown, fall back to
+the global rate** — never free.
+
+**Channel prices are off by default and live behind one switch** (`showChannelPricesProvider`,
+`core/settings/price_display_settings.dart`; the app-bar toggle on `ChannelsScreen`, and a
+`SwitchListTile` in the explainer sheet, which is where someone staring at a price they can't
+afford will find it). It is a mode switch, not a preference: nobody picks a channel by price, so a
+permanent column of figures would turn browsing into reading a market board — but someone who
+wants to post and is reviewing to earn the difference is watching exactly that. Two rules follow
+and should not be undone. `ChannelPriceLabel` renders **affordability, not a figure** ("3 · Enough
+to post" / "3 · 6 more tokens to post", reusing the feed pill's own two clauses), because the
+question in that mode is "can I afford it yet", not "what does it cost". And while prices are on,
+`ChannelsScreen` follows `post_price_expires_at` and re-fetches through
+`ChannelsNotifier.refreshPrices()` — a quiet refresh, since `refresh()` would replace the list
+being read with a spinner once per window. Nothing in this paragraph runs while the switch is off,
+including the economy fetch and the timer.
+
 ### Chrome that yields to content
 
 Both main screens are mostly other people's content, and the rule for anything else on them is

@@ -32,14 +32,33 @@ enum EconomyBarVariant {
 /// [showEconomyExplainerSheet], which is now also where the live numbers are
 /// spelled out, since no bar states them any more.
 class EconomyHeaderStatus extends ConsumerWidget {
-  const EconomyHeaderStatus({super.key, this.variant = EconomyBarVariant.feed});
+  const EconomyHeaderStatus({
+    super.key,
+    this.variant = EconomyBarVariant.feed,
+    this.priceOverride,
+  });
 
   final EconomyBarVariant variant;
+
+  /// The price of the channel being posted to, once one is chosen.
+  ///
+  /// `GET /posts/economy` quotes the *global* price — a reference rate, and the
+  /// right number for the feed, which is about the balance rather than about
+  /// any one channel. The composer is the opposite case: it is spending, into a
+  /// named channel, and what it will actually be charged is that channel's own
+  /// price (see the backend's `service.channel_prices`). Null until a channel
+  /// is picked, when the global figure is the only honest answer available.
+  final int? priceOverride;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cached = ref.watch(economyProvider);
     if (cached == null) return const SizedBox.shrink();
+
+    final price = priceOverride;
+    final economy = price == null
+        ? cached.data
+        : cached.data.copyWith(postPrice: price);
 
     // `AppBar` lays its actions out with `CrossAxisAlignment.stretch`, which
     // would draw the pill as a toolbar-tall lozenge; the width factor keeps the
@@ -47,9 +66,9 @@ class EconomyHeaderStatus extends ConsumerWidget {
     return Center(
       widthFactor: 1,
       child: switch (variant) {
-        EconomyBarVariant.feed => _FeedPill(economy: cached.data),
+        EconomyBarVariant.feed => _FeedPill(economy: economy),
         EconomyBarVariant.composer => _ComposerPill(
-          economy: cached.data,
+          economy: economy,
           isStale: cached.isStale,
         ),
       },

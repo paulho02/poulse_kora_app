@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/settings/price_display_settings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../channels/data/channel.dart';
+import '../../channels/presentation/channel_price_label.dart';
 
 /// Opens a searchable channel picker as a modal bottom sheet and resolves to
 /// the chosen channel, or `null` if the sheet was dismissed without a choice.
@@ -23,17 +26,17 @@ Future<Channel?> showChannelPickerSheet(
   );
 }
 
-class _ChannelPickerSheet extends StatefulWidget {
+class _ChannelPickerSheet extends ConsumerStatefulWidget {
   const _ChannelPickerSheet({required this.channels, required this.selectedId});
 
   final List<Channel> channels;
   final int? selectedId;
 
   @override
-  State<_ChannelPickerSheet> createState() => _ChannelPickerSheetState();
+  ConsumerState<_ChannelPickerSheet> createState() => _ChannelPickerSheetState();
 }
 
-class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
+class _ChannelPickerSheetState extends ConsumerState<_ChannelPickerSheet> {
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -47,6 +50,11 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    // Behind the same switch as the channels list. This is where the choice is
+    // actually made, so someone in price-watching mode wants the figures here
+    // too — and someone who isn't still gets a picker that is only about
+    // channels.
+    final showPrices = ref.watch(showChannelPricesProvider);
     final filtered = _query.isEmpty
         ? widget.channels
         : widget.channels
@@ -115,11 +123,20 @@ class _ChannelPickerSheetState extends State<_ChannelPickerSheet> {
                               ),
                             ),
                           ),
+                          isThreeLine: showPrices,
                           title: Text(channel.name),
-                          subtitle: Text(
-                            channel.description,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                channel.description,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (showPrices)
+                                ChannelPriceLabel(channel: channel),
+                            ],
                           ),
                           trailing: channel.id == widget.selectedId
                               ? Icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/settings/price_display_settings.dart';
 import '../application/economy_providers.dart';
 
 /// The one place the token economy is explained in full sentences.
@@ -50,9 +51,14 @@ Future<void> showEconomyExplainerSheet(BuildContext context) {
                 text: l10n.economyExplainerCost,
               ),
               _Point(
+                icon: Icons.tag,
+                text: l10n.economyExplainerPerChannel,
+              ),
+              _Point(
                 icon: Icons.timer_outlined,
                 text: l10n.economyExplainerLock,
               ),
+              const _ShowPricesSwitch(),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
@@ -118,6 +124,31 @@ class _LiveFigures extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The switch for channel prices, offered here rather than buried in Settings.
+///
+/// This sheet is one tap from the composer's pill, which is what someone is
+/// looking at when they find they can't afford the post they just wrote — the
+/// exact moment "let me watch the prices while I earn" becomes a thing worth
+/// doing. Settings would be the discoverable-by-nobody place to put it; the
+/// channels list has the same switch in its app bar for turning it back off.
+class _ShowPricesSwitch extends ConsumerWidget {
+  const _ShowPricesSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return SwitchListTile(
+      value: ref.watch(showChannelPricesProvider),
+      onChanged: (value) =>
+          ref.read(showChannelPricesProvider.notifier).set(value),
+      title: Text(l10n.economyShowPricesTitle),
+      subtitle: Text(l10n.economyShowPricesSubtitle),
+      contentPadding: EdgeInsets.zero,
+      dense: true,
     );
   }
 }

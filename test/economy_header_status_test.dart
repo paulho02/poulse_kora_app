@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
 import 'package:poulse_kora_app/src/core/cache/cached.dart';
+import 'package:poulse_kora_app/src/core/settings/app_settings.dart'
+    show sharedPreferencesProvider;
 import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
 import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
 import 'package:poulse_kora_app/src/features/economy/presentation/economy_header_status.dart';
@@ -21,9 +24,15 @@ void main() {
     Economy? economy,
     Locale? locale,
   }) async {
+    // The pill opens the explainer sheet, which carries the channel-price
+    // switch and therefore reads preferences — overridden in `main()` in the
+    // real app, so it has to be here too.
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
           economyProvider.overrideWith(
             () => _FakeEconomyNotifier(
               economy ?? Economy(tokenBalance: balance, postPrice: price),
