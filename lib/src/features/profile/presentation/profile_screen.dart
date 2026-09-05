@@ -106,6 +106,15 @@ class ProfileScreen extends ConsumerWidget {
                           ref.read(profileProvider.notifier).setDarkMode(value),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.feedback_outlined),
+                      title: Text(l10n.feedbackOpen),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/feedback'),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     onPressed: () =>

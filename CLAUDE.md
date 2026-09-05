@@ -175,6 +175,26 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   - A feed card is a *preview*, so `PostMediaThumbnail` clamps to `minAspectRatio` (square): a 4:5
     photo at true shape is ~440dp tall on a phone and pushes the drop/forward buttons off screen.
     The full shape is what the opened post shows.
+- `features/feedback/` — the feedback / bug-report form (`/feedback`), reachable from the profile
+  **and from the login and register screens**. That last part is the constraint the feature is
+  built around, and it shows up in three places that should not be undone:
+  - **The route sits outside every redirect gate.** `app_router.dart`'s `redirect` early-returns
+    for `/feedback` before the signed-in / verified / onboarded chain, because the reports most
+    worth receiving come from exactly the people those gates have stopped. The backend accepts the
+    endpoint unauthenticated for the same reason.
+  - **Signed out, anonymity is shown locked on rather than hidden**, and "you can contact me" is
+    not offered at all — there is no verified address to reply to. Choosing anonymity while signed
+    in really does cut the link (the backend stores no user id for one), so the contact option
+    disappears with it. The screen mirrors the backend's rules; it does not enforce them.
+  - **Attachments skip the cropper.** This is the one upload path with no `CropMediaScreen` in
+    front of it, because a screenshot has no shape to choose — so its content type comes from
+    `core/media/image_content_type.dart` sniffing the bytes instead of from a re-encode, and the
+    picker is deliberately given no `maxWidth`/`maxHeight` (those make it re-encode, turning a PNG
+    screenshot into a JPEG with ringing around the very text being reported). An unsupported file
+    is caught locally with a message rather than as a 400 after the upload.
+  Consent is a hard precondition, reported as a line above the button rather than by disabling it
+  — same rule as the composer's `_PublishBlocker`, and for the same reason. The screen depends on
+  `Navigator`, not `GoRouter`, so it mounts anywhere.
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.

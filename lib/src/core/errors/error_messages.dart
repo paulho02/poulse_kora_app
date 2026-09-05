@@ -146,6 +146,34 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'post_blocks_too_many':
       return l10n.errorPostBlocksTooMany;
 
+    // ---- feedback ------------------------------------------------------------
+    // Its own family rather than a reuse of the post_media_* codes: the wording
+    // has to make sense on a screen with no post on it, and the rules differ —
+    // notably there is no `feedback_media_invalid_aspect_ratio`, because a
+    // screenshot's shape is never wrong.
+    case 'feedback_consent_required':
+      return l10n.errorFeedbackConsentRequired;
+    case 'feedback_message_empty':
+      return l10n.errorFeedbackMessageEmpty;
+    case 'feedback_message_too_long':
+      return l10n.errorFeedbackMessageTooLong;
+    case 'feedback_media_invalid_type':
+      return l10n.errorFeedbackMediaInvalidType;
+    case 'feedback_media_too_large':
+      return l10n.errorFeedbackMediaTooLarge;
+    case 'feedback_media_total_too_large':
+      return l10n.errorFeedbackMediaTotalTooLarge;
+    case 'feedback_media_too_many_files':
+      return l10n.errorFeedbackMediaTooManyFiles;
+    case 'feedback_media_video_too_long':
+      return l10n.errorFeedbackMediaVideoTooLong;
+    // Deliberately absent: `feedback_invalid_kind`, `feedback_invalid_rating`,
+    // `feedback_rating_not_allowed` and `feedback_contact_requires_identity`.
+    // All four mean the form and the backend disagree about what the form is —
+    // a bug in this app, not something the person filling it in can act on — so
+    // they fall through to the generic message rather than getting copy that
+    // implies otherwise.
+
     // The bucket holding uploaded media was unreachable (see the backend's
     // `app/core/storage.py`). Worth its own copy rather than falling through to
     // the generic message: nothing about the file was wrong, so "try a different

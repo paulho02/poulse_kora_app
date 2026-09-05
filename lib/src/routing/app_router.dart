@@ -10,6 +10,7 @@ import '../features/channels/presentation/channels_screen.dart';
 import '../features/create_post/presentation/create_post_screen.dart';
 import '../features/email_verification/presentation/email_verification_screen.dart';
 import '../features/feed/presentation/feed_screen.dart';
+import '../features/feedback/presentation/feedback_screen.dart';
 import '../features/history/presentation/post_history_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_providers.dart';
@@ -22,6 +23,9 @@ import 'app_shell.dart';
 const _authRoutes = {'/login', '/register'};
 const _verifyEmailRoute = '/verify-email';
 const _onboardingRoute = '/onboarding';
+
+/// Deliberately outside every gate below — see the early return in `redirect`.
+const _feedbackRoute = '/feedback';
 
 /// The context `MaterialApp.router`'s `builder` receives (and thus
 /// [BetaBanner]/[OfflineBanner]/[InfoBanner], which wrap the routed content
@@ -127,6 +131,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/feed',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // Reachable in every state: signed out, unverified, mid-onboarding. The
+      // reports most worth receiving are exactly the ones from people the gates
+      // below have stopped ("I can't sign in", "the code never arrives"), and
+      // those are unreportable from anywhere else in the app. The backend allows
+      // this route without a token for the same reason.
+      if (state.matchedLocation == _feedbackRoute) return null;
+
       final loggedIn = ref.read(authNotifierProvider).value ?? false;
 
       // Only read once logged in: `profileProvider` hits `/users/me`, which
@@ -187,6 +198,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: _feedbackRoute,
+        name: 'feedback',
+        builder: (context, state) => const FeedbackScreen(),
       ),
       GoRoute(
         path: _verifyEmailRoute,

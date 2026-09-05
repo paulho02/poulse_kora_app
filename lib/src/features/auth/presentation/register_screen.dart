@@ -170,6 +170,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   // it turns out to be depends only on whether the address is
                   // already known.
                   GoogleAuthSection(label: l10n.authSignUpWithGoogle),
+                  // Reachable without an account on purpose: "I can't sign
+                  // in" and "registration won't take my email" are the reports
+                  // that cannot be filed from anywhere inside the app, and the
+                  // backend accepts this one unauthenticated for the same
+                  // reason. Pushed, not `go`, so backing out returns here with
+                  // whatever was typed still in the fields.
+                  TextButton.icon(
+                    onPressed: () => context.push('/feedback'),
+                    icon: const Icon(Icons.feedback_outlined, size: 18),
+                    label: Text(l10n.feedbackOpen),
+                  ),
                 ],
               ),
             ),
