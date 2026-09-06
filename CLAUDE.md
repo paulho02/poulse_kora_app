@@ -195,6 +195,54 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   Consent is a hard precondition, reported as a line above the button rather than by disabling it
   — same rule as the composer's `_PublishBlocker`, and for the same reason. The screen depends on
   `Navigator`, not `GoRouter`, so it mounts anywhere.
+- `features/onboarding/` + `features/tutorial/` — how a new account is introduced to the app.
+  Two features, because they answer two different questions and only one of them is mandatory.
+  `OnboardingScreen` is the post-registration flow the router forces
+  (`intro → tutorial offer → [tutorial] → [username] → channels → disclaimer`, the last three
+  conditional); the deck in `features/tutorial/` is the long explanation, and it is *asked for*
+  rather than imposed. Five things are load-bearing:
+  - **The tutorial is offered as a question with two real answers.** `TutorialOfferStep` puts
+    "Show me the idea behind Relay" and "I'll explore it on my own" on screen as two buttons of
+    the same weight, rather than hanging a "learn more" link off the last intro slide. A link is
+    an aside that gets skimmed past, and the people who skim it are the ones who later meet the
+    token economy as a surprise. Making it a step means declining is a decision. That is also why
+    the "you can start this anytime from Settings" hint sits on *that* screen and not only at the
+    end of the deck: the person who most needs it is the one who just said no.
+  - **The deck is a widget first and a route second.** Onboarding embeds `TutorialDeck`;
+    `/tutorial` (Settings → How Relay works) wraps the same widget in `TutorialScreen`. It cannot
+    be a route in both places: while `onboardingCompleted` is false, `app_router.dart`'s gate
+    chain bounces every location that isn't `/onboarding` straight back to it, so a route pushed
+    from inside the flow would not survive the push. `onSkip` is null on the Settings route
+    because the app bar's back button is already the way out.
+  - **The five chapters are a chain of consequences, not a feature list.** A post travels by hand
+    (1), so no ranking model is involved (2), so the decision is yours (3), which is worth
+    something and is therefore priced (4), and the result is a feed that is finite (5). Chapter 5
+    is there because a feed that runs dry is the most confusing thing about Relay for anyone
+    arriving from an infinite scroll: it looks broken, and it isn't. Chapters are the place for
+    depth; the intro slides stay at three sentences because everyone sees them.
+  - **The animations are hand-drawn `CustomPainter`s** (`tutorial_illustrations.dart`), with no
+    Lottie/Rive and no asset files. They have to read in both themes, and an exported animation
+    bakes its colours in, while these take every colour from `ColorScheme` at paint time. They are
+    also diagrams of a mechanic rather than artwork, so the part most likely to change is the part
+    a vector asset would freeze. Two rules every one of them follows, both in `_Loop`: it animates
+    **only while its page is the visible one** (a `PageView` builds its neighbours, so otherwise
+    three controllers tick for one drawing), and it honours **reduced motion** by pinning a chosen
+    representative frame rather than frame 0, which is generally an empty stage. Captions are
+    widgets over the canvas, never text painted into it, so they stay translated and scale with
+    the reader's text size.
+  - **The channel list is fetched when the flow starts, not when the channel step mounts**
+    (`OnboardingScreen.initState`). Nothing else in onboarding watches
+    `channelsNotifierProvider`, so the step used to be what started the request, and the step is
+    minutes downstream of registration for anyone who takes the tutorial. That put the one
+    request onboarding cannot continue without at the end of a long idle gap, on an account too
+    new to have a cached list: a single dropped connection ended the flow at a Retry button.
+    `ChannelSelectionStep` holds the other half, and it is narrow on purpose. It re-asks **only**
+    when the provider is already sitting on an error when the step mounts, because that error is
+    minutes old and was never on screen. A list that loaded is left alone, and a second failure
+    is shown, since that one is current. Pinned by `test/onboarding_channels_test.dart`.
+  Consequence for tests: an on-screen illustration repeats forever, and so does the intro
+  slides' icon badge, so **`pumpAndSettle` on anything in this flow never returns**. Drive it
+  with `pump(duration)`. `test/tutorial_test.dart` says so at the top and is the reference.
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.

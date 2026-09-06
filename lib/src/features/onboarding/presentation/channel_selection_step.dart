@@ -7,25 +7,52 @@ import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
 
-/// The onboarding flow's second, mandatory step: pick 1-3 channels so the
-/// Feed tab has something in it the moment onboarding finishes.
+/// The onboarding flow's mandatory channel step: pick 1-3 channels so the Feed
+/// tab has something in it the moment onboarding finishes.
 ///
-/// The 1-3 cap is enforced here only — nothing backend-side stops an existing
-/// user from subscribing to more later from the Channels tab. This is purely
+/// The 1-3 cap is enforced here only. Nothing backend-side stops an existing
+/// user from subscribing to more later from the Channels tab; this is purely
 /// about giving a new account a manageable, non-empty starting feed.
-class ChannelSelectionStep extends ConsumerWidget {
+///
+/// The list itself is fetched earlier, when `OnboardingScreen` mounts, so by
+/// the time this step appears it is usually already in hand. This widget adds
+/// the other half of that arrangement: a warm-up that failed left an error
+/// nobody saw, minutes ago, so the step asks once more when it arrives instead
+/// of showing a Retry button for a stale answer. Only a second failure is
+/// current enough to be worth showing.
+class ChannelSelectionStep extends ConsumerStatefulWidget {
   const ChannelSelectionStep({super.key, required this.onContinue});
   final VoidCallback onContinue;
 
   static const _maxSelectable = 3;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChannelSelectionStep> createState() =>
+      _ChannelSelectionStepState();
+}
+
+class _ChannelSelectionStepState extends ConsumerState<ChannelSelectionStep> {
+  @override
+  void initState() {
+    super.initState();
+    // Deliberately narrow: only a *stale error* is re-asked, never a list that
+    // loaded fine and never one still in flight. Refreshing unconditionally
+    // would throw away a good warm-up and put a spinner in front of everyone.
+    if (!ref.read(channelsNotifierProvider).hasError) return;
+    Future.microtask(() {
+      if (mounted) ref.read(channelsNotifierProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final channelsAsync = ref.watch(channelsNotifierProvider);
     final selectedCount = ref.watch(subscribedChannelsProvider).length;
-    final canContinue = selectedCount >= 1 && selectedCount <= _maxSelectable;
+    final canContinue =
+        selectedCount >= 1 &&
+        selectedCount <= ChannelSelectionStep._maxSelectable;
 
     return SafeArea(
       child: Column(
@@ -52,7 +79,7 @@ class ChannelSelectionStep extends ConsumerWidget {
                 Text(
                   l10n.onboardingChannelsSelectedCount(
                     selectedCount,
-                    _maxSelectable,
+                    ChannelSelectionStep._maxSelectable,
                   ),
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: selectedCount == 0
@@ -70,7 +97,8 @@ class ChannelSelectionStep extends ConsumerWidget {
                 itemCount: cached.data.length,
                 itemBuilder: (context, i) => _SelectableChannelTile(
                   channel: cached.data[i],
-                  atMax: selectedCount >= _maxSelectable,
+                  atMax:
+                      selectedCount >= ChannelSelectionStep._maxSelectable,
                 ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -86,7 +114,7 @@ class ChannelSelectionStep extends ConsumerWidget {
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: canContinue ? onContinue : null,
+                onPressed: canContinue ? widget.onContinue : null,
                 child: Text(l10n.commonContinue),
               ),
             ),

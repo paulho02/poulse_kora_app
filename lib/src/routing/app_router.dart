@@ -18,6 +18,7 @@ import '../features/profile/presentation/change_password_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
+import '../features/tutorial/presentation/tutorial_deck.dart';
 import 'app_shell.dart';
 
 const _authRoutes = {'/login', '/register'};
@@ -223,6 +224,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding/replay',
         name: 'onboardingReplay',
         builder: (context, state) => const OnboardingScreen(isReplay: true),
+      ),
+      // "How Relay works", from Settings. Needs no exemption from the gate
+      // chain above: it is only ever pushed by an account that is signed in,
+      // verified and onboarded, so every check has already passed by the time
+      // it can be reached. Onboarding shows the same deck as an embedded step
+      // instead of pushing this - see `OnboardingScreen`.
+      GoRoute(
+        path: '/tutorial',
+        name: 'tutorial',
+        builder: (context, state) => const TutorialScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
