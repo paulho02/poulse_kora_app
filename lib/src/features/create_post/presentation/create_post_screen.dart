@@ -24,9 +24,12 @@ import '../../economy/presentation/economy_header_status.dart';
 import '../../feed/application/feed_providers.dart';
 import '../../feed/data/feed_repository.dart'
     show ComposerBlockInput, PickedMedia;
+import '../../feed/data/post.dart';
 import '../../history/application/history_providers.dart';
+import '../../profile/application/profile_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import 'channel_picker_sheet.dart';
+import 'post_preview.dart';
 import 'video_orientation_sheet.dart';
 
 /// One photo/video picked in the composer, before upload — mirrors `PostMedia`'s
@@ -229,6 +232,57 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// Show the post as a reader will get it (see `post_preview.dart`).
+  ///
+  /// Runs the same "drop empty paragraphs, keep the order" walk `_submit` does,
+  /// so what is previewed is what would be published — an author who left a
+  /// blank block behind while rearranging sees the post without it, which is
+  /// what the reader gets. An empty post raises the same blocker line the Relay
+  /// button would rather than opening a blank screen; a channel is *not*
+  /// required, since previewing the writing is worth doing before that choice
+  /// is made.
+  void _openPreview(Channel? channel) {
+    final blocks = _previewBlocks();
+    if (blocks.isEmpty) {
+      setState(() => _blocker = _PublishBlocker.emptyPost);
+      return;
+    }
+    // Same reason as `_pickChannel`: a route pushed with the keyboard up hands
+    // focus back on the way out, reopening it over a post already written.
+    FocusManager.instance.primaryFocus?.unfocus();
+    showPostPreview(
+      context,
+      buildPreviewPost(
+        blocks: blocks,
+        channel: channel,
+        isAnonymous: _isAnonymous,
+        author: ref.read(profileProvider).value?.data,
+      ),
+    );
+  }
+
+  List<PostBlock> _previewBlocks() {
+    final blocks = <PostBlock>[];
+    for (final block in _blocks) {
+      switch (block) {
+        case _TextBlock():
+          final text = block.controller.text.trim();
+          if (text.isNotEmpty) blocks.add(PostTextBlock(text));
+        case _MediaBlock():
+          blocks.add(
+            PostMediaBlock(
+              PostMedia.local(
+                bytes: block.item.bytes,
+                isVideo: block.item.isVideo,
+                aspectRatio: block.item.aspectRatio,
+              ),
+            ),
+          );
+      }
+    }
+    return blocks;
   }
 
   Future<void> _pickChannel(List<Channel> channels) async {
@@ -596,6 +650,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     '$_mediaCount/$_kMaxMediaItems',
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
+                const Spacer(),
+                // Set apart from the three "add a block" buttons: this one
+                // doesn't change the post, it looks at it. Never disabled — an
+                // empty post answers with the blocker line, which says more
+                // than a greyed-out button can.
+                TextButton.icon(
+                  onPressed: () => _openPreview(selectedChannel),
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: Text(l10n.createPostPreview),
+                ),
               ],
             ),
             const Divider(height: 8),

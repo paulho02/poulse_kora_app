@@ -33,8 +33,6 @@ class _CapturingAdapter implements HttpClientAdapter {
         ],
         'is_anonymous': false,
         'author': {'id': null, 'username': null, 'profile_picture_url': null},
-        'forwarded_count': 0,
-        'dropped_count': 0,
         'subscription_kind': null,
         'created': DateTime.now().toUtc().toIso8601String(),
       },

@@ -17,8 +17,6 @@ Map<String, dynamic> _postJson({Map<String, dynamic> author = const {}}) => {
         '/api/v1/users/ce1b6b1e-0000-4000-8000-000000000000/profile-picture',
     ...author,
   },
-  'forwarded_count': 0,
-  'dropped_count': 0,
   'subscription_kind': null,
   'created': DateTime.now().toUtc().toIso8601String(),
 };

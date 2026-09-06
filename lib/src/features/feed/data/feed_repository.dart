@@ -87,6 +87,8 @@ class PostReviewResult {
     required this.reviewGate,
     required this.unlocked,
     required this.tokenBalance,
+    required this.postForwardedCount,
+    required this.postReviewedCount,
   });
 
   factory PostReviewResult.fromJson(Map<String, dynamic> json) =>
@@ -97,6 +99,8 @@ class PostReviewResult {
         reviewGate: json['review_gate'] as int,
         unlocked: json['unlocked'] as bool,
         tokenBalance: json['token_balance'] as int,
+        postForwardedCount: json['post_forwarded_count'] as int,
+        postReviewedCount: json['post_reviewed_count'] as int,
       );
 
   final int postId;
@@ -107,6 +111,14 @@ class PostReviewResult {
 
   /// Spendable balance after earning one token for this review.
   final int tokenBalance;
+
+  /// How the post itself has fared, counting this review. Deliberately absent
+  /// from [Post]: the server discloses it only here, once the reader has
+  /// committed to their own verdict, so the crowd cannot cast it.
+  /// [postReviewedCount] is everyone who forwarded *or* dropped it - the
+  /// denominator, so "2 of 9" can be shown rather than a bare count.
+  final int postForwardedCount;
+  final int postReviewedCount;
 }
 
 /// Result of publishing an original post: the created post plus what it cost.

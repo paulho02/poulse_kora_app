@@ -226,6 +226,22 @@ class _InlineMediaBlockState extends ConsumerState<InlineMediaBlock>
     final media = widget.media;
     final knownRatio = media.aspectRatio;
 
+    // The composer's preview: nothing has been uploaded, so there is no URL to
+    // point an image or a player at — the bytes are right here. A photo is
+    // already exactly what will be published (the cropper's own output), so it
+    // draws for real; a clip cannot, because the crop, the transcode and the
+    // poster frame are all still the server's to do, and playing the raw file
+    // would preview a shape the reader will never see. See [PostMedia.local].
+    final localBytes = media.localBytes;
+    if (localBytes != null) {
+      return _framed(
+        ratio: knownRatio ?? _kUnknownRatio,
+        child: media.isVideo
+            ? const _LocalVideoPlaceholder()
+            : Image.memory(localBytes, fit: BoxFit.cover),
+      );
+    }
+
     if (!media.isVideo) {
       return _framed(
         ratio: knownRatio ?? _kUnknownRatio,
@@ -345,6 +361,41 @@ class _VideoPoster extends StatelessWidget {
             child: DurationBadge(seconds: duration),
           ),
       ],
+    );
+  }
+}
+
+/// A clip in the composer's preview: the block at the shape it will publish in,
+/// saying so, rather than a player pointed at an un-transcoded file.
+///
+/// The glyph is deliberately not a button — there is nothing to play yet, and an
+/// affordance that does nothing is worse than none.
+class _LocalVideoPlaceholder extends StatelessWidget {
+  const _LocalVideoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return ColoredBox(
+      color: Colors.black87,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.play_circle_outline, color: Colors.white, size: 40),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              l10n.postPreviewVideoPlaceholder,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -260,6 +260,34 @@ screen and should not be undone: media is **full-bleed** (text keeps its reading
 after the article, so acting on a long post no longer means scrolling to the end of something you
 had already decided about.
 
+The composer's **Preview** button opens that same screen
+(`features/create_post/presentation/post_preview.dart`): same `PostDetailScaffold`, same
+`slideUpRoute`, so there is no second post layout to keep in step with the real one. Four things
+make it work and are worth keeping:
+- **It previews the *opened* post, not the feed card.** That is the view carrying every block the
+  author wrote, and the one where forwarding is actually decided. Reusing `PostCard` instead would
+  have meant a non-interactive fork of a widget whose buttons hit the network.
+- **The post is assembled locally** (`buildPreviewPost`) into a real `Post` with placeholder ids
+  that never leave the device — publishing still goes through `_submit`'s `ComposerBlockInput`
+  list. It runs the same "drop empty paragraphs, keep the order" walk, so what is previewed is what
+  would be published. Anonymity is previewed *as anonymity* (no name, no picture, the neutral
+  glyph), which is the single thing here most worth being sure about before relaying;
+  `subscription_kind` is the one thing it cannot anticipate — the backend snapshots it at creation
+  — so a supporter's post previews as an ordinary one, which under-promises rather than over-.
+- **A picked attachment renders from its bytes** — `PostMedia.local` carries them and `isLocal` is
+  what every caller must branch on, since there is no URL and no poster yet. A **photo** draws for
+  real (the bytes *are* the cropper's output, so it is exactly what publishes); a **clip** shows a
+  placeholder at the shape it will publish in, because the crop, the transcode and the poster frame
+  are all still the server's to do and playing the raw file would preview a shape the reader never
+  sees.
+- **The drop/forward footer is shown, disabled.** It takes the bottom of the screen away from the
+  article, so omitting it would preview more room than the post gets; a line above it says the
+  screen is a preview, which is otherwise only discoverable by tapping something that does nothing.
+No channel is required to preview — that choice is made at publish time and the meta line simply
+drops the channel while it is open — but an empty post raises the composer's existing
+`_PublishBlocker.emptyPost` line rather than opening a blank screen. Covered by
+`test/post_preview_test.dart`.
+
 ### Refreshing history
 
 `PostHistoryScreen` offers both an app-bar button and pull-to-refresh, and the button drives the

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class PostAuthor {
   PostAuthor({
     required this.id,
@@ -32,7 +34,34 @@ class PostMedia {
     required this.width,
     required this.height,
     required this.posterUrl,
+    this.localBytes,
   });
+
+  /// An attachment that has not been uploaded yet — the composer's preview
+  /// (`create_post/presentation/post_preview.dart`) assembles a [Post] out of
+  /// picked files so the *reader's* widgets can draw it, rather than the
+  /// composer growing a second copy of the post layout that would drift.
+  ///
+  /// [width]/[height] are the published *shape*, not a pixel count: the ratio
+  /// is all a block is laid out from, and for a video the real pixel size is
+  /// the server-side transcode's to decide. There is no [url] and no poster
+  /// for the same reason — nothing has been uploaded, so callers must branch
+  /// on [isLocal] rather than reach for either.
+  factory PostMedia.local({
+    required Uint8List bytes,
+    required bool isVideo,
+    required double aspectRatio,
+  }) => PostMedia(
+    id: -1,
+    mediaType: isVideo ? 'video' : 'image',
+    contentType: '',
+    url: '',
+    durationSeconds: null,
+    width: (aspectRatio * 1000).round(),
+    height: 1000,
+    posterUrl: null,
+    localBytes: bytes,
+  );
 
   factory PostMedia.fromJson(Map<String, dynamic> json) => PostMedia(
     id: json['id'] as int,
@@ -75,6 +104,13 @@ class PostMedia {
     return w / h;
   }
 
+  /// The bytes of an attachment that is still local to the composer, or null
+  /// for everything that came from the server — which is every post the app
+  /// reads. See [PostMedia.local].
+  final Uint8List? localBytes;
+
+  bool get isLocal => localBytes != null;
+
   /// What to fetch to show this item *without* playing it: a photo is its own
   /// preview, a video has a poster frame (when one exists).
   String? get previewUrl => isVideo ? posterUrl : url;
@@ -112,8 +148,6 @@ class Post {
     required this.blocks,
     required this.isAnonymous,
     required this.author,
-    required this.forwardedCount,
-    required this.droppedCount,
     required this.subscriptionKind,
     required this.created,
   });
@@ -127,8 +161,6 @@ class Post {
         .toList(),
     isAnonymous: json['is_anonymous'] as bool,
     author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
-    forwardedCount: json['forwarded_count'] as int,
-    droppedCount: json['dropped_count'] as int,
     subscriptionKind: json['subscription_kind'] as String?,
     created: DateTime.parse(json['created'] as String),
   );
@@ -139,8 +171,9 @@ class Post {
   final List<PostBlock> blocks;
   final bool isAnonymous;
   final PostAuthor author;
-  final int forwardedCount;
-  final int droppedCount;
+  // No forward/drop counts here on purpose: the server withholds how a post has
+  // fared until the reader has reviewed it, so it cannot sway the verdict. The
+  // numbers arrive once, on PostReviewResult.
   // Snapshot of the author's subscription at the moment this post was created
   // (e.g. "supporter"), or null. Fixed forever — doesn't reflect their current
   // subscription status.

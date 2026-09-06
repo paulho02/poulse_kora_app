@@ -112,8 +112,6 @@ Map<String, dynamic> _postJson(int id) => {
     'username': 'ada',
     'profile_picture_url': null,
   },
-  'forwarded_count': 0,
-  'dropped_count': 0,
   'subscription_kind': null,
   'created': DateTime.now().toUtc().toIso8601String(),
 };

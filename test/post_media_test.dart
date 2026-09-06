@@ -140,8 +140,6 @@ void main() {
       'blocks': blocks,
       'is_anonymous': false,
       'author': {'id': null, 'username': null, 'profile_picture_url': null},
-      'forwarded_count': 0,
-      'dropped_count': 0,
       'subscription_kind': null,
       'created': DateTime.now().toUtc().toIso8601String(),
     };

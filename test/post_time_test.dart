@@ -9,8 +9,6 @@ Post _postCreatedAgo(Duration ago) => Post(
   blocks: [PostTextBlock('hi')],
   isAnonymous: false,
   author: PostAuthor(id: 'u1', username: 'ada', profilePictureUrl: null),
-  forwardedCount: 0,
-  droppedCount: 0,
   subscriptionKind: null,
   created: DateTime.now().toUtc().subtract(ago),
 );
