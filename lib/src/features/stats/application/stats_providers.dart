@@ -39,7 +39,7 @@ class ReviewGateStatus {
 /// Single shared source of truth for "can this user post right now?",
 /// read by both the Create-Post and Stats screens. Seeded from `GET
 /// /stats/me` and then patched locally by the Feed after each review action
-/// (see FeedNotifier.reviewAndRemove) so posting a review doesn't need an
+/// (see FeedNotifier.applyReviewResult) so posting a review doesn't need an
 /// extra network round-trip just to refresh the gate.
 class ReviewGateStatusNotifier extends Notifier<ReviewGateStatus?> {
   @override

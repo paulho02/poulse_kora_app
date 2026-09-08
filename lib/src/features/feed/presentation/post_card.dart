@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
+import 'forward_score_badge.dart';
 import 'post_author_avatar.dart';
 import 'post_media_thumbnail.dart';
 
@@ -24,19 +25,27 @@ class PostCard extends ConsumerStatefulWidget {
 }
 
 class _PostCardState extends ConsumerState<PostCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _exit = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 360),
+  );
+  late final AnimationController _scorePop = AnimationController(
+    vsync: this,
+    duration: kForwardScorePopIn,
   );
 
   bool _leaving = false;
   // -1 slides the card left (drop), +1 slides it right (forward).
   double _direction = 0;
+  // The post's forwarding score, once the server has disclosed it — which it
+  // only does in a review's response, and so only after the verdict below.
+  int? _score;
 
   @override
   void dispose() {
     _exit.dispose();
+    _scorePop.dispose();
     super.dispose();
   }
 
@@ -68,8 +77,15 @@ class _PostCardState extends ConsumerState<PostCard>
     }
 
     if (!mounted) return;
-    // Confirmed — now it's safe to play the exit animation, then commit the
-    // removal to the provider (which drops it from the underlying list).
+    // Confirmed. The score comes back with that confirmation and is shown
+    // first, on the card the reader has just judged — a beat of payoff while
+    // the post is still there to attach it to. Then the card leaves, carrying
+    // the badge with it, and the removal is committed to the provider (which
+    // drops it from the underlying list).
+    setState(() => _score = result.postForwardedCount);
+    await _scorePop.forward();
+    await Future<void>.delayed(kForwardScoreHold);
+    if (!mounted) return;
     setState(() => _direction = kind == 'forward' ? 1 : -1);
     await _exit.forward();
     if (!mounted) return;
@@ -81,10 +97,30 @@ class _PostCardState extends ConsumerState<PostCard>
   @override
   Widget build(BuildContext context) {
     final card = _buildCard(context);
+    // Inside the exit transform below, not above it, so the badge slides off
+    // with the card it belongs to rather than hanging in the empty row.
+    final content = _score == null
+        ? card
+        : Stack(
+            alignment: Alignment.center,
+            children: [
+              card,
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: ForwardScoreBadge(
+                      count: _score!,
+                      animation: _scorePop,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
 
     return AnimatedBuilder(
       animation: _exit,
-      child: card,
+      child: content,
       builder: (context, child) {
         // First ~60% of the timeline slides + fades the card away; the last
         // ~40% collapses its height so the list smoothly closes the gap.

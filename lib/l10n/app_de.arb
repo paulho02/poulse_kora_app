@@ -195,6 +195,7 @@
   "postMediaUnmute": "Ton einschalten",
   "postForward": "Weiterleiten",
   "postDrop": "Verwerfen",
+  "postForwardScoreAnnouncement": "{count, plural, =0{Bisher hat niemand diesen Beitrag weitergeleitet} one{Bisher einmal weitergeleitet} other{Bisher {count}-mal weitergeleitet}}",
   "postAutoDropsIn": "{hours, plural, one{Wird in 1 Std. automatisch verworfen} other{Wird in {hours} Std. automatisch verworfen}}",
   "postDetailHeader": "BEITRAGSDETAILS",
   "postDetailCloseTooltip": "Schließen",

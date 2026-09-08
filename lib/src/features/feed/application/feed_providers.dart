@@ -253,10 +253,11 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
   // --- reviewing ------------------------------------------------------------
 
   /// Hits the server for a drop/forward review. Deliberately doesn't touch
-  /// the local list — a caller that plays an exit animation (see
-  /// `PostCard`) needs to know the review actually succeeded *before*
-  /// starting it, and only remove the post (via [applyReviewResult]) once
-  /// that animation finishes.
+  /// the local list: every caller has something to play between the server's
+  /// answer and the post's removal — the forwarding score the answer carries,
+  /// then an exit (the card's slide, the detail page's pop) — and none of that
+  /// may start before the review is known to have succeeded. So callers review
+  /// first and commit the removal with [applyReviewResult] once they are done.
   Future<PostReviewResult> reviewPost(int postId, String kind) {
     return ref.read(feedRepositoryProvider).reviewPost(postId, kind);
   }
@@ -290,14 +291,6 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
     if ((state.value?.data.length ?? 0) <= _topUpThreshold) {
       unawaited(checkForArrivals());
     }
-  }
-
-  /// Convenience for callers with no exit animation to sequence around
-  /// (e.g. the detail sheet, which closes immediately either way): review,
-  /// then apply straight away.
-  Future<void> reviewAndRemove(int postId, String kind) async {
-    final result = await reviewPost(postId, kind);
-    applyReviewResult(postId, result);
   }
 }
 

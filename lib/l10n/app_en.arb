@@ -497,6 +497,15 @@
   "@postForward": {},
   "postDrop": "Drop",
   "@postDrop": {},
+  "postForwardScoreAnnouncement": "{count, plural, =0{Nobody has forwarded this post} one{Forwarded once so far} other{Forwarded {count} times so far}}",
+  "@postForwardScoreAnnouncement": {
+    "description": "Screen-reader announcement for the forwarding score revealed after reviewing a post. The badge itself shows only an arrow and the number.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "postAutoDropsIn": "{hours, plural, one{Auto-drops in 1h} other{Auto-drops in {hours}h}}",
   "@postAutoDropsIn": {
     "placeholders": {
