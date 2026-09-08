@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/presentation/error_state_view.dart';
+import '../../../core/presentation/field_info_icon.dart';
 import '../../profile/application/profile_providers.dart';
 
 /// Onboarding step shown to Google signups only: confirm the username.
@@ -34,6 +36,11 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
   late final _controller = TextEditingController(text: widget.initialUsername);
   var _submitting = false;
 
+  /// The username the server has already refused as taken, if any — shown under
+  /// the field rather than only in a snackbar, since this screen is one field
+  /// and the fix is to edit it. Cleared as soon as the text changes.
+  String? _takenUsername;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -42,6 +49,10 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    // Still the name the server just refused (it is cleared on the first
+    // keystroke), so the answer is already known - don't spend a round trip
+    // asking again.
+    if (_takenUsername != null) return;
     final username = _controller.text.trim();
 
     // Unchanged means the derived name is already what the server has; skip the
@@ -56,7 +67,15 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
       await ref.read(profileProvider.notifier).updateUsername(username);
       if (mounted) widget.onContinue();
     } catch (error) {
-      if (mounted) showErrorSnackBar(context, error);
+      if (!mounted) return;
+      // The derived name the backend pre-filled can have been claimed in the
+      // meantime, and the user is free to type any name at all here, so this is
+      // the expected failure of this screen rather than an exceptional one.
+      if (asRelayException(error).error == 'username_taken') {
+        setState(() => _takenUsername = username);
+      } else {
+        showErrorSnackBar(context, error);
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -103,11 +122,25 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
                 decoration: InputDecoration(
                   labelText: l10n.commonUsername,
                   counterText: '',
+                  suffixIcon: FieldInfoIcon(
+                    message: l10n.usernameVisibleToOthers,
+                  ),
+                  // Not a `validator` rule: the form only re-validates on
+                  // submit, so a validator-based version of this would keep
+                  // the message on screen while the user types the new name.
+                  errorText: _takenUsername == null
+                      ? null
+                      : l10n.errorUsernameTaken,
                 ),
                 maxLength: UsernameStep.maxLength,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 enableSuggestions: false,
+                onChanged: (_) {
+                  if (_takenUsername != null) {
+                    setState(() => _takenUsername = null);
+                  }
+                },
                 onFieldSubmitted: (_) => _submitting ? null : _submit(),
                 validator: (v) => _validate(v, l10n),
               ),

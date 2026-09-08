@@ -260,6 +260,33 @@ screen and should not be undone: media is **full-bleed** (text keeps its reading
 after the article, so acting on a long post no longer means scrolling to the end of something you
 had already decided about.
 
+### The forwarding score
+
+After a verdict — and only after — the card shows how many forwards the post has, as a badge that
+pops in, holds a beat, and then leaves with the card (`features/feed/presentation/`:
+`forward_score_badge.dart`, sequenced by `PostCard._review` and the detail page's `_review`).
+Four things are load-bearing:
+
+- **The server is what makes "only after" true.** The count arrives on `PostReviewResult` and is
+  deliberately absent from `PostRead`, so no feed or detail response carries it (see the backend's
+  CLAUDE.md). Hiding it client-side would leave the raw API as the way around it, and a reader who
+  can see that everyone else forwarded a post is voting on the crowd rather than on the post. So
+  `ForwardScoreBadge` takes a number from a review result and has no way to read one off a `Post`
+  — there is nothing there to read. Don't "helpfully" add one.
+- **Loudness is logarithmic** (`ForwardScoreBadge.heatFor`, 0 at 1 forward, 1 at 50). A forward
+  re-fans the post out to more readers, so counts compound; on a linear ramp nearly every real post
+  would look identical and only freak ones would register. The ramp drives colour (grey → accent →
+  amber), size and glow together, so the number reads before it is read.
+- **The order is reveal, hold, exit** — the reveal has to land while the card the score belongs to
+  is still there. `FeedNotifier.reviewPost` deliberately doesn't touch the list; the caller commits
+  the removal with `applyReviewResult` once its own animation is done.
+- **A drop discloses it on the same terms.** The number describes the post, not a reward for
+  agreeing with the crowd.
+
+The badge shows an arrow and a numeral, nothing to translate; the localized string is the
+screen-reader announcement (`postForwardScoreAnnouncement`), which is what says *what* was counted.
+`test/forward_score_test.dart`.
+
 The composer's **Preview** button opens that same screen
 (`features/create_post/presentation/post_preview.dart`): same `PostDetailScaffold`, same
 `slideUpRoute`, so there is no second post layout to keep in step with the real one. Four things
@@ -508,6 +535,19 @@ or URL schemes are involved. Three things about it are load-bearing:
   The two entry points differ and have separate dialog copy: from the **login screen** the Google
   address *is* the account address (that is what matched them), whereas from **Settings** any
   Google account may be linked and the account keeps its own email as its contact address.
+- **A taken username is shown under the field, not in a snackbar.** The backend answers 409
+  `username_taken` on both writers, and both screens that set a name (`register_screen.dart`,
+  `username_step.dart`) hold the refused string and feed it to `InputDecoration.errorText`,
+  clearing it on the first keystroke. Deliberately not a `validator` rule: a form only
+  re-validates on submit, so a validator version leaves the message under the field while the
+  user types the replacement. While it is set, submit returns early — the server's answer is
+  still true for that exact string, so a retry would only spend a round trip. `messageFor`
+  still maps the code (unlike `google_link_required`), as the fallback for anywhere that has
+  only a snackbar.
+  The same field carries a `FieldInfoIcon` (`core/presentation/`) saying the name is visible to
+  other people — it uses `TooltipTriggerMode.tap` because a default Tooltip opens on *long
+  press* on touch, which nobody finds, and a hint meant to be read before someone types their
+  real name has to be findable.
 
 Session boundaries invalidate the account-scoped providers on the way **in** as well as out
 (`_invalidateSessionScoped` in `app.dart`). Only invalidating on logout was not enough: the router

@@ -30,6 +30,12 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'register_user_already_exists':
     case 'update_user_email_already_exists':
       return l10n.errorEmailAlreadyExists;
+    // Raised by registration *and* by the onboarding username step, which is why
+    // it is one code rather than a per-route pair like the email ones above.
+    // Both screens also render it under the username field itself; this is the
+    // fallback for anywhere that only has a snackbar.
+    case 'username_taken':
+      return l10n.errorUsernameTaken;
     case 'register_invalid_password':
     case 'update_user_invalid_password':
     case 'change_password_invalid_password':

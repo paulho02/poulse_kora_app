@@ -113,6 +113,19 @@ void main() {
       expect(msg, contains('you have 2'));
     });
 
+    test('a taken username gets copy about the username, in both locales', () {
+      // The backend answers this on registration and on the onboarding username
+      // step (it used to be an unhandled unique-constraint violation, i.e. a
+      // 500). Falling through to the generic message would tell someone whose
+      // only problem is a name clash that something went wrong on our side.
+      final taken = RelayApiException(409, 'username_taken', const {});
+
+      expect(messageFor(en, taken), contains('username'));
+      final unmapped = RelayApiException(400, 'something_new', const {});
+      expect(messageFor(en, taken), isNot(messageFor(en, unmapped)));
+      expect(messageFor(de, taken), contains('Benutzername'));
+    });
+
     test('maps the profile-picture rejections to their own copy', () {
       // Both are real answers from the backend's upload validation, so neither
       // may fall through to the generic "something went wrong".

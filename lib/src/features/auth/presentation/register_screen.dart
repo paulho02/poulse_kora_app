@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/app_config/application/app_config_providers.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/error_messages.dart';
+import '../../../core/presentation/field_info_icon.dart';
 import '../../../core/presentation/language_picker.dart';
 import '../application/auth_providers.dart';
 import 'google_auth_section.dart';
@@ -24,6 +26,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   var _obscurePassword = true;
 
+  /// The username the server has already refused as taken, if any.
+  ///
+  /// Kept so the refusal lands *under the field* rather than only in a snackbar
+  /// that scrolls away — and so a second tap on "create account" with the same
+  /// name is stopped here instead of spending another round trip on an answer
+  /// we already have. Cleared as soon as the text changes.
+  String? _takenUsername;
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -34,6 +44,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    // Still the username the server just refused (it is cleared on the first
+    // keystroke), so the answer is already known - don't spend a round trip
+    // asking again.
+    if (_takenUsername != null) return;
     // Otherwise a still-showing error from a previous failed attempt (the
     // default SnackBar duration is 4s) can outlive this one and linger into
     // whatever screen a *successful* retry navigates to.
@@ -64,6 +78,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     ref.listen(authNotifierProvider, (previous, next) {
       if (next.hasError) {
+        // A taken username is the one failure that points at a specific field,
+        // so it is shown there instead of in a snackbar — the fields are still
+        // filled in and the fix is to edit one of them.
+        if (asRelayException(next.error).error == 'username_taken') {
+          setState(() => _takenUsername = _usernameController.text.trim());
+          return;
+        }
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(messageFor(l10n, next.error))));
@@ -87,10 +108,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   TextFormField(
                     controller: _usernameController,
-                    decoration: InputDecoration(labelText: l10n.commonUsername),
+                    decoration: InputDecoration(
+                      labelText: l10n.commonUsername,
+                      // Said here rather than as a `helperText` line: this is
+                      // the one field on the form whose value other people see,
+                      // and it is worth saying before someone types their real
+                      // name into it.
+                      suffixIcon: FieldInfoIcon(
+                        message: l10n.usernameVisibleToOthers,
+                      ),
+                      // Not a `validator` rule: the form only re-validates on
+                      // submit, so a validator-based version of this would keep
+                      // the message on screen while the user types the new name.
+                      errorText: _takenUsername == null
+                          ? null
+                          : l10n.errorUsernameTaken,
+                    ),
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.newUsername],
-                    validator: (v) => (v == null || v.isEmpty)
+                    onChanged: (_) {
+                      if (_takenUsername != null) {
+                        setState(() => _takenUsername = null);
+                      }
+                    },
+                    validator: (v) => (v == null || v.trim().isEmpty)
                         ? l10n.validationUsernameRequired
                         : null,
                   ),
