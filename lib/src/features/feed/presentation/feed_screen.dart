@@ -43,6 +43,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   late final AppLifecycleListener _lifecycle;
 
+  /// The notifier whose poll this screen drives, held as a field purely so
+  /// [dispose] can stop it without touching `ref`.
+  ///
+  /// `dispose` must not read a provider: Riverpod answers a read from a widget
+  /// that is already unmounting by *throwing*, and an exception thrown while an
+  /// element unmounts aborts the framework's unmount pass — the deactivated feed
+  /// subtree is then left half-torn-down while its `GlobalKey`s stay registered,
+  /// and the next time the shell activates that branch (returning to `/feed`
+  /// after the onboarding or verify-email redirect that disposed it) activation
+  /// fails and the whole tab renders as an `ErrorWidget`: a blank body under a
+  /// working navigation bar. Re-read on every build rather than captured once,
+  /// so an invalidated provider (a session boundary, a channel filter change)
+  /// can't leave this pointing at a notifier nobody is polling with.
+  FeedNotifier? _feed;
+
   @override
   void initState() {
     super.initState();
@@ -70,12 +85,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   void dispose() {
     _lifecycle.dispose();
-    ref.read(feedNotifierProvider.notifier).stopWatching();
+    // See [_feed] — deliberately not `ref.read`.
+    _feed?.stopWatching();
     super.dispose();
   }
 
   void _syncWatching() {
     final feed = ref.read(feedNotifierProvider.notifier);
+    _feed = feed;
     if (_onScreen && _resumed) {
       feed.startWatching();
     } else {
@@ -137,6 +154,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final feedAsync = ref.watch(feedNotifierProvider);
+    // The watch above is what makes this the right place to refresh it: an
+    // invalidated provider rebuilds this widget, so the reference [dispose]
+    // will use is never the previous notifier's. See [_feed].
+    _feed = ref.read(feedNotifierProvider.notifier);
     final subscribedChannels = ref.watch(subscribedChannelsProvider);
     final selectedChannelId = ref.watch(selectedChannelFilterProvider);
     final l10n = AppLocalizations.of(context);

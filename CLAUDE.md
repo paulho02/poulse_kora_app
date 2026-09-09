@@ -446,7 +446,15 @@ gap, and four decisions in it are load-bearing:
   that kept running in the background would be a lie about who is here. `_watching` is tracked
   apart from the timer itself because `build` re-runs whenever the channel filter changes and
   takes its `onDispose` with it — without that, choosing a channel would quietly leave the feed
-  static for the rest of the session.
+  static for the rest of the session. Stopping it on the way out goes through `_feed`, a cached
+  reference to the notifier, because **`dispose` must not touch `ref` at all**: Riverpod answers
+  a read from a widget that is already unmounting by *throwing*, and an exception thrown
+  mid-unmount aborts the framework's unmount pass — which left the feed branch's elements
+  defunct with their `GlobalKey`s still registered, so the next activation of that branch
+  (returning to `/feed` after the verify-email or onboarding redirect that disposed it) failed
+  and the entire tab rendered as an `ErrorWidget`: a blank body under a working navigation bar,
+  which is what every new account saw the moment onboarding ended. `test/feed_branch_remount_test.dart`
+  pins the sequence.
 - **Three things ask ahead of the timer**: reviewing down to the last few posts (a review is the
   one moment a queue slot is *guaranteed* to have just freed up server-side, so the worker may
   be placing something right now), settling a scroll near the bottom (the infinite-scroll
