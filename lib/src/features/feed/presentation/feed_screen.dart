@@ -14,6 +14,8 @@ import '../../channels/data/channel.dart';
 import '../../economy/application/economy_providers.dart';
 import '../../economy/presentation/economy_header_status.dart';
 import '../application/feed_providers.dart';
+import '../data/post.dart';
+import 'missing_post_card.dart';
 import 'post_card.dart';
 import 'post_detail_view.dart';
 
@@ -141,9 +143,14 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
     ref.listen(expandedPostIdProvider, (previous, next) {
       if (next == null) return;
+      // Only a real post opens: a `MissingPost` has no detail view, and nothing
+      // can set this to one anyway since its card is not tappable.
       final matches =
-          feedAsync.value?.data.where((p) => p.id == next) ?? const [];
-      if (matches.isNotEmpty) showPostDetail(context, ref, matches.first);
+          feedAsync.value?.data.whereType<FeedPost>().where(
+            (e) => e.postId == next,
+          ) ??
+          const <FeedPost>[];
+      if (matches.isNotEmpty) showPostDetail(context, ref, matches.first.post);
     });
 
     Channel? selectedChannel;
@@ -203,7 +210,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     onNotification: _onUserScroll,
                     child: feedAsync.when(
                       data: (feed) {
-                        final posts = feed.data;
+                        final entries = feed.data;
                         if (subscribedChannels.isEmpty) {
                           return _ScrollableEmptyState(
                             icon: Icons.forum_outlined,
@@ -213,7 +220,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             onAction: () => context.go('/channels'),
                           );
                         }
-                        if (posts.isEmpty) {
+                        if (entries.isEmpty) {
                           // A channel filter isn't the reason there's nothing in
                           // the *whole* queue — only mention it (and offer to
                           // clear it) when it's plausibly why this one channel
@@ -252,14 +259,24 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                 // the last post should land on a statement about
                                 // what happens next, not on a hard stop that
                                 // looks like the app forgot to load more.
-                                itemCount: posts.length + 1,
-                                itemBuilder: (context, index) =>
-                                    index == posts.length
-                                    ? const _EndOfFeedNotice()
-                                    : PostCard(
-                                        key: ValueKey(posts[index].id),
-                                        post: posts[index],
+                                itemCount: entries.length + 1,
+                                itemBuilder: (context, index) {
+                                  if (index == entries.length) {
+                                    return const _EndOfFeedNotice();
+                                  }
+                                  final entry = entries[index];
+                                  return switch (entry) {
+                                    FeedPost(:final post) => PostCard(
+                                      key: ValueKey(post.id),
+                                      post: post,
+                                    ),
+                                    MissingPost(:final postId) =>
+                                      MissingPostCard(
+                                        key: ValueKey(postId),
+                                        postId: postId,
                                       ),
+                                  };
+                                },
                               ),
                             ),
                           ],

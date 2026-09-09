@@ -140,6 +140,52 @@ class PostMediaBlock implements PostBlock {
   final PostMedia media;
 }
 
+/// One slot in the review queue: the post that fills it, or a hole where a post
+/// used to be.
+///
+/// The queue lives in the backend's Redis and holds nothing but post ids, so an
+/// author erasing their account leaves ids behind in every reader's queue that
+/// was holding one (see the backend's `app/core/account_deletion.py`). Rather
+/// than scan every queue in the deployment, the backend answers the hole
+/// honestly and the reader is given a way to clear the slot.
+///
+/// A sealed pair rather than a nullable field on [Post]: a vanished post has no
+/// channel, no author and no creation time, so anything a [Post] carried for one
+/// would be invented — and the compiler makes every renderer say what it does
+/// with the case instead of tripping over a null later.
+sealed class FeedEntry {
+  const FeedEntry();
+
+  factory FeedEntry.fromJson(Map<String, dynamic> json) {
+    final post = json['post'] as Map<String, dynamic>?;
+    return post == null
+        ? MissingPost(json['post_id'] as int)
+        : FeedPost(Post.fromJson(post));
+  }
+
+  /// The queue slot's post id — the one thing that exists in both cases, and
+  /// what every list operation (dedupe, removal, "have I seen this?") keys on.
+  int get postId;
+}
+
+class FeedPost extends FeedEntry {
+  const FeedPost(this.post);
+
+  final Post post;
+
+  @override
+  int get postId => post.id;
+}
+
+/// A slot whose post has been erased. Nothing can be done with it but dismissed
+/// — there is nothing left to read, and nothing to forward.
+class MissingPost extends FeedEntry {
+  const MissingPost(this.postId);
+
+  @override
+  final int postId;
+}
+
 class Post {
   Post({
     required this.id,

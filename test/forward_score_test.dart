@@ -122,8 +122,12 @@ void main() {
   });
 }
 
-List<int> _feedIds(ProviderContainer container) =>
-    container.read(feedNotifierProvider).value!.data.map((p) => p.id).toList();
+List<int> _feedIds(ProviderContainer container) => container
+    .read(feedNotifierProvider)
+    .value!
+    .data
+    .map((e) => e.postId)
+    .toList();
 
 /// Runs time forward far enough for the review to resolve and the badge to pop
 /// in, but not far enough for the hold to expire and the card to start leaving.
@@ -180,11 +184,13 @@ Future<ProviderContainer> _pumpCard(
         home: Scaffold(
           body: Consumer(
             builder: (context, ref, _) {
-              final posts =
-                  ref.watch(feedNotifierProvider).value?.data ?? const <Post>[];
+              final entries =
+                  ref.watch(feedNotifierProvider).value?.data ??
+                  const <FeedEntry>[];
+              final posts = entries.whereType<FeedPost>().toList();
               return posts.isEmpty
                   ? const SizedBox.shrink()
-                  : PostCard(post: posts.first);
+                  : PostCard(post: posts.first.post);
             },
           ),
         ),
@@ -210,7 +216,11 @@ class _FakeBackend implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     final path = options.path;
-    if (path == '/posts/feed') return _json([_post]);
+    if (path == '/posts/feed') {
+      return _json([
+        {'post_id': 1, 'post': _post},
+      ]);
+    }
     if (path == '/posts/feed/status') {
       return _json({
         'post_ids': [1],

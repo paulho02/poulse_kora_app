@@ -70,6 +70,26 @@ class ProfileRepository {
     return UserProfile.fromJson(response.data!);
   }
 
+  /// Erase the account, and its posts too when [deletePosts] is set.
+  ///
+  /// Irreversible, and the caller is expected to have confirmed twice (see
+  /// `DeleteAccountDialog`). [currentPassword] is required by the backend for a
+  /// password account and meaningless for a Google one, whose stored hash is a
+  /// random value nobody holds.
+  ///
+  /// Writes nothing to the cache on the way out: the whole cache is wiped by the
+  /// sign-out that follows, and a profile written here would be a copy of an
+  /// account that no longer exists.
+  Future<void> deleteAccount({
+    required bool deletePosts,
+    String? currentPassword,
+  }) async {
+    await _dio.delete<void>(
+      '/users/me',
+      data: {'delete_posts': deletePosts, 'current_password': ?currentPassword},
+    );
+  }
+
   Future<UserProfile> deleteProfilePicture() async {
     final response = await _dio.delete<Map<String, dynamic>>(
       '/users/me/profile-picture',

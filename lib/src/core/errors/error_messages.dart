@@ -110,6 +110,16 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorAlreadyReviewed;
     case 'post_not_found':
       return l10n.errorPostNotFound;
+    // Answered by `DELETE /posts/feed/{id}` when the post is in fact still
+    // there — this client's list is stale, not the server's.
+    case 'post_available':
+      return l10n.errorPostAvailable;
+
+    // ---- deleting an account ------------------------------------------------
+    case 'delete_account_wrong_password':
+      return l10n.errorDeleteAccountWrongPassword;
+    case 'delete_account_password_required':
+      return l10n.errorDeleteAccountPasswordRequired;
 
     // ---- pacing -------------------------------------------------------------
     // One budget covers posting, forwarding and dropping, so the copy has to work

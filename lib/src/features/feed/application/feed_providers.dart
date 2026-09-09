@@ -70,7 +70,7 @@ final feedQueueStatusProvider =
 /// the design goal is that a reader never has to ask: while the feed is on
 /// screen it polls `GET /posts/feed/status` and *appends* whatever has arrived.
 /// Pull-to-refresh is still there for impatience, but nothing depends on it.
-class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
+class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   /// Every post id this session has already accounted for — pulled into the
   /// list, or reported by a status poll we then fetched against.
   ///
@@ -93,7 +93,7 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
   bool _fetching = false;
 
   @override
-  Future<Cached<List<Post>>> build() async {
+  Future<Cached<List<FeedEntry>>> build() async {
     // Changing the filter is a different queue view: refetch from scratch.
     final channelId = ref.watch(selectedChannelFilterProvider);
     ref.onDispose(_cancelTimer);
@@ -101,7 +101,7 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
     final feed = await ref
         .read(feedRepositoryProvider)
         .fetchFeed(channelId: channelId);
-    _accountedFor.addAll(feed.data.map((p) => p.id));
+    _accountedFor.addAll(feed.data.map((e) => e.postId));
     _ensureTimer();
     return feed;
   }
@@ -216,9 +216,9 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
         state = AsyncData(fetched);
         return fetched.data.isNotEmpty;
       }
-      final heldIds = held.data.map((p) => p.id).toSet();
+      final heldIds = held.data.map((e) => e.postId).toSet();
       final arrivals = fetched.data
-          .where((p) => !heldIds.contains(p.id))
+          .where((e) => !heldIds.contains(e.postId))
           .toList();
       if (arrivals.isEmpty) return false;
       state = AsyncData(Cached.live([...held.data, ...arrivals]));
@@ -246,7 +246,7 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
         .fetchFeed(channelId: channelId);
     _accountedFor
       ..clear()
-      ..addAll(feed.data.map((p) => p.id));
+      ..addAll(feed.data.map((e) => e.postId));
     state = AsyncData(feed);
   }
 
@@ -262,16 +262,40 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
     return ref.read(feedRepositoryProvider).reviewPost(postId, kind);
   }
 
+  /// Drops one slot from the list on screen, whatever kind it was.
+  ///
+  /// Kept apart from [applyReviewResult] because dismissing a [MissingPost] is
+  /// the only other thing that removes an entry, and it has none of a review's
+  /// side effects — no score, no token, no history to invalidate.
+  void _removeFromList(int postId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.map((entries) => entries.where((e) => e.postId != postId).toList()),
+    );
+  }
+
+  /// Clear a slot whose post no longer exists — the ghost card's one button.
+  ///
+  /// Removed locally only once the server has confirmed, exactly like a review:
+  /// it answers 409 while the post is still there, which means this list is
+  /// stale and dropping the card would hide a post the reader still owes a
+  /// verdict on. Throws on failure so the card can say so.
+  Future<void> dismissMissingPost(int postId) async {
+    await ref.read(feedRepositoryProvider).dismissMissingPost(postId);
+    _removeFromList(postId);
+    // A slot just freed up server-side, same as a review — so the worker may be
+    // placing something right now.
+    if ((state.value?.data.length ?? 0) <= _topUpThreshold) {
+      unawaited(checkForArrivals());
+    }
+  }
+
   /// Removes [postId] from the local list and applies the rest of a
   /// successful review's side effects. Only call this once the server has
   /// confirmed the review (i.e. after [reviewPost] resolved).
   void applyReviewResult(int postId, PostReviewResult result) {
-    final current = state.value;
-    if (current != null) {
-      state = AsyncData(
-        current.map((posts) => posts.where((p) => p.id != postId).toList()),
-      );
-    }
+    _removeFromList(postId);
     ref
         .read(reviewGateStatusProvider.notifier)
         .updateFromReviewResult(
@@ -295,7 +319,9 @@ class FeedNotifier extends AsyncNotifier<Cached<List<Post>>> {
 }
 
 final feedNotifierProvider =
-    AsyncNotifierProvider<FeedNotifier, Cached<List<Post>>>(FeedNotifier.new);
+    AsyncNotifierProvider<FeedNotifier, Cached<List<FeedEntry>>>(
+      FeedNotifier.new,
+    );
 
 /// Which post (if any) is expanded in the detail bottom sheet.
 class ExpandedPostIdNotifier extends Notifier<int?> {

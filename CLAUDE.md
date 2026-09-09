@@ -463,6 +463,52 @@ stays empty until someone posts or forwards, because reach is what an author pai
 (`FEED_FANOUT` recipients per operation) and handing out undelivered posts on demand would be an
 economy change, not a UX one. See the backend's CLAUDE.md and the todo.
 
+### A slot can outlive its post
+
+The queue the feed renders is a list of *ids* on the backend, so a slot can survive the post that
+filled it: erasing an account erases its posts without walking every reader's queue to tidy up
+(see the backend's `app/core/account_deletion.py`). `GET /posts/feed` therefore answers
+`FeedEntry` envelopes, and `post.dart` mirrors that as a sealed pair — `FeedPost` or
+`MissingPost` — rather than a nullable field on `Post`. A vanished post has no channel, no author
+and no timestamp, so anything a `Post` carried for one would be invented, and the compiler makes
+every renderer say what it does with the case instead of tripping over a null later. Everything
+in `FeedNotifier` that used to key on `post.id` keys on `entry.postId` now; that is the whole
+ripple.
+
+`MissingPostCard` is what it draws: an explanation (most likely the author deleted their account)
+and one button. Three absences are the design:
+
+- **No forward.** There is nothing to pass on, so the button is gone rather than present and
+  disabled — a disabled button invites a tap and then explains itself.
+- **Not tappable.** There is no detail view to open; the card's whole content is its sentence.
+- **Not a drop.** It calls `DELETE /posts/feed/{id}`, which earns nothing and records no review —
+  nobody read anything, so calling it "Drop" would claim a verdict happened. The backend refuses
+  it with 409 `post_available` while the post is in fact still there, and the card treats that as
+  what it is: this list is stale, so the card stays put rather than hiding a post still owed a
+  verdict.
+
+A cache entry written before this shape existed simply fails to parse and is discarded as a miss
+(`JsonCache.read` catches it), so no migration was needed for the stored feed.
+
+### Deleting an account
+
+Settings → Account ends in the one row drawn in the error colour, and `DeleteAccountDialog` is
+two slides in a single dialog rather than a chain of them — a chain cannot go back, and "wait,
+which did I pick?" is exactly the doubt this flow has to be able to answer.
+
+- **Slide one is a choice, stated in terms of what other people lose**: keep the posts (they stay
+  in Relay with no name on them) or erase them too (nobody can read them again, including whoever
+  has one waiting in their feed). It defaults to keeping them — both outcomes are permanent, so
+  the default is the one that destroys less.
+- **Slide two proves the account, not just the intent.** A password account types its password;
+  the backend requires it for the same reason `POST /auth/change-password` does. A Google account
+  has no password to prove (linking overwrote its hash with a random value), so it gets the
+  confirmation alone. Either way the slide repeats the choice, because it was one tap ago and the
+  two options sound alike.
+- **It ends by signing out**, through `AuthNotifier.logout` rather than a route push: the account
+  is gone, so what has to happen is what happens at every session boundary — token cleared, cache
+  wiped, router falling back to the login screen on its own.
+
 ### Chrome that yields to content
 
 Both main screens are mostly other people's content, and the rule for anything else on them is

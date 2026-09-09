@@ -8,6 +8,7 @@ import '../../../core/settings/locale_settings.dart';
 import '../../../core/tips/application/tip_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../application/profile_providers.dart';
+import 'delete_account_dialog.dart';
 import 'google_link_tile.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -36,6 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final gateStatus = ref.watch(reviewGateStatusProvider);
     final profileAsync = ref.watch(profileProvider);
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final localeOverride = ref.watch(localeOverrideProvider);
 
     return Scaffold(
@@ -133,6 +135,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         context.push('/profile/settings/change-password'),
                   ),
                 GoogleLinkTile(profile: profile.data),
+                const Divider(height: 32, indent: 16, endIndent: 16),
+                // Last row on the screen, and the only one drawn in the error
+                // colour: a destructive action should look like one before it
+                // is tapped, not only once its dialog is open. No section
+                // header of its own — a "Danger zone" heading would give it
+                // more prominence than a setting nobody is looking for
+                // deserves.
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    l10n.settingsDeleteAccount,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  subtitle: Text(l10n.settingsDeleteAccountSubtitle),
+                  onTap: () => showDeleteAccountDialog(context, profile.data),
+                ),
               ],
             ),
             loading: () => const Padding(

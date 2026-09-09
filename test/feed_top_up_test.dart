@@ -40,7 +40,7 @@ class _FakeBackend implements HttpClientAdapter {
       final visible = channelId == null
           ? queue
           : queue.where((id) => _channelOf(id) == channelId);
-      return _json([for (final id in visible) _post(id)]);
+      return _json([for (final id in visible) _entry(id)]);
     }
     if (path == '/posts/economy') {
       return _json({
@@ -55,6 +55,16 @@ class _FakeBackend implements HttpClientAdapter {
   /// Odd ids belong to channel 1, even ids to channel 2 — enough to exercise
   /// the filter without a channel fixture.
   static int _channelOf(int postId) => postId.isOdd ? 1 : 2;
+
+  /// Ids in [erased] resolve to a hole rather than a post - what a reader's
+  /// queue looks like once the author has deleted their account.
+  Set<int> erased = {};
+
+  /// The `FeedEntry` envelope `GET /posts/feed` actually answers with.
+  Map<String, dynamic> _entry(int id) => {
+    'post_id': id,
+    'post': erased.contains(id) ? null : _post(id),
+  };
 
   static Map<String, dynamic> _post(int id) => {
     'id': id,
@@ -100,7 +110,7 @@ Future<ProviderContainer> _container(_FakeBackend backend) async {
 }
 
 List<int> _ids(ProviderContainer c) =>
-    c.read(feedNotifierProvider).value!.data.map((p) => p.id).toList();
+    c.read(feedNotifierProvider).value!.data.map((e) => e.postId).toList();
 
 void main() {
   group('FeedNotifier top-up', () {

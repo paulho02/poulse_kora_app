@@ -156,8 +156,14 @@ class FeedRepository {
   /// not queue: reviewing is guarded server-side by the Redis queue and posting is
   /// priced at request time, so a deferred replay could fail or overcharge long
   /// after the user believed it succeeded.
-  Future<Cached<List<Post>>> fetchFeed({int? channelId}) {
-    return fetchCached<List<Post>>(
+  ///
+  /// Answers [FeedEntry], not [Post]: a slot whose post has been erased comes
+  /// back as a [MissingPost] rather than being left out, so the reader can see
+  /// why the queue is not filling up and clear the slot. A cache entry written
+  /// before that shape existed simply fails to parse and is discarded as a miss
+  /// (see `JsonCache.read`).
+  Future<Cached<List<FeedEntry>>> fetchFeed({int? channelId}) {
+    return fetchCached<List<FeedEntry>>(
       cache: _cache,
       key: CacheKeys.feed(channelId),
       fetchJson: () async {
@@ -174,7 +180,7 @@ class FeedRepository {
         return response.data!;
       },
       parse: (json) => (json as List<dynamic>)
-          .map((e) => Post.fromJson(e as Map<String, dynamic>))
+          .map((e) => FeedEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -237,5 +243,17 @@ class FeedRepository {
       data: {'kind': kind},
     );
     return PostReviewResult.fromJson(response.data!);
+  }
+
+  /// Clear a queue slot whose post no longer exists — the ghost card's one
+  /// button (see [MissingPost]).
+  ///
+  /// Deliberately not `reviewPost(id, 'drop')`: nothing was read, so there is no
+  /// verdict to record and no token to earn, and the backend refuses this while
+  /// the post still exists so it cannot become a way to skip one. It answers 409
+  /// `post_available` in that case, which means this client's list is stale
+  /// rather than that anything went wrong.
+  Future<void> dismissMissingPost(int postId) async {
+    await _dio.delete<void>('/posts/feed/$postId');
   }
 }
