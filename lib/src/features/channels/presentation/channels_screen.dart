@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/settings/price_display_settings.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/tips/presentation/view_tip.dart';
 import '../../economy/application/economy_providers.dart';
 import '../application/channels_providers.dart';
 import '../data/channel.dart';
-import 'channel_price_label.dart';
+import 'channel_avatar.dart';
+import 'channel_price_chip.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
   const ChannelsScreen({super.key});
@@ -99,20 +99,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       appBar: AppBar(
         title: Text(l10n.channelsTitle),
         actions: [
-          // A toggle rather than a permanent column of figures: prices are for
-          // the one mode that wants them (see `PriceDisplayStore`), and this is
-          // how someone enters and leaves that mode.
-          IconButton(
-            isSelected: showPrices,
-            icon: const Icon(Icons.toll_outlined),
-            selectedIcon: const Icon(Icons.toll),
-            tooltip: showPrices
-                ? l10n.channelsHidePricesTooltip
-                : l10n.channelsShowPricesTooltip,
-            onPressed: () =>
-                ref.read(showChannelPricesProvider.notifier).toggle(),
+          _PriceSwitchAction(
+            value: showPrices,
+            onChanged: (value) =>
+                ref.read(showChannelPricesProvider.notifier).set(value),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
         ],
       ),
       body: ViewTip(
@@ -186,6 +178,74 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   }
 }
 
+/// The price mode switch, in the app bar.
+///
+/// It replaced an `isSelected` IconButton there — a coin glyph toggling between
+/// filled and outlined said nothing about what it did, and the only thing
+/// naming it was a tooltip, which on touch needs a long press nobody performs.
+/// A real switch with a word beside it says both what it is and which way it is
+/// set, at a glance.
+///
+/// It stays in the header rather than becoming a row over the list: it is
+/// chrome *about* the list, and a full-width `SwitchListTile` under the search
+/// field spent a whole line of the screen with the least to spare on a control
+/// that is off by default and touched rarely — the same trade the economy bars
+/// lost when they became pills.
+///
+/// The tooltip is back, but as a second name rather than the only one: the
+/// visible word does the everyday job, and the full sentence is what a screen
+/// reader announces and what a long press reveals.
+class _PriceSwitchAction extends StatelessWidget {
+  const _PriceSwitchAction({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Tooltip(
+      message: l10n.channelsShowPricesHint,
+      child: Semantics(
+        toggled: value,
+        label: l10n.channelsShowPricesHint,
+        excludeSemantics: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.channelsShowPricesLabel,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            // A Switch is sized for a settings row and would set the toolbar's
+            // height on its own; scaled down it keeps the affordance without
+            // making the app bar taller than every other screen's.
+            Transform.scale(
+              scale: 0.75,
+              child: Switch(value: value, onChanged: onChanged),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One channel, as a card rather than a `ListTile`.
+///
+/// The list used to be undivided tiles, which at three lines each ran together
+/// into one column of text — a channel is a *thing* you join, not a row in a
+/// settings table, and the rest of the app already says so with cards (see
+/// `PostCard`). Same margin and radius as a feed card, so the two screens read
+/// as one product.
+///
+/// The price sits under the badge rather than beside the description: it
+/// belongs to the channel's identity, not to its sentence, and stacking it
+/// there keeps the description on one line at any text scale.
 class _ChannelTile extends ConsumerWidget {
   const _ChannelTile({required this.channel, required this.showPrice});
 
@@ -194,45 +254,68 @@ class _ChannelTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = AppColors.channelColor(channel.name);
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    return ListTile(
-      isThreeLine: showPrice,
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.15),
-        child: Text(
-          channel.name.isNotEmpty ? channel.name[0] : '?',
-          style: TextStyle(color: color, fontWeight: FontWeight.bold),
-        ),
-      ),
-      title: Text(
-        channel.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(channel.description),
-          if (showPrice) ChannelPriceLabel(channel: channel),
-        ],
-      ),
-      trailing: FilledButton.tonal(
-        onPressed: () async {
-          try {
-            await ref
-                .read(channelsNotifierProvider.notifier)
-                .toggleSubscription(channel);
-          } catch (error) {
-            if (context.mounted) {
-              showErrorSnackBar(context, error);
-            }
-          }
-        },
-        child: Text(
-          channel.isSubscribed
-              ? l10n.channelsJoinedButton
-              : l10n.channelsJoinButton,
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ChannelAvatar(name: channel.name),
+                if (showPrice) ...[
+                  const SizedBox(height: 4),
+                  ChannelPriceChip(channel: channel),
+                ],
+              ],
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    channel.name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    channel.description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            FilledButton.tonal(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(channelsNotifierProvider.notifier)
+                      .toggleSubscription(channel);
+                } catch (error) {
+                  if (context.mounted) {
+                    showErrorSnackBar(context, error);
+                  }
+                }
+              },
+              child: Text(
+                channel.isSubscribed
+                    ? l10n.channelsJoinedButton
+                    : l10n.channelsJoinButton,
+              ),
+            ),
+          ],
         ),
       ),
     );

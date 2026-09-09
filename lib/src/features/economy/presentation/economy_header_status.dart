@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../application/economy_providers.dart';
 import '../data/economy.dart';
-import 'economy_explainer_sheet.dart';
+import 'economy_explainer.dart';
 
 /// Which screen the pill is on — and therefore which single number it states.
 enum EconomyBarVariant {
@@ -29,7 +29,7 @@ enum EconomyBarVariant {
 /// unnecessary as a number: a full bar means "you can post".
 ///
 /// Everything longer than a glyph is one tap away in
-/// [showEconomyExplainerSheet], which is now also where the live numbers are
+/// [showEconomyExplainer], which is now also where the live numbers are
 /// spelled out, since no bar states them any more.
 class EconomyHeaderStatus extends ConsumerWidget {
   const EconomyHeaderStatus({
@@ -227,9 +227,13 @@ class _ComposerPillState extends ConsumerState<_ComposerPill> {
     );
 
     return _EconomyPill(
-      // A minus sign: the number is what this post takes off the balance, not
-      // the balance itself.
-      value: '−${economy.postPrice}',
+      // Named rather than signed. A leading "−" was arithmetic where a word was
+      // wanted: it reads as a *loss of* tokens — the way a balance change is
+      // written — when the fact being stated is a price, and next to a balance
+      // pill on the previous screen showing a bare "12" it invited being read
+      // as the new total. "Cost 3" needs no decoding.
+      valuePrefix: l10n.economyCostPrefix,
+      value: '${economy.postPrice}',
       label: _label(l10n),
       progress: _progressFor(economy),
       tone: economy.canAffordPost ? _PillTone.neutral : _PillTone.short,
@@ -270,7 +274,13 @@ class _EconomyPill extends StatelessWidget {
     required this.progress,
     required this.tone,
     required this.semanticsLabel,
+    this.valuePrefix,
   });
+
+  /// A word naming what [value] is, set small and muted ahead of it — "Cost 3".
+  /// Null on the feed's pill, where the number is the balance and the pill's
+  /// own token glyph already says so.
+  final String? valuePrefix;
 
   final String value;
 
@@ -309,7 +319,7 @@ class _EconomyPill extends StatelessWidget {
           shape: const StadiumBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: () => showEconomyExplainerSheet(context),
+            onTap: () => showEconomyExplainer(context),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 5, 12, 5),
               child: Row(
@@ -330,6 +340,18 @@ class _EconomyPill extends StatelessWidget {
                           textBaseline: TextBaseline.alphabetic,
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           children: [
+                            if (valuePrefix != null) ...[
+                              Text(
+                                valuePrefix!,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: isShort
+                                      ? foreground
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  height: 1.1,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                            ],
                             Text(
                               value,
                               style: theme.textTheme.labelLarge?.copyWith(

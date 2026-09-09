@@ -109,13 +109,15 @@ void main() {
 
     test('rises with the count and tops out, log-scaled', () {
       expect(ForwardScoreBadge.heatFor(2), greaterThan(0));
-      expect(ForwardScoreBadge.heatFor(50), 1);
+      expect(ForwardScoreBadge.heatFor(500), 1);
       expect(ForwardScoreBadge.heatFor(5000), 1, reason: 'clamped');
-      // Log, not linear: the midpoint sits near 7, not near 25. Counts compound
-      // (every forward re-fans the post out to more readers), so a linear ramp
-      // would leave every ordinary post looking identical.
-      expect(ForwardScoreBadge.heatFor(7), closeTo(0.5, 0.03));
-      expect(ForwardScoreBadge.heatFor(25), greaterThan(0.8));
+      // Log, not linear: the midpoint sits near 22, not near 250. Counts
+      // compound (every forward re-fans the post out to more readers), so a
+      // linear ramp would leave every ordinary post looking identical — which
+      // is also why raising the ceiling to 500 doesn't flatten the low counts
+      // real posts actually get.
+      expect(ForwardScoreBadge.heatFor(22), closeTo(0.5, 0.03));
+      expect(ForwardScoreBadge.heatFor(250), greaterThan(0.8));
     });
   });
 }

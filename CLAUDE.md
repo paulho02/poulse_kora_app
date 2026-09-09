@@ -243,6 +243,16 @@ the backend), `application/` (Riverpod providers/state), `presentation/` (widget
   Consequence for tests: an on-screen illustration repeats forever, and so does the intro
   slides' icon badge, so **`pumpAndSettle` on anything in this flow never returns**. Drive it
   with `pump(duration)`. `test/tutorial_test.dart` says so at the top and is the reference.
+- `features/channels/` — the channel list, and the two widgets any channel row is built from.
+  `ChannelAvatar` is the channel's badge: a **glyph for the topic**, in the channel's own colour
+  (`channelIcon`, falling back to `#` for a channel the map has never heard of — channels are
+  backend rows, so that case is real). It used to be the name's first initial on a coloured disc,
+  which is the convention for *people*: applied to a topic the list read as an address book, and
+  "T" said less than "#" would have. Rows are **cards**, same margin and radius as a `PostCard`,
+  rather than the undivided `ListTile`s they were — at three lines each those ran together into one
+  column of text, and a channel is a thing you join rather than a row in a settings table. Both the
+  badge and `ChannelPriceChip` are shared with the composer's `showChannelPickerSheet`, which is
+  the other place a channel is drawn; two looks for one thing is one to keep in step forever.
 - `features/home/` — reference implementation of the data → application → presentation pattern:
   calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
   for new features rather than inventing a new structure.
@@ -273,7 +283,7 @@ Four things are load-bearing:
   can see that everyone else forwarded a post is voting on the crowd rather than on the post. So
   `ForwardScoreBadge` takes a number from a review result and has no way to read one off a `Post`
   — there is nothing there to read. Don't "helpfully" add one.
-- **Loudness is logarithmic** (`ForwardScoreBadge.heatFor`, 0 at 1 forward, 1 at 50). A forward
+- **Loudness is logarithmic** (`ForwardScoreBadge.heatFor`, 0 at 1 forward, 1 at 500). A forward
   re-fans the post out to more readers, so counts compound; on a linear ramp nearly every real post
   would look identical and only freak ones would register. The ramp drives colour (grey → accent →
   amber), size and glow together, so the number reads before it is read.
@@ -334,8 +344,11 @@ paged again.
 `EconomyHeaderStatus` takes an `EconomyBarVariant` and states **one fact** per screen, as a pill
 among the app bar's `actions`: a number, the clause that says what the number means, and a bar
 filling toward affording a post. The **feed** variant is the balance and how far it is from a post
-("12 · 2 more tokens to post"). The **composer** variant is `−3`, what this post takes off that
-balance, and its clause is the **price-lock countdown** ("−3 · held for 4:32") — the composer is
+("12 · 2 more tokens to post"). The **composer** variant is `Cost 3`, what this post takes off that
+balance, and its clause is the **price-lock countdown** ("Cost 3 · held for 4:32").
+The number is *named* rather than signed — a leading `−` read as a balance change
+(the way a transaction is written) beside a feed pill stating a bare balance, so it
+invited being read as the new total — the composer is
 the screen you sit in for minutes while the quote's window runs out, so that is where the clock
 belongs, and it stays worded as the promise it is rather than shown as a bare `4:32`, which reads
 as a deadline to race. The clause gives way to "2 more needed" (and the pill to `errorContainer`)
@@ -349,10 +362,14 @@ bars stacked under the app bar, a permanent row of chrome on the two screens wit
 to spare. Two rules keep it that way. The clause is **one line, width-capped** against the screen
 (`_labelCap`) — app bar actions get unbounded width, so nothing else would stop a long translation
 from pushing the title off the left edge, and the full sentence is on the tooltip either way.
-Anything longer than that clause belongs in `showEconomyExplainerSheet`, reachable by tapping
+Anything longer than that clause belongs in `showEconomyExplainer`, reachable by tapping
 either pill — that is the one place the model is spelled out, and it opens with the live figures
 precisely because no bar states them any more. New economy copy goes there rather than growing the
-pill.
+pill. It is a **full-screen `slideUpRoute`**, the same route a post opens through, and not the
+bottom sheet it started as: a sheet is capped at a fraction of the screen while this is four
+paragraphs, a figures panel and a switch, so it arrived already scrolled — a clipped explanation
+that had to be dragged taller to finish. An explanation is the last thing that should be read
+through a letterbox.
 
 Two things the bars used to do still need doing and now happen elsewhere. The composer's price
 quote expires, so `_ComposerPill` keeps a timer and re-fetches when it lapses (retrying, since
@@ -374,18 +391,33 @@ nullable (a channel list cached before per-channel pricing) and null means **unk
 the global rate** — never free.
 
 **Channel prices are off by default and live behind one switch** (`showChannelPricesProvider`,
-`core/settings/price_display_settings.dart`; the app-bar toggle on `ChannelsScreen`, and a
-`SwitchListTile` in the explainer sheet, which is where someone staring at a price they can't
-afford will find it). It is a mode switch, not a preference: nobody picks a channel by price, so a
-permanent column of figures would turn browsing into reading a market board — but someone who
-wants to post and is reviewing to earn the difference is watching exactly that. Two rules follow
-and should not be undone. `ChannelPriceLabel` renders **affordability, not a figure** ("3 · Enough
-to post" / "3 · 6 more tokens to post", reusing the feed pill's own two clauses), because the
-question in that mode is "can I afford it yet", not "what does it cost". And while prices are on,
-`ChannelsScreen` follows `post_price_expires_at` and re-fetches through
+`core/settings/price_display_settings.dart`; a labelled `Switch` in the channels app bar, and a
+`SwitchListTile` in the explainer, which is where someone staring at a price they can't afford
+will find it). It is a mode switch, not a preference: nobody picks a channel by
+price, so a permanent column of figures would turn browsing into reading a market board — but
+someone who wants to post and is reviewing to earn the difference is watching exactly that. It is
+an ordinary switch with a word beside it because it replaced an `isSelected` `IconButton`: a coin
+glyph toggling between filled and outlined said nothing about what it did, and the only thing
+naming it was a tooltip — which on touch needs a long press, so nobody read it. It stays in the
+**header** rather than becoming a row over the list, for the reason the economy bars became pills:
+a full-width row is a lot of screen for a control that is off by default and touched rarely. The
+tooltip survives as a *second* name — the visible word does the everyday job, the sentence is what
+a screen reader announces.
+
+While prices are on, `ChannelsScreen` follows `post_price_expires_at` and re-fetches through
 `ChannelsNotifier.refreshPrices()` — a quiet refresh, since `refresh()` would replace the list
 being read with a spinner once per window. Nothing in this paragraph runs while the switch is off,
 including the economy fetch and the timer.
+
+`ChannelPriceChip` renders **a figure, not a sentence** — a token glyph and the number, under the
+channel's badge, in a bordered stadium so it reads as the control it is rather than as a caption
+(a bare number under an avatar invites no tap). It previously resolved the price against the balance ("3 · Enough to post"), which
+put two clauses on every row and turned a list of channels into a column of prose; the
+affordability question is already answered continuously by the app-bar pill, so here the price is
+a property of the channel and sits with the channel's other identity. The chip is tappable into
+`showEconomyExplainer` for the same reason the pill is — a number with no model behind it is
+trivia — and it carries its own `InkWell` above the row's, so tapping the price cannot select the
+channel. `postPrice` null still renders **nothing**: unknown, never free.
 
 ### The feed keeps itself current
 

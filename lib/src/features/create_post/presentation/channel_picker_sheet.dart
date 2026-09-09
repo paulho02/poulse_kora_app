@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/settings/price_display_settings.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../channels/data/channel.dart';
-import '../../channels/presentation/channel_price_label.dart';
+import '../../channels/presentation/channel_avatar.dart';
+import '../../channels/presentation/channel_price_chip.dart';
 
 /// Opens a searchable channel picker as a modal bottom sheet and resolves to
 /// the chosen channel, or `null` if the sheet was dismissed without a choice.
@@ -111,34 +111,33 @@ class _ChannelPickerSheetState extends ConsumerState<_ChannelPickerSheet> {
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
                         final channel = filtered[index];
-                        final color = AppColors.channelColor(channel.name);
+                        final isSelected = channel.id == widget.selectedId;
+                        // Same badge and price chip the channels list uses —
+                        // this is the other place a channel is drawn, and two
+                        // looks for one thing is one to keep in step forever.
                         return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: color.withValues(alpha: 0.15),
-                            child: Text(
-                              channel.name.isNotEmpty ? channel.name[0] : '?',
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          isThreeLine: showPrices,
-                          title: Text(channel.name),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          leading: Column(
                             mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                channel.description,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (showPrices)
-                                ChannelPriceLabel(channel: channel),
+                              ChannelAvatar(name: channel.name, radius: 20),
+                              if (showPrices) ...[
+                                const SizedBox(height: 2),
+                                ChannelPriceChip(channel: channel),
+                              ],
                             ],
                           ),
-                          trailing: channel.id == widget.selectedId
+                          isThreeLine: showPrices,
+                          title: Text(
+                            channel.name,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            channel.description,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: isSelected
                               ? Icon(
                                   Icons.check,
                                   color: theme.colorScheme.primary,

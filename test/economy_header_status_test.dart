@@ -107,7 +107,10 @@ void main() {
       price: 3,
     );
 
-    expect(find.text('−3'), findsOneWidget);
+    // Named, not signed: "Cost 3" rather than the old "−3", which read as a
+    // balance change beside a feed pill that states a bare balance.
+    expect(find.text('Cost'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
     // No expiry on this quote (an old cached one), so the clause falls back to
     // the balance rather than counting down from nothing.
     expect(find.text('of your 12'), findsOneWidget);

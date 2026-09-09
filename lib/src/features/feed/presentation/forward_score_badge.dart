@@ -23,8 +23,8 @@ const Duration kForwardScoreHold = Duration(milliseconds: 420);
 /// Loudness scales with the number on a **logarithmic** curve. Every forward
 /// re-fans the post out to more readers, so counts compound: on a linear ramp
 /// almost every real post would look identical and only freak ones would
-/// register at all. Here 1 is a quiet grey chip, ~7 is solidly accented, and 50
-/// glows.
+/// register at all. Here 1 is a quiet grey chip, ~22 is solidly accented, and
+/// 500 glows.
 class ForwardScoreBadge extends StatelessWidget {
   const ForwardScoreBadge({
     super.key,
@@ -39,7 +39,20 @@ class ForwardScoreBadge extends StatelessWidget {
   final Animation<double> animation;
 
   /// The count that reads as "everything" — heat is flat out from here up.
-  static const int _fullHeatAt = 1000;
+  ///
+  /// Chosen for the app this is growing into rather than the one it is: 500 is
+  /// out of reach at today's traffic, but a ceiling low enough to be hit
+  /// routinely stops being a ceiling — every genuinely big post would pin at
+  /// full amber and look like every other, which is the one thing this badge
+  /// exists to avoid. The log curve is what makes that affordable: it spends
+  /// most of its range on the counts posts actually get (2 → 0.11, 22 → 0.50,
+  /// 250 → 0.89), so raising the top does not flatten the bottom.
+  ///
+  /// This number *is* the scale, so three other places state it in their own
+  /// terms and all of them move with it: the class docstring's landmarks,
+  /// `_backgroundFor`'s midpoint, and `forward_score_test.dart`. It shipped
+  /// once as 1000 while they still said 50 — the test is what caught it.
+  static const int _fullHeatAt = 500;
 
   /// 0..1, how remarkable this number is. A first forward is deliberately cold:
   /// on a post nobody else has passed on yet, the reader *is* the score.
@@ -50,7 +63,8 @@ class ForwardScoreBadge extends StatelessWidget {
   static Color _backgroundFor(double heat, ColorScheme scheme) {
     // Amber, from the channel palette — a third stop past the accent, so a
     // genuinely viral post doesn't just look like a slightly bigger ordinary
-    // one. The midpoint lands at 7 forwards.
+    // one. The midpoint — where accent starts turning amber — is sqrt of
+    // _fullHeatAt, so ~22 forwards.
     const hot = Color(0xFFF59E0B);
     return heat < 0.5
         ? Color.lerp(

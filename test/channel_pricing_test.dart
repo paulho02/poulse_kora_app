@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
 import 'package:poulse_kora_app/src/core/cache/cached.dart';
 import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channel_price_label.dart';
+import 'package:poulse_kora_app/src/features/channels/presentation/channel_price_chip.dart';
 import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
 import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
 import 'package:poulse_kora_app/src/features/economy/presentation/economy_header_status.dart';
@@ -60,47 +60,49 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('ChannelPriceLabel', () {
-    testWidgets('resolves the price into whether it can be afforded', (
+  group('ChannelPriceChip', () {
+    testWidgets('states the channel price, not the global rate', (
       tester,
     ) async {
       await pump(
         tester,
-        ChannelPriceLabel(channel: channel(postPrice: 3)),
+        ChannelPriceChip(channel: channel(postPrice: 3)),
         balance: 12,
         globalPrice: 5,
       );
 
-      // The channel's price, not the global one, and the clause that answers
-      // the only question being asked of it.
       expect(find.text('3'), findsWidgets);
-      expect(find.text('Enough to post'), findsWidgets);
+      expect(find.text('5'), findsNothing);
     });
 
-    testWidgets('states the shortfall rather than just the price', (
-      tester,
-    ) async {
+    testWidgets('is a figure, not an affordability clause', (tester) async {
+      // It used to resolve the price against the balance ("10 · 6 more tokens
+      // to post"). Two clauses per row turned the list into a column of
+      // sentences, and the app-bar pill answers that question already.
       await pump(
         tester,
-        ChannelPriceLabel(channel: channel(postPrice: 10)),
+        ChannelPriceChip(channel: channel(postPrice: 10)),
         balance: 4,
         globalPrice: 5,
       );
 
       expect(find.text('10'), findsWidgets);
-      expect(find.text('6 more tokens to post'), findsWidgets);
+      expect(find.text('6 more tokens to post'), findsNothing);
+      expect(find.text('Enough to post'), findsNothing);
     });
 
     testWidgets('renders nothing when the price is unknown', (tester) async {
+      // Null means unknown, never free — quoting `0` would be a lie a reader
+      // would act on.
       await pump(
         tester,
-        ChannelPriceLabel(channel: channel()),
+        ChannelPriceChip(channel: channel()),
         balance: 12,
         globalPrice: 5,
       );
 
       expect(find.byIcon(Icons.toll_outlined), findsNothing);
-      expect(find.text('Enough to post'), findsNothing);
+      expect(find.text('0'), findsNothing);
     });
   });
 
@@ -118,8 +120,8 @@ void main() {
         globalPrice: 3,
       );
 
-      expect(find.text('−7'), findsWidgets);
-      expect(find.text('−3'), findsNothing);
+      expect(find.text('7'), findsWidgets);
+      expect(find.text('3'), findsNothing);
     });
 
     testWidgets('falls back to the global rate before a channel is chosen', (
@@ -132,7 +134,7 @@ void main() {
         globalPrice: 3,
       );
 
-      expect(find.text('−3'), findsWidgets);
+      expect(find.text('3'), findsWidgets);
     });
 
     testWidgets('an unaffordable channel price drives the short state', (
