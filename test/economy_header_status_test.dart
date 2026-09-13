@@ -230,9 +230,116 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // Not pumpAndSettle: the checking state renders a spinner, and an
+    // indeterminate progress indicator never settles.
+    await tester.pump();
 
     expect(notifier.refreshCount, 1);
+    // The clause it replaces is gone, and the sentence is on the tooltip.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.textContaining('checking'), findsNothing);
+    expect(
+      tester.widget<Tooltip>(find.byType(Tooltip)).message,
+      'checking price…',
+    );
+  });
+
+  group('price range', () {
+    // There is no single price any more — every (channel, language) route is
+    // priced by its own congestion — so both pills have to be able to state a
+    // spread. The failure this guards is silent: showing one plausible number
+    // where a range was meant looks completely normal on screen.
+    testWidgets('the composer states a range before a route is chosen', (
+      tester,
+    ) async {
+      await pumpPill(
+        tester,
+        variant: EconomyBarVariant.composer,
+        balance: 20,
+        price: 4,
+        economy: const Economy(
+          tokenBalance: 20,
+          postPrice: 4,
+          postPriceMin: 2,
+          postPriceMax: 6,
+        ),
+      );
+
+      expect(find.text('2–6'), findsOneWidget);
+      expect(
+        find.text('4'),
+        findsNothing,
+        reason: 'the base rate is not a price anyone pays',
+      );
+    });
+
+    testWidgets('the composer narrows to one number once the route is known', (
+      tester,
+    ) async {
+      // What the composer does after a channel and a language are picked: it
+      // collapses the range onto the exact quote, which is also the number the
+      // Relay button is gated on.
+      await pumpPill(
+        tester,
+        variant: EconomyBarVariant.composer,
+        balance: 20,
+        price: 4,
+        economy: const Economy(
+          tokenBalance: 20,
+          postPrice: 4,
+          postPriceMin: 4,
+          postPriceMax: 4,
+        ),
+      );
+
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('4–4'), findsNothing, reason: 'reads as a bug');
+    });
+
+    testWidgets('the feed pill says what posts cost', (tester) async {
+      // It used to say "Enough to post", which named no number the reader could
+      // act on — and there is no longer one price to go and look up elsewhere.
+      await pumpPill(
+        tester,
+        variant: EconomyBarVariant.feed,
+        balance: 20,
+        price: 4,
+        economy: const Economy(
+          tokenBalance: 20,
+          postPrice: 4,
+          postPriceMin: 2,
+          postPriceMax: 6,
+        ),
+      );
+
+      // Phrased as a rate, and separated from the balance by a middot: led
+      // with the noun ("Posts cost 2–6") it ran straight on from the number
+      // before it and read as a sentence about twenty posts.
+      expect(find.text('2–6 tokens per post'), findsOneWidget);
+      expect(find.text('20'), findsOneWidget, reason: 'the balance stays');
+      expect(find.text('·'), findsOneWidget);
+    });
+
+    testWidgets('a shortfall still counts to the cheapest route', (
+      tester,
+    ) async {
+      // "3 more needed" has to mean "to post anywhere". Counting up to the
+      // dearest route would keep refusing someone who could already publish.
+      await pumpPill(
+        tester,
+        variant: EconomyBarVariant.feed,
+        balance: 1,
+        price: 6,
+        economy: const Economy(
+          tokenBalance: 1,
+          postPrice: 6,
+          postPriceMin: 4,
+          postPriceMax: 6,
+        ),
+      );
+
+      expect(find.text('3 more tokens to post'), findsOneWidget);
+    });
   });
 }
 

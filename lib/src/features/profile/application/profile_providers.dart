@@ -61,6 +61,20 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
     }
   }
 
+  /// Set which languages this reader accepts posts in.
+  ///
+  /// Rethrows rather than softening an offline failure, unlike `setDarkMode`.
+  /// This is not a local preference that can be re-pushed later: until the
+  /// server has it, fan-out is still selecting this reader by the old set, so
+  /// "saved" would be a lie the feed goes on contradicting. The screen keeps the
+  /// choice on screen and says it could not be saved.
+  Future<void> setContentLanguages(List<String> languages) async {
+    final updated = await ref
+        .read(profileRepositoryProvider)
+        .setContentLanguages(languages);
+    state = AsyncData(Cached.live(updated));
+  }
+
   /// Upload a new profile picture, replacing any existing one.
   ///
   /// Rethrows rather than softening an offline failure: unlike a settings

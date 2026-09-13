@@ -41,6 +41,7 @@ UserProfile _profile() => UserProfile(
   authProvider: 'password',
   googleEmail: null,
   profilePictureUrl: null,
+  contentLanguages: const ['en', 'de'],
 );
 
 Channel _channel() => Channel(

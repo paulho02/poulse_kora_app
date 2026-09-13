@@ -49,6 +49,22 @@ class ProfileRepository {
   /// A multipart upload rather than a field on [updateMe]: the bytes go to
   /// `PUT /users/me/profile-picture`, which is where the backend enforces the
   /// size and content-type limits (see `PROFILE_PICTURE_*` in its config).
+  /// Set which languages this reader accepts posts in.
+  ///
+  /// Its own endpoint rather than a field on the profile PATCH, because the
+  /// column is only half the change server-side: the other half is rewriting
+  /// the Redis audience memberships fan-out actually samples. Sends the whole
+  /// set, not a delta — the backend writes it absolutely, which is what makes
+  /// re-sending the same value a no-op rather than a conflict for the user's
+  /// other devices.
+  Future<UserProfile> setContentLanguages(List<String> languages) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/users/me/content-languages',
+      data: {'languages': languages},
+    );
+    return UserProfile.fromJson(response.data!);
+  }
+
   Future<UserProfile> uploadProfilePicture({
     required List<int> bytes,
     required String filename,

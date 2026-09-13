@@ -194,12 +194,18 @@ class FeedRepository {
   Future<CreatePostResult> createPost({
     required int channelId,
     required List<ComposerBlockInput> blocks,
+    required String language,
     bool isAnonymous = false,
     List<PickedMedia> media = const [],
   }) async {
     final form = FormData.fromMap({
       'channel_id': channelId.toString(),
       'blocks': jsonEncode(blocks.map((b) => b.toJson()).toList()),
+      // Required, not defaulted: with `channel_id` this is the routing key that
+      // decides who can receive the post (see the backend's `keys.audience`).
+      // A default here would be a silent guess on the one field whose wrong
+      // value sends the post to people who cannot read it.
+      'language': language,
       'is_anonymous': isAnonymous.toString(),
     });
     // `form.files.add(...)`, not another `FormData.fromMap` entry: repeated

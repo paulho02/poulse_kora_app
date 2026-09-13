@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/languages/language_providers.dart';
 import '../../../core/media/post_media_format.dart';
 import '../../../core/media/presentation/crop_media_screen.dart';
 import '../../../core/network/connectivity.dart';
@@ -28,6 +29,8 @@ import '../../feed/data/post.dart';
 import '../../history/application/history_providers.dart';
 import '../../profile/application/profile_providers.dart';
 import '../../stats/application/stats_providers.dart';
+import 'language_picker_sheet.dart';
+import 'token_spend_badge.dart';
 import 'channel_picker_sheet.dart';
 import 'post_preview.dart';
 import 'video_orientation_sheet.dart';
@@ -110,7 +113,7 @@ String _asPngFilename(String original) {
 /// asking the author to tap, so the message had to time out before it could be
 /// acted on. Stored as a case rather than as resolved text so it survives a
 /// locale change.
-enum _PublishBlocker { noChannel, emptyPost }
+enum _PublishBlocker { noChannel, emptyPost, noLanguage, languageNeedsNoText }
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -119,35 +122,244 @@ class CreatePostScreen extends ConsumerStatefulWidget {
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
-class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
+class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
+    with SingleTickerProviderStateMixin {
   int? _selectedChannelId;
   _PublishBlocker? _blocker;
   bool _isAnonymous = false;
   bool _isSubmitting = false;
-  final List<_ComposerBlock> _blocks = [_TextBlock()];
+  late final List<_ComposerBlock> _blocks = [_newTextBlock()];
+
+  /// The language this post will be published in, and so who can receive it.
+  ///
+  /// Filled in by the on-device detector as the author types, until they open
+  /// the picker themselves — from then on [_languageTouched] freezes it, because
+  /// a detector that keeps overruling a deliberate choice is worse than no
+  /// detector. Null means "not decided yet" and blocks publishing, rather than
+  /// defaulting to the app's own language: a phone set to English is no evidence
+  /// about the language someone is writing in, and a wrong guess here routes the
+  /// post to people who cannot read it.
+  String? _selectedLanguage;
+  bool _languageTouched = false;
+
+  /// What the detector last made of the text, kept even once the author has
+  /// overridden it so the picker can still badge its suggestion.
+  String? _detectedLanguage;
+  Timer? _detectDebounce;
+
+  /// The exact price for (channel, language), quoted by the backend and held
+  /// for the current price window. Null while either half of the route is
+  /// unchosen, or while the quote is in flight or failed — the channel's own
+  /// range covers that case.
+  PostPrice? _routePrice;
+
+  /// Guards against an out-of-order quote: switching channel twice quickly can
+  /// land the first response after the second, and the price shown must be the
+  /// one for the route currently selected.
+  int _priceRequest = 0;
+
+  /// Drives the spend badge. Built in `initState` rather than as a `late final`
+  /// initializer: that form is lazy, so a composer that never published would
+  /// first construct the controller inside `dispose`, building a `Ticker`
+  /// against an already-deactivated element.
+  late final AnimationController _spendPop;
+
+  /// What the post just cost, and the balance it came out of. Non-null only
+  /// while the badge is on screen.
+  int? _spentAmount;
+  int _balanceBeforeSpend = 0;
 
   @override
   void initState() {
     super.initState();
+    _spendPop = AnimationController(vsync: this, duration: kTokenSpendPlay);
     // Refresh so the price reflects current congestion when opening the composer.
     Future.microtask(() => ref.read(economyProvider.notifier).refresh());
   }
 
   @override
   void dispose() {
+    _spendPop.dispose();
+    _detectDebounce?.cancel();
     for (final block in _blocks) {
-      if (block is _TextBlock) block.controller.dispose();
+      if (block is _TextBlock) {
+        block.controller
+          ..removeListener(_onTextChanged)
+          ..dispose();
+      }
     }
     super.dispose();
+  }
+
+  /// Every text block is created through here so exactly one place has to
+  /// remember to hook up language detection — a block added by any of the three
+  /// paths that add one would otherwise be invisible to it.
+  _TextBlock _newTextBlock([String initial = '']) {
+    final block = _TextBlock(initial);
+    block.controller.addListener(_onTextChanged);
+    return block;
   }
 
   int get _mediaCount => _blocks.whereType<_MediaBlock>().length;
   int get _remainingMediaSlots => _kMaxMediaItems - _mediaCount;
 
+  /// Whether the post carries any words at all. Drives whether "no language" is
+  /// offerable: it means the post reaches every subscriber of the channel
+  /// regardless of what they read, which is only honest when there is nothing
+  /// to read.
+  bool get _hasText => _blocks.whereType<_TextBlock>().any(
+    (block) => block.controller.text.trim().isNotEmpty,
+  );
+
+  String get _allText => _blocks
+      .whereType<_TextBlock>()
+      .map((block) => block.controller.text)
+      .join('\n');
+
+  /// Re-run detection on a debounce as the author writes.
+  ///
+  /// Debounced because this fires per keystroke and a suggestion that changes
+  /// mid-word is noise; 400ms is about the gap between words at speed, so the
+  /// picker settles instead of flickering.
+  void _onTextChanged() {
+    _detectDebounce?.cancel();
+    _detectDebounce = Timer(const Duration(milliseconds: 400), _redetect);
+  }
+
+  /// Re-read *all* the text and re-decide, from scratch.
+  ///
+  /// Deliberately a pure function of the post's current content rather than of
+  /// what was typed most recently: the author can delete a block, and a
+  /// suggestion derived from text that no longer exists is simply wrong. That
+  /// is why every path which changes the *set* of blocks calls this too, not
+  /// only the per-keystroke listener — removing the last German paragraph fires
+  /// no controller notification at all, so detection used to sit on "German"
+  /// over a post that had become entirely English.
+  void _redetect() {
+    if (!mounted) return;
+
+    // No text left anywhere. Whatever was detected came from text the post no
+    // longer contains, so it stops being evidence — clearing it also lets "no
+    // language" become offerable again, which is the honest state for a post
+    // that is now just a photo. An explicit choice is left alone: the author
+    // answered this question themselves, and a video can be spoken German.
+    if (!_hasText) {
+      if (_detectedLanguage == null &&
+          (_languageTouched || _selectedLanguage == null)) {
+        return;
+      }
+      setState(() {
+        _detectedLanguage = null;
+        if (!_languageTouched) _selectedLanguage = null;
+      });
+      return;
+    }
+
+    final detected = ref.read(languageDetectorProvider).detect(_allText);
+    // A null answer here means "there is text, but I am not confident" — too
+    // short, or sitting between two languages. That must leave the choice
+    // exactly where it is rather than clearing it, or typing into a half-
+    // finished sentence would flicker the picker off and on.
+    if (detected == null) return;
+    setState(() {
+      _detectedLanguage = detected;
+      if (!_languageTouched) {
+        _selectedLanguage = detected;
+        if (_blocker == _PublishBlocker.noLanguage) _blocker = null;
+      }
+    });
+  }
+
+  /// Show what the post just cost, then hold a beat before the screen moves on.
+  ///
+  /// Awaited by `_submit`, so the navigation genuinely waits for it — the same
+  /// shape as `PostCard._review`, which holds its forward score on screen
+  /// before letting the card leave. Without the wait the badge would be built
+  /// and torn down inside one frame.
+  Future<void> _playSpend(int spent, int balanceBefore) async {
+    setState(() {
+      _spentAmount = spent;
+      _balanceBeforeSpend = balanceBefore;
+    });
+    try {
+      await _spendPop.forward(from: 0);
+      await Future<void>.delayed(kTokenSpendHold);
+    } on TickerCanceled {
+      // Disposed mid-play; there is nothing left to show it on.
+    }
+    if (!mounted) return;
+    setState(() => _spentAmount = null);
+  }
+
+  Future<void> _pickLanguage() async {
+    final unspecified = ref.read(languageUnspecifiedProvider);
+    final chosen = await showLanguagePickerSheet(
+      context,
+      selected: _selectedLanguage,
+      allowUnspecified: !_hasText,
+      suggested: _detectedLanguage,
+    );
+    if (chosen == null || !mounted) return;
+    setState(() {
+      _selectedLanguage = chosen;
+      // From here the detector stops proposing. The author has answered the
+      // question it was guessing at, and re-guessing over them would make the
+      // field feel like it was fighting back.
+      _languageTouched = true;
+      if (_blocker == _PublishBlocker.noLanguage ||
+          _blocker == _PublishBlocker.languageNeedsNoText) {
+        _blocker = null;
+      }
+      if (chosen != unspecified || !_hasText) _routePrice = null;
+    });
+    unawaited(_refreshRoutePrice());
+  }
+
+  /// Ask the backend what this exact (channel, language) route costs.
+  ///
+  /// A quote rather than an estimate: `POST /posts` charges this number until
+  /// its window rolls over. A failure is deliberately silent — the channel's
+  /// range is still on screen and still true, and an error toast for a price
+  /// refresh would interrupt writing for something nobody asked for.
+  Future<void> _refreshRoutePrice() async {
+    final channelId = _selectedChannelId;
+    final language = _selectedLanguage;
+    if (channelId == null || language == null) {
+      if (mounted && _routePrice != null) setState(() => _routePrice = null);
+      return;
+    }
+    final request = ++_priceRequest;
+    try {
+      final quote = await ref
+          .read(channelsRepositoryProvider)
+          .fetchPostPrice(channelId: channelId, language: language);
+      if (!mounted || request != _priceRequest) return;
+      setState(() => _routePrice = quote);
+    } catch (_) {
+      if (!mounted || request != _priceRequest) return;
+      setState(() => _routePrice = null);
+    }
+  }
+
   Future<void> _submit() async {
     final channelId = _selectedChannelId;
     if (channelId == null) {
       setState(() => _blocker = _PublishBlocker.noChannel);
+      return;
+    }
+    final language = _selectedLanguage;
+    if (language == null) {
+      setState(() => _blocker = _PublishBlocker.noLanguage);
+      return;
+    }
+    // Checked here rather than by mutating the selection when text appears: the
+    // author chose "no language" deliberately, and silently switching it out
+    // from under them once they typed a caption would be a worse surprise than
+    // being told. The backend refuses this too - the check exists there because
+    // it is the only side that can be trusted, and here so the refusal does not
+    // cost an upload.
+    if (language == ref.read(languageUnspecifiedProvider) && _hasText) {
+      setState(() => _blocker = _PublishBlocker.languageNeedsNoText);
       return;
     }
 
@@ -188,6 +400,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
 
+    // Read before the spend so the flash can be driven by what actually left
+    // the balance, rather than by the quoted price. The two differ for a
+    // superuser, who posts for free — and `record` refuses a zero, so they get
+    // no flash rather than a "−0".
+    final balanceBefore = ref.read(economyProvider)?.data.tokenBalance;
+
     setState(() => _isSubmitting = true);
     try {
       final result = await ref
@@ -195,11 +413,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           .createPost(
             channelId: channelId,
             blocks: blockInputs,
+            language: language,
             isAnonymous: _isAnonymous,
             media: media,
           );
       // Posting spent tokens; sync the balance and refresh the (now higher) price.
       ref.read(economyProvider.notifier).setBalance(result.tokenBalance);
+      // What actually left the balance, worked out now while both numbers are
+      // in hand — `refresh()` below re-fetches and can move the balance again
+      // for reasons that have nothing to do with this post. It is *recorded*
+      // later, immediately before the navigation.
+      final spent = balanceBefore == null
+          ? 0
+          : balanceBefore - result.tokenBalance;
       await ref.read(economyProvider.notifier).refresh();
       // The channel's own price moved too — this post is one more op on its
       // backlog, which is exactly what its price is measured from.
@@ -218,11 +444,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         // was written for, and a channel left selected is inherited silently by
         // the next one - noticed only after relaying to the wrong place.
         _selectedChannelId = null;
+        // Cleared with the channel and for the same reason: the composer is a
+        // tab in an IndexedStack, so a language left selected would be
+        // inherited by a post written in a different one.
+        _selectedLanguage = null;
+        _languageTouched = false;
+        _detectedLanguage = null;
+        _routePrice = null;
         _blocker = null;
         _blocks
           ..clear()
-          ..add(_TextBlock());
+          ..add(_newTextBlock());
       });
+      // Played here, on the screen the author is still looking at, before the
+      // navigation rather than after it — see `TokenSpendBadge`. A free post (a
+      // superuser's) spends nothing and raises no badge.
+      if (spent > 0 && balanceBefore != null) {
+        await _playSpend(spent, balanceBefore);
+        if (!mounted) return;
+      }
       context.go('/feed');
     } catch (error) {
       if (!mounted) return;
@@ -302,8 +542,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (selected != null) {
       setState(() {
         _selectedChannelId = selected.id;
+        // The previous quote was for a different route, so it stops being a
+        // quote the moment the channel changes. Cleared rather than left to be
+        // overwritten, so the pill falls back to the new channel's range for
+        // the moment the fetch is in flight instead of showing the old channel's
+        // exact figure as if it applied here.
+        _routePrice = null;
         if (_blocker == _PublishBlocker.noChannel) _blocker = null;
       });
+      unawaited(_refreshRoutePrice());
     }
   }
 
@@ -483,7 +730,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   void _addTextBlock() {
     setState(() {
-      _blocks.add(_TextBlock());
+      _blocks.add(_newTextBlock());
       _clearEmptyPostBlocker();
     });
   }
@@ -491,8 +738,17 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   void _removeBlock(int index) {
     setState(() {
       final block = _blocks.removeAt(index);
-      if (block is _TextBlock) block.controller.dispose();
+      if (block is _TextBlock) {
+        block.controller
+          ..removeListener(_onTextChanged)
+          ..dispose();
+      }
     });
+    // Deleting a paragraph changes the post's text without any controller
+    // firing, so detection has to be re-run by hand here or the suggestion
+    // stays pinned to text that is gone. Immediate rather than debounced: this
+    // is one deliberate action, not a stream of keystrokes.
+    _redetect();
   }
 
   void _onReorder(int oldIndex, int newIndex) {
@@ -529,43 +785,67 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         actions: [
           EconomyHeaderStatus(
             variant: EconomyBarVariant.composer,
-            priceOverride: selectedChannel?.postPrice,
+            priceOverride: _effectivePrice(selectedChannel),
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: ViewTip(
-        tipKey: 'tip.create',
-        message: l10n.createPostTipMessage,
-        child: Builder(
-          builder: (context) {
-            if (economy == null) {
-              // `EconomyNotifier.refresh` swallows connectivity failures, so an
-              // offline first launch would otherwise spin here forever.
-              if (isOffline) {
-                return ErrorStateView(
-                  error: RelayApiException(
-                    0,
-                    'offline',
-                    const {},
-                    kind: ApiErrorKind.offline,
+      // Stacked so the spend badge lands centred over the editor — the same
+      // place `ForwardScoreBadge` lands over the card it belongs to, and where
+      // the author's eye already is. `Positioned.fill` + `Center` rather than
+      // an alignment on the Stack itself, so the badge centres on the body
+      // regardless of how tall the editor's own content happens to be.
+      body: Stack(
+        children: [
+          ViewTip(
+            tipKey: 'tip.create',
+            message: l10n.createPostTipMessage,
+            child: Builder(
+              builder: (context) {
+                if (economy == null) {
+                  // `EconomyNotifier.refresh` swallows connectivity failures,
+                  // so an offline first launch would otherwise spin here
+                  // forever.
+                  if (isOffline) {
+                    return ErrorStateView(
+                      error: RelayApiException(
+                        0,
+                        'offline',
+                        const {},
+                        kind: ApiErrorKind.offline,
+                      ),
+                      onRetry: () =>
+                          ref.read(economyProvider.notifier).refresh(),
+                    );
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return channelsAsync.when(
+                  data: (cached) => _buildEditor(context, cached.data),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => ErrorStateView(
+                    error: error,
+                    onRetry: () =>
+                        ref.read(channelsNotifierProvider.notifier).refresh(),
                   ),
-                  onRetry: () => ref.read(economyProvider.notifier).refresh(),
                 );
-              }
-              return const Center(child: CircularProgressIndicator());
-            }
-            return channelsAsync.when(
-              data: (cached) => _buildEditor(context, cached.data),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => ErrorStateView(
-                error: error,
-                onRetry: () =>
-                    ref.read(channelsNotifierProvider.notifier).refresh(),
+              },
+            ),
+          ),
+          if (_spentAmount != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: TokenSpendBadge(
+                    spent: _spentAmount!,
+                    balanceBefore: _balanceBeforeSpend,
+                    animation: _spendPop,
+                  ),
+                ),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
       // Pinned outside the scrolling editor (rather than inline below the
       // ReorderableListView) so these fixed-height controls don't eat into
@@ -595,15 +875,42 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     return null;
   }
 
-  /// The economy as it applies to *this* post: the viewer's balance, priced
-  /// against the chosen channel.
+  /// What this post will actually be charged, or null while that is not yet
+  /// knowable.
   ///
-  /// Falls back to the global quote while no channel is chosen — and while the
-  /// channel's own price is unknown, which is a list cached before per-channel
-  /// pricing existed rather than a channel that is somehow free.
-  static Economy _effectiveEconomy(Economy economy, Channel? channel) {
-    final price = channel?.postPrice;
-    return price == null ? economy : economy.copyWith(postPrice: price);
+  /// The exact route quote when both a channel and a language are chosen; the
+  /// channel's cheapest route while only the channel is. The low end rather
+  /// than the high one, because this figure also gates the Relay button — and
+  /// telling someone they cannot afford a post that a different language would
+  /// in fact make affordable is a refusal they cannot act on. The exact number
+  /// always arrives before they can publish, since a language is required.
+  int? _effectivePrice(Channel? channel) =>
+      _routePrice?.price ?? channel?.lowestPrice;
+
+  /// The economy as it applies to *this* post: the viewer's balance, priced
+  /// against the chosen route.
+  ///
+  /// Collapses the range onto the resolved price *once there is one*, and
+  /// otherwise leaves the deployment-wide spread in place.
+  ///
+  /// Both halves matter. Collapsing when a price is known keeps the pill and
+  /// the Relay button reading the same number — the affordability getters use
+  /// the range's low end, so a leftover spread would let a cheap route in
+  /// another channel vouch for this one, and the pill would read "Cost 4"
+  /// beside an enabled button on a balance of 3. *Not* collapsing before then
+  /// is what lets the composer open on "Cost 2–6" and narrow to "Cost 4" as the
+  /// author picks: there is no single price yet, and showing the base rate
+  /// instead would name a figure nobody is ever charged — which is the bug this
+  /// replaced, and an invisible one, since a plausible number looks fine.
+  Economy _effectiveEconomy(Economy economy, Channel? channel) {
+    final price = _effectivePrice(channel);
+    return price == null
+        ? economy
+        : economy.copyWith(
+            postPrice: price,
+            postPriceMin: price,
+            postPriceMax: price,
+          );
   }
 
   /// Everything that is not the article being written: the block-adding
@@ -663,6 +970,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               ],
             ),
             const Divider(height: 8),
+            // Once both halves of the route are chosen there *is* an exact
+            // number, and saying so is the point: everything up to here has
+            // been a range, and a figure that silently stops being a range
+            // looks identical to one that never was. `_routePrice` is non-null
+            // only for a quote the backend actually returned for this exact
+            // (channel, language) pair, so this line never appears over an
+            // interpolation or a stale channel figure.
+            if (_routePrice != null) _ExactPriceLine(price: _routePrice!.price),
             // Only when it applies, and right above the button it explains —
             // the disabled Relay button is otherwise the only thing saying no,
             // and it can't say why.
@@ -674,30 +989,54 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             if (_blocker != null) _PublishBlockerHint(blocker: _blocker!),
             Row(
               children: [
-                FilterChip(
-                  label: Text(l10n.postAnonymous),
-                  avatar: Icon(
-                    _isAnonymous ? Icons.visibility_off : Icons.visibility,
-                    size: 16,
-                  ),
-                  selected: _isAnonymous,
-                  showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: _onAnonymousChanged,
-                ),
-                const SizedBox(width: 8),
-                // The channel picker used to be a full-width labelled field at
-                // the top of the editor — a whole row spent on one word that is
-                // usually chosen once. As a chip it sits in the row it belongs
-                // to: the three decisions made at the moment of publishing.
+                // The publishing decisions — where it goes, in what language,
+                // under whose name — in a `Wrap` rather than a scroller.
+                //
+                // A horizontal scroller was the wrong shape for this: three
+                // chips and a button do not fit a phone, and a control that has
+                // to be scrolled into view is a control nobody knows is there.
+                // The language chip in particular is *required*, so hiding it
+                // off-edge meant the composer refused to publish over something
+                // the author could not see. Wrapping grows the toolbar by one
+                // chip-height only on the screens that actually need it, which
+                // is the cost worth paying — the fixed second row this replaced
+                // would have taken that height from the editor everywhere.
+                //
+                // Ordered destination-first so it is the anonymity toggle that
+                // drops to a second line, never one half of the routing key.
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _ChannelSelectorChip(
-                      channel: selectedChannel,
-                      hasError: _blocker == _PublishBlocker.noChannel,
-                      onTap: () => _pickChannel(channels),
-                    ),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _ChannelSelectorChip(
+                        channel: selectedChannel,
+                        hasError: _blocker == _PublishBlocker.noChannel,
+                        onTap: () => _pickChannel(channels),
+                      ),
+                      _LanguageSelectorChip(
+                        language: _selectedLanguage,
+                        unspecified: ref.watch(languageUnspecifiedProvider),
+                        hasError:
+                            _blocker == _PublishBlocker.noLanguage ||
+                            _blocker == _PublishBlocker.languageNeedsNoText,
+                        onTap: _pickLanguage,
+                      ),
+                      FilterChip(
+                        label: Text(l10n.postAnonymous),
+                        avatar: Icon(
+                          _isAnonymous
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          size: 16,
+                        ),
+                        selected: _isAnonymous,
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: _onAnonymousChanged,
+                      ),
+                    ],
                   ),
                 ),
                 if (_isSubmitting)
@@ -844,6 +1183,114 @@ class _ChannelSelectorChip extends StatelessWidget {
   }
 }
 
+/// The chosen language as a chip, beside the channel one.
+///
+/// It sits in the publish row for the same reason the channel does: both are
+/// decisions about *where the post goes*, made at the moment of publishing,
+/// rather than anything about the writing. Unpicked it reads as a prompt.
+///
+/// The detector fills this in as the author types, so in the ordinary case it
+/// is already answered by the time anyone looks at it — which is the point.
+/// What it must never do is look answered when it is not: an unset language
+/// blocks publishing rather than defaulting to the app's own language, because
+/// a phone set to English is no evidence about what someone is writing.
+class _LanguageSelectorChip extends StatelessWidget {
+  const _LanguageSelectorChip({
+    required this.language,
+    required this.unspecified,
+    required this.hasError,
+    required this.onTap,
+  });
+
+  final String? language;
+  final String unspecified;
+  final bool hasError;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final code = language;
+    final color = code == null
+        ? (hasError ? theme.colorScheme.error : theme.colorScheme.primary)
+        : (hasError ? theme.colorScheme.error : theme.colorScheme.outline);
+
+    final label = switch (code) {
+      null => l10n.composerLanguagePick,
+      final value when value == unspecified => l10n.contentLanguageNone,
+      final value => contentLanguageLabel(l10n, value),
+    };
+
+    return ActionChip(
+      onPressed: onTap,
+      tooltip: l10n.composerLanguageTitle,
+      avatar: Icon(
+        code == unspecified ? Icons.image_outlined : Icons.translate,
+        size: 16,
+        color: color,
+      ),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      shape: const StadiumBorder(),
+      side: BorderSide(color: color),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+/// "Price based on your selection: 4" — shown only once the author has picked
+/// both a channel and a language.
+///
+/// The pill in the app bar already states the number, but not that it has
+/// *become exact*. It counts down from a range as the author decides, and the
+/// moment it lands on one figure is the moment worth naming — otherwise the
+/// difference between "somewhere in 2–6" and "4, guaranteed" is a silent one.
+class _ExactPriceLine extends StatelessWidget {
+  const _ExactPriceLine({required this.price});
+
+  final int price;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Semantics(
+      label: l10n.composerExactPriceSemantics(price),
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            Icon(
+              Icons.toll_outlined,
+              size: 15,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.composerExactPriceLabel,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$price',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The one case where the composer still owes an explanation: the Relay button
 /// is disabled and nothing else on screen says why.
 ///
@@ -900,6 +1347,8 @@ class _PublishBlockerHint extends StatelessWidget {
     final message = switch (blocker) {
       _PublishBlocker.noChannel => l10n.createPostPickChannelError,
       _PublishBlocker.emptyPost => l10n.createPostEmptyPostError,
+      _PublishBlocker.noLanguage => l10n.createPostNeedsLanguage,
+      _PublishBlocker.languageNeedsNoText => l10n.createPostLanguageNeedsNoText,
     };
 
     return Padding(

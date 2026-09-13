@@ -3,9 +3,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 
-/// Bottom-nav shell for the 5 main tabs (Feed/Channels/Create/Stats/Profile),
+/// Bottom-nav shell for the 5 main tabs (Feed/Filters/Create/Stats/Profile),
 /// wrapping a [StatefulShellRoute.indexedStack] so each tab keeps its own
 /// navigation stack (e.g. Profile > Settings survives switching tabs).
+///
+/// "Filters" is `FeedPreferencesScreen` — channels and content languages,
+/// the two things that decide what the feed delivers. It reuses
+/// `l10n.feedPrefsTitle` for the label rather than a separate nav-only
+/// string, matching every other tab here: the nav label and the screen's own
+/// `AppBar` title are always the same word (see `feed_screen.dart`).
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -29,9 +35,9 @@ class AppShell extends StatelessWidget {
             label: l10n.feedTitle,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.tag_outlined),
-            selectedIcon: const Icon(Icons.tag),
-            label: l10n.channelsTitle,
+            icon: const Icon(Icons.filter_alt_outlined),
+            selectedIcon: const Icon(Icons.filter_alt),
+            label: l10n.feedPrefsTitle,
           ),
           NavigationDestination(
             icon: const Icon(Icons.add_circle_outline),

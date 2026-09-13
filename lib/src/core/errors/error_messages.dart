@@ -101,6 +101,20 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'channel_not_found':
       return l10n.errorChannelNotFound;
 
+    // ---- content language ---------------------------------------------------
+    // The composer guards both of these locally, so reaching one means the app
+    // and the backend disagree about what is configured - an app open across a
+    // CONTENT_LANGUAGES change, most likely. Worth real copy rather than a
+    // generic failure, because the fix is a tap away in the picker.
+    case 'post_language_invalid':
+      return l10n.errorPostLanguageInvalid;
+    case 'post_language_requires_no_text':
+      return l10n.errorPostLanguageRequiresNoText;
+    case 'content_languages_empty':
+      return l10n.errorContentLanguagesEmpty;
+    case 'content_languages_invalid':
+      return l10n.errorContentLanguagesInvalid;
+
     // ---- reviewing ----------------------------------------------------------
     // Both mean the post left this user's queue while the card was still on
     // screen — stale UI rather than a real failure, so point at the fix.

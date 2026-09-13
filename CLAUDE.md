@@ -353,9 +353,21 @@ the screen you sit in for minutes while the quote's window runs out, so that is 
 belongs, and it stays worded as the promise it is rather than shown as a bare `4:32`, which reads
 as a deadline to race. The clause gives way to "2 more needed" (and the pill to `errorContainer`)
 when the balance can't cover the post, since how long an unaffordable price holds is nobody's
-question; it falls back to "of your 12" for a cached quote with no expiry, and to "checking price…"
+question; it falls back to "of your 12" for a cached quote with no expiry, and to a **spinner**
 once expired or stale — which is also when `_ComposerPill` re-fetches. A full bar means "you can
 post", which is why the feed never needs the price as a number.
+
+Three details of that line are load-bearing. The number and the clause are separated by a **middot**,
+not a space: they are two different facts — on the feed pill a balance and a price — and run
+together they read as one sentence, which is exactly what "3 Posts cost 1 token" was. For the same
+reason the price clause leads with the rate rather than the noun ("1 token per post", not "Posts
+cost 1 token"): a plural noun immediately after a number reads as that number *of* them. And the
+checking state is a spinner rather than the words it used to be, because "checking price…" is a
+whole clause competing with a screen title for one toolbar, to say something a glyph says — the
+sentence survives on the tooltip and for a screen reader (`economyPillCheckingPrice`), which is now
+its only appearance. It is the one thing in the pill without a baseline, hence the row centring its
+children in that state: a baseline-aligned row inside an `IntrinsicWidth` asks every child for a
+*dry* baseline, and a painter throws rather than declining.
 
 What changed is *how much room this gets*, not what it says: both variants used to be full-width
 bars stacked under the app bar, a permanent row of chrome on the two screens with the least space
@@ -378,17 +390,74 @@ need 2 more tokens", which was permanent chrome for everyone including the peopl
 concern, is now `_ShortOnTokensHint`: one line, only while it applies, directly above the disabled
 Relay button it explains.
 
-**Posting is priced per channel, so there are two prices and they mean different things.**
-`GET /posts/economy` quotes a *global reference rate* — the right number for the feed pill, which
-is about the balance rather than about any one channel. What a post actually costs is the price on
-the channel it goes to (`Channel.postPrice`, from `GET /channels`), which the backend holds for the
-same window as the global one and charges verbatim. So the composer passes
-`EconomyHeaderStatus(priceOverride: selectedChannel?.postPrice)` and derives its affordability
-state — the Relay button, `_ShortOnTokensHint` — from `_effectiveEconomy`, never from the raw
-global figure. Dropping that override would show a price nobody is ever charged, and it would look
-entirely normal on screen; `test/channel_pricing_test.dart` is what stops that. `postPrice` is
-nullable (a channel list cached before per-channel pricing) and null means **unknown, fall back to
-the global rate** — never free.
+**Posting is priced per *route* — a (channel, language) pair — so nothing quotes one number until
+both halves are chosen.** `GET /posts/economy` returns a base rate plus the observed
+`post_price_min`/`post_price_max` across the deployment; `GET /channels` returns the same range
+scoped to each channel (`Channel.postPriceMin`/`postPriceMax`); and only `GET /posts/price`
+(`ChannelsRepository.fetchPostPrice`, deliberately uncached) gives the exact figure `POST /posts`
+will charge. The composer walks that ladder: the channel's cheapest route while only a channel is
+picked, the exact quote once a language is too.
+
+Three rules follow, and `test/channel_pricing_test.dart` + `test/content_language_test.dart` pin
+them:
+- **The composer states one price and gates Relay on that same price.** `_effectiveEconomy`
+  collapses the range onto whatever `_effectivePrice` resolved — not just `postPrice` — because the
+  affordability getters read the range's low end. Leaving a spread in place would let a cheap route
+  in another channel vouch for this one, and the pill would read "Cost 4" beside an enabled button
+  on a balance of 3.
+- **Affordability is judged against the cheapest end everywhere else.** `Economy.canAffordPost` and
+  the feed pill's "2 more tokens to post" both count to `priceRange.$1`, because that pill is about
+  the balance rather than any one post: counting to the dearest route would keep saying no to
+  someone who could already publish. The exact number always arrives before publishing, since a
+  language is required.
+- **Null means unknown, never free.** `postPriceMin` is nullable (a channel list cached before this
+  existed) and the price chip renders nothing rather than a `0`.
+
+Expect both ends to be the same number often — `FEED_PRICE_CHANNEL_BAND` is ±50%, which rounds away
+entirely at the bottom of the scale, so a base price of 1 can only ever be 1. `hasSinglePrice`
+exists so those cases render "4" and not "4–4". **On a quiet dev backend every route prices at
+`FEED_PRICE_MIN` and the range is invisible** — that is the formula working, and the way to see a
+spread locally is to raise that floor for a session (see the backend's `env-template`), not to
+change anything here.
+
+Where the range actually appears: the **feed pill's** sentence states what posts cost once the
+reader can afford one ("2–6 tokens per post"), replacing the old "Enough to post", which named no number
+and pointed at nothing — there is no longer a single price to go and look up. The **composer pill**
+opens on the range and narrows to the exact figure as the author picks a channel and then a
+language, which is also the clearest signal available that those two choices are what move it.
+Once both are picked, `_ExactPriceLine` says so in words ("Price based on your selection: 4") above
+the chips — the pill states the number but not that it has *become* exact, and a figure that
+quietly stops being a range looks identical to one that never was. It is keyed on `_routePrice`
+being non-null, i.e. a quote the backend actually returned for that pair, so it never appears over
+an interpolation or a stale channel figure.
+
+**Spending is animated, centred over the editor** (`TokenSpendBadge`,
+`features/create_post/presentation/token_spend_badge.dart`). Publishing drops the token count, and
+a number that is simply smaller afterwards says nothing about why — so the composer replays the
+subtraction: the balance you had, a red "−N" rising away, then the digits easing down to what is
+left. Four things are load-bearing:
+- **It is the sibling of `ForwardScoreBadge`, deliberately.** Same centred position over the
+  content, same pop-in, same beat before the screen moves on (`kTokenSpendPlay`/`kTokenSpendHold`
+  against `kForwardScorePopIn`/`kForwardScoreHold`). These are the only two moments in the app where
+  a number the user cares about moves as a *result* of something they just did — one earns, one
+  spends — and they should read as one kind of event. The hold is the one value that does *not*
+  match: the forward score's number is final the instant it appears, while this one is still
+  falling when the play ends, so the hold is the only part of the beat where the balance you are
+  left with can actually be read.
+- **The balance is labelled** ("Your tokens:", `economySpendBadgeLabel`). Unlabelled it is a bare
+  count in a pill on a screen whose other number is the post's price — which is what the "−N" above
+  it is.
+- **It plays on the composer, before `context.go('/feed')`, and the navigation genuinely awaits
+  it** — the same shape as `PostCard._review` holding its score before letting the card leave. The
+  first attempt put this on the feed's app-bar pill instead, which was wrong twice over: an
+  animation in the corner is over before an eye on the Relay button finds it, and it had to survive
+  a route change, which needed a cross-screen provider for something that is one screen's business.
+- **Driven by the actual delta** (`balanceBefore - result.tokenBalance`), not the quoted price, so a
+  superuser's free post yields 0 and raises no badge at all — "−0" would be a claim about a balance
+  that never moved.
+- **The controller is built in `initState`, never as a `late final` initializer.** That form is
+  lazy, so a composer that never published would first construct it inside `dispose` — a `Ticker`
+  against an already-deactivated element, which throws.
 
 **Channel prices are off by default and live behind one switch** (`showChannelPricesProvider`,
 `core/settings/price_display_settings.dart`; a labelled `Switch` in the channels app bar, and a
@@ -670,5 +739,87 @@ applies to all new features, not just ones the user explicitly calls out as need
   (`core/network/dio_client.dart`'s interceptor), which is what lets backend-authored text (the
   admin banner, password-policy messages) match the app's language too — see the backend's
   `app/core/locale.py` / `app/core/banner.py`.
+- **Interface language and content language are two different settings, and must stay that way.**
+  This section is about the first: the language the app is *drawn in*, a device preference that
+  never leaves the phone. The second is `User.contentLanguages` — which languages you accept posts
+  in, stored server-side, and the thing that actually decides what the feed sends you (see
+  **Content language** below). **They deliberately live in different places**: the interface
+  language is a row in Settings, the content languages are a tab of `FeedPreferencesScreen`
+  alongside the channel list — because accepting a language is the same kind of act as
+  subscribing to a channel, and neither is an account preference. Having both in one Settings
+  list was the original mistake; they read as one setting stated twice. What survives from that
+  is the **subtitle on the Settings row** ("The language this app is shown in") and the hint on
+  the languages tab saying it is separate from the app's own. Removing either is a real
+  regression and an invisible one: someone switches the app to German, sees no change in the
+  feed, and concludes the filter is broken.
+  Two separate lists on the backend too (`SUPPORTED_LOCALES` vs `CONTENT_LANGUAGES`), free to
+  diverge — a language people post in needs no translated error catalogue, and vice versa.
 - **Exceptions** (deliberately left untranslated): the `Relay` brand name, and example/placeholder
   URLs (e.g. `server_settings_sheet.dart`'s hint text) — URLs aren't translated by convention.
+
+### Content language
+
+What language a post is *written in*, and which languages a reader accepts. The backend routes on
+the pair — a post reaches only subscribers who accept its language — so getting this wrong sends
+someone a post they cannot read, and nothing anywhere reports an error. See the backend's
+CLAUDE.md, "Language routing".
+
+- **Both lists come from the server** (`GET /config` → `contentLanguagesProvider`,
+  `languageUnspecifiedProvider`), never from a Dart constant. That is what keeps the picker, the
+  detector's candidate set and the values `POST /posts` accepts from drifting apart: adding a
+  language becomes a backend setting plus a stopword list, not an app release.
+- **Detection is on-device and only ever prefills** (`core/languages/language_detector.dart`). A
+  pure-Dart stopword heuristic, chosen over ML Kit because it separates two well-spaced languages
+  nearly perfectly, needs no plugin, and works on Flutter web, which ML Kit does not.
+  `LanguageDetector` is the seam; swap it at `languageDetectorProvider` and nothing else moves.
+  Three rules matter more than the algorithm: **null is a real answer** (too short, too ambiguous)
+  and must leave the picker alone rather than clear it; the detector **stops proposing** once the
+  author opens the picker (`_languageTouched`), because a field that keeps overruling a deliberate
+  choice feels like it is fighting back; and the stopword lists must stay **disjoint** — an
+  ordinary English word left in the German list makes English prose read as faintly German.
+  `test/language_detector_test.dart` asserts the disjointness, not the individual entries.
+  **`_redetect` is a pure function of the post's current text, and every path that changes the set
+  of blocks has to call it.** Detection hung off a controller listener alone, so deleting a
+  paragraph fired nothing and the suggestion stayed pinned to a language the post no longer
+  contained — remove the last German block from a mixed post and the chip still said German.
+  `_removeBlock` now re-runs it immediately (one deliberate action, so no debounce). Note the two
+  null cases are *different*: "there is text but I am not confident" leaves the choice alone, while
+  "there is no text at all" withdraws the suggestion outright, since it describes a post that no
+  longer exists — and that is also what puts "no language" back within reach for a photo-only post.
+  An explicit choice (`_languageTouched`) survives both.
+  **`minimumWords` is 4, and that number was tuned against real posts, not in isolation.** At 8 it
+  abstained on "Hallo, das ist mein erster Post hier" — seven words, a completely ordinary first
+  post — so the feature looked broken rather than cautious. What keeps short text honest is
+  `minimumScore`/`minimumMargin`, not the word count: at four words "Berlin Hamburg Munich
+  Cologne" and "nice one" still get no answer. `test/composer_language_test.dart` drives the real
+  screen for this, because the failure mode is silence — no error, just a picker that never fills
+  in — and only an end-to-end test can tell "the detector abstained" from "the listener was never
+  attached".
+- **A language is required to publish, and is never defaulted to the app's own.** A phone set to
+  English is no evidence about what someone is writing, and the failure is silent. An unset
+  language raises the same kind of blocker line as an unset channel.
+- **"No language" is only offerable for a post with no text.** It routes through the whole channel
+  rather than one language's readers, so it is the widest audience a post can claim — text is the
+  one part of that claim the server can check. The picker greys it out *with a reason* instead of
+  hiding it, and the composer refuses it before spending an upload. Note the converse is not
+  enforced: a text-free post may still declare a real language, because a video can be spoken
+  German.
+- **`FeedPreferencesScreen`** (`features/feed_preferences/presentation/feed_preferences_screen.dart`)
+  is the bottom-nav tab named **"Filters"** (`l10n.feedPrefsTitle`, `Icons.filter_alt` — reusing
+  the icon `feed_screen.dart` already uses for "clear channel filter", since both are the same
+  concept). It replaced the old standalone Channels screen: `ChannelsTab` and `ContentLanguagesTab`
+  are now two `TabBarView` pages under one `TabController`, because channels and content languages
+  are the same *kind* of decision — both filter delivery, neither is an account preference — and
+  "Feed preferences" as a name was both too long for the nav bar and not what the screen actually
+  is. Both tabs carry their own search field (`TextField` + local `_query` state, same pattern in
+  each — filter client-side over whatever the provider already holds, no new endpoint). Two things
+  that only make sense once you know it is one screen with tabs:
+  - **The price switch (`ChannelPriceSwitchAction`) is in the `AppBar`'s `actions`, shown only
+    while `_tabs.index == 0`.** It is chrome about the channel list specifically, so leaving it up
+    unconditionally would put a control with no subject over the languages tab.
+  - **`ViewTip` wraps the `TabBarView`, not each tab separately** — one card, one `tipKey`
+    (`'tip.feedPreferences'`), explaining the screen's *purpose* ("channels and languages both
+    shape your feed") rather than one tab's mechanics while the other sits unintroduced.
+    Dismissing it is a screen-level fact: switching tabs must not bring it back on the other one,
+    which is why it lives in the shell and not inside `ChannelsTab`/`ContentLanguagesTab` (each of
+    which used to have — and `ChannelsTab` briefly did have — its own).

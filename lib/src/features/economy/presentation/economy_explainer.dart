@@ -135,7 +135,16 @@ class _LiveFigures extends ConsumerWidget {
                   style: theme.textTheme.titleSmall,
                 ),
                 Text(
-                  l10n.economyExplainerPrice(economy.postPrice),
+                  // A range, because there is no single price any more: every
+                  // (channel, language) pair is priced by its own congestion.
+                  // Where the two ends meet, the single-number sentence still
+                  // reads better than "4 to 4 tokens".
+                  economy.hasSinglePrice
+                      ? l10n.economyExplainerPrice(economy.priceRange.$1)
+                      : l10n.economyExplainerPriceRange(
+                          economy.priceRange.$1,
+                          economy.priceRange.$2,
+                        ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

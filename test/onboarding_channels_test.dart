@@ -179,7 +179,8 @@ class _FakeChannels extends ChannelsNotifier {
         color: '#2563EB',
         description: 'Tech talk',
         isSubscribed: false,
-        postPrice: 3,
+        postPriceMin: 3,
+      postPriceMax: 3,
       ),
     ]);
   }

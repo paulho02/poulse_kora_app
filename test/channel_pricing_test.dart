@@ -23,13 +23,14 @@ import 'package:poulse_kora_app/src/features/economy/presentation/economy_header
 /// nullable for channel lists cached before per-channel pricing existed, and
 /// `0` is a perfectly plausible-looking token count.
 void main() {
-  Channel channel({int? postPrice}) => Channel(
+  Channel channel({int? postPrice, int? postPriceMax}) => Channel(
     id: 1,
     name: 'Music',
     color: '#ff0000',
     description: 'Songs',
     isSubscribed: true,
-    postPrice: postPrice,
+    postPriceMin: postPrice,
+    postPriceMax: postPriceMax ?? postPrice,
   );
 
   Future<void> pump(
@@ -164,9 +165,10 @@ void main() {
         'color': '#ff0000',
         'description': 'Songs',
         'is_subscribed': true,
-        'post_price': 4,
+        'post_price_min': 4,
+        'post_price_max': 4,
       });
-      expect(parsed.postPrice, 4);
+      expect(parsed.postPriceMin, 4);
     });
 
     test('leaves the price unknown when the payload predates it', () {
@@ -177,14 +179,14 @@ void main() {
         'description': 'Songs',
         'is_subscribed': true,
       });
-      expect(parsed.postPrice, isNull);
+      expect(parsed.postPriceMin, isNull);
     });
 
     test('carries the price through a subscription toggle', () {
       // `copyWith` is how an optimistic subscribe rebuilds the row; dropping
       // the price there would blank the label mid-tap.
       final toggled = channel(postPrice: 4).copyWith(isSubscribed: false);
-      expect(toggled.postPrice, 4);
+      expect(toggled.postPriceMin, 4);
     });
   });
 }

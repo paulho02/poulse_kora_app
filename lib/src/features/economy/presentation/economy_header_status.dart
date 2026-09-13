@@ -85,15 +85,24 @@ class _FeedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final needed = (economy.postPrice - economy.tokenBalance).clamp(
-      0,
-      economy.postPrice,
-    );
+    // Measured against the *cheapest* route, matching `canAffordPost`. The feed
+    // pill is about the balance rather than about any one post, so "2 more
+    // tokens to post" has to mean "to post anywhere" — counting up to the
+    // dearest route would keep saying no to someone who could already publish.
+    final target = economy.priceRange.$1;
+    final needed = (target - economy.tokenBalance).clamp(0, target);
 
     // The sentence is the whole point of the bar next to it: "12" alone is a
     // score, "12 · 2 more tokens to post" is a thing to do.
+    //
+    // Once a post *is* affordable, that sentence states the price instead of
+    // affirming the balance. "Enough to post" said nothing the reader could act
+    // on, and there is no longer one price to find elsewhere — every (channel,
+    // language) route is priced separately, so the range is the only honest
+    // answer to "what will this cost me" before a channel is picked. Next to
+    // the balance it also makes the affordability obvious without asserting it.
     final label = economy.canAffordPost
-        ? l10n.economyReadyToPost
+        ? _priceLabel(l10n, economy)
         : l10n.economyTokensToGo(needed);
 
     return _EconomyPill(
@@ -104,6 +113,16 @@ class _FeedPill extends StatelessWidget {
       semanticsLabel: label,
     );
   }
+}
+
+/// What a post costs, as a range where the routes differ and a single figure
+/// where they do not — "4–4" reads as a bug, and a deployment quiet enough for
+/// every route to price the same is the normal early state.
+String _priceLabel(AppLocalizations l10n, Economy economy) {
+  final (low, high) = economy.priceRange;
+  return economy.hasSinglePrice
+      ? l10n.economyPriceSingleLabel(low)
+      : l10n.economyPriceRangeLabel(low, high);
 }
 
 /// Composing: what publishing this will cost, and how long that price holds.
@@ -199,16 +218,25 @@ class _ComposerPillState extends ConsumerState<_ComposerPill> {
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
-  String _label(AppLocalizations l10n) {
+  /// Whether the quote beside the price is being re-fetched — a lapsed window,
+  /// or a price remembered from disk with no live one to replace it yet.
+  ///
+  /// Only interesting while the price is affordable: what a shortfall needs is
+  /// the number of missing tokens, which no refresh is going to change.
+  bool get _isCheckingPrice =>
+      widget.economy.canAffordPost && (_isExpired || widget.isStale);
+
+  /// The clause beside the price, or null while [_isCheckingPrice] — a spinner
+  /// says that in a glyph's width where "checking price…" took a whole clause,
+  /// on the one screen where the clause is competing with a title for the bar.
+  String? _label(AppLocalizations l10n) {
     final economy = widget.economy;
     if (!economy.canAffordPost) {
-      final needed = (economy.postPrice - economy.tokenBalance).clamp(
-        0,
-        economy.postPrice,
-      );
+      final target = economy.priceRange.$1;
+      final needed = (target - economy.tokenBalance).clamp(0, target);
       return l10n.economyPillShort(needed);
     }
-    if (_isExpired || widget.isStale) return l10n.economyPillCheckingPrice;
+    if (_isCheckingPrice) return null;
     // A quote cached before the backend sent an expiry has no window to state,
     // so it falls back to the other thing worth saying about the price.
     if (_expiresAt == null) {
@@ -221,10 +249,8 @@ class _ComposerPillState extends ConsumerState<_ComposerPill> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final economy = widget.economy;
-    final needed = (economy.postPrice - economy.tokenBalance).clamp(
-      0,
-      economy.postPrice,
-    );
+    final (low, high) = economy.priceRange;
+    final needed = (low - economy.tokenBalance).clamp(0, low);
 
     return _EconomyPill(
       // Named rather than signed. A leading "−" was arithmetic where a word was
@@ -233,22 +259,44 @@ class _ComposerPillState extends ConsumerState<_ComposerPill> {
       // pill on the previous screen showing a bare "12" it invited being read
       // as the new total. "Cost 3" needs no decoding.
       valuePrefix: l10n.economyCostPrefix,
-      value: '${economy.postPrice}',
+      // A range until the composer knows both halves of the route, then the
+      // exact figure. That progression is the whole point: before a channel and
+      // a language are picked there genuinely is no single price, and showing
+      // one would name a number the author might never be charged. The screen
+      // narrows "Cost 2–6" to "Cost 4" as they decide, which is also the
+      // clearest possible signal that the choice is what moved it.
+      value: economy.hasSinglePrice ? '$low' : '$low–$high',
       label: _label(l10n),
+      isBusy: _isCheckingPrice,
       progress: _progressFor(economy),
       tone: economy.canAffordPost ? _PillTone.neutral : _PillTone.short,
       // The full sentence the clause is shorthand for — it names the balance,
-      // which the clause gives up in order to state the countdown.
-      semanticsLabel: economy.canAffordPost
-          ? l10n.economyComposerCost(economy.postPrice, economy.tokenBalance)
-          : l10n.economyComposerShort(needed),
+      // which the clause gives up in order to state the countdown. The spinner
+      // has no words at all, so this is the only place the checking state is
+      // still said out loud, for the tooltip and for a screen reader.
+      semanticsLabel: _isCheckingPrice
+          ? l10n.economyPillCheckingPrice
+          : switch ((economy.canAffordPost, economy.hasSinglePrice)) {
+              (false, _) => l10n.economyComposerShort(needed),
+              (true, true) => l10n.economyComposerCost(
+                low,
+                economy.tokenBalance,
+              ),
+              (true, false) => l10n.economyComposerCostRange(
+                low,
+                high,
+                economy.tokenBalance,
+              ),
+            },
     );
   }
 }
 
-double _progressFor(Economy economy) => economy.postPrice <= 0
+/// How close the balance is to affording a post — against the cheapest route,
+/// for the same reason the sentence beside it counts to that number.
+double _progressFor(Economy economy) => economy.priceRange.$1 <= 0
     ? 1.0
-    : (economy.tokenBalance / economy.postPrice).clamp(0.0, 1.0);
+    : (economy.tokenBalance / economy.priceRange.$1).clamp(0.0, 1.0);
 
 /// How much of the screen the pill's sentence may claim, leaving room for the
 /// screen title on its left and the reload button on its right. Bounded at both
@@ -275,6 +323,7 @@ class _EconomyPill extends StatelessWidget {
     required this.tone,
     required this.semanticsLabel,
     this.valuePrefix,
+    this.isBusy = false,
   });
 
   /// A word naming what [value] is, set small and muted ahead of it — "Cost 3".
@@ -284,8 +333,13 @@ class _EconomyPill extends StatelessWidget {
 
   final String value;
 
-  /// The short line beside [value] — one clause, never a paragraph.
-  final String label;
+  /// The short line beside [value] — one clause, never a paragraph. Null when
+  /// there is nothing to say beside the number, which today means [isBusy].
+  final String? label;
+
+  /// Show a spinner where the label goes: the number is current, the clause
+  /// about it is being fetched.
+  final bool isBusy;
 
   final double progress;
   final _PillTone tone;
@@ -338,7 +392,16 @@ class _EconomyPill extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           textBaseline: TextBaseline.alphabetic,
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          // Text sits on a shared baseline; a spinner has no
+                          // baseline at all, and a baseline-aligned row asks
+                          // every child for one — inside an IntrinsicWidth
+                          // that means a *dry* baseline, which a painter
+                          // throws on rather than declining. Centring the one
+                          // case that has no second line of text to align to
+                          // is both the fix and the better look.
+                          crossAxisAlignment: isBusy
+                              ? CrossAxisAlignment.center
+                              : CrossAxisAlignment.baseline,
                           children: [
                             if (valuePrefix != null) ...[
                               Text(
@@ -360,23 +423,49 @@ class _EconomyPill extends StatelessWidget {
                                 height: 1.1,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: _labelCap(context),
+                            if (isBusy) ...[
+                              const SizedBox(width: 8),
+                              SizedBox.square(
+                                dimension: 11,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.6,
+                                  color: accent,
+                                ),
                               ),
-                              child: Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            ] else if (label != null) ...[
+                              // A separator, not a space. The number and the
+                              // clause are two different facts — on the feed
+                              // pill, a balance and a price — and run together
+                              // they read as one: "3 Posts cost 1 token" is a
+                              // sentence about three posts.
+                              const SizedBox(width: 6),
+                              Text(
+                                '·',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   color: isShort
                                       ? foreground
-                                      : theme.colorScheme.onSurfaceVariant,
+                                      : theme.colorScheme.outline,
                                   height: 1.1,
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 6),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: _labelCap(context),
+                                ),
+                                child: Text(
+                                  label!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: isShort
+                                        ? foreground
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 4),

@@ -32,6 +32,7 @@ void main() {
     authProvider: 'google',
     googleEmail: 'ada@example.com',
     profilePictureUrl: null,
+    contentLanguages: const ['en', 'de'],
   );
 
   Future<_FakeProfile> pumpStep(WidgetTester tester, {bool continued = false}) async {

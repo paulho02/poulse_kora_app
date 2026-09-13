@@ -626,10 +626,6 @@
   "@postPreviewNotice": {},
   "postPreviewVideoPlaceholder": "Your video plays here, trimmed to this shape",
   "@postPreviewVideoPlaceholder": {},
-  "channelsTitle": "Channels",
-  "@channelsTitle": {},
-  "channelsTipMessage": "Channels are topics you follow. What you join here is what fills your Feed.",
-  "@channelsTipMessage": {},
   "channelsSearchHint": "Search channels",
   "@channelsSearchHint": {},
   "channelsNoneFound": "No channels found",
@@ -1027,5 +1023,135 @@
   "errorFeedbackMediaTooManyFiles": "You can attach up to 5 photos or videos.",
   "@errorFeedbackMediaTooManyFiles": {},
   "errorFeedbackMediaVideoTooLong": "That video is too long to attach.",
-  "@errorFeedbackMediaVideoTooLong": {}
+  "@errorFeedbackMediaVideoTooLong": {},
+  "contentLanguageEnglish": "English",
+  "@contentLanguageEnglish": {},
+  "contentLanguageGerman": "German",
+  "@contentLanguageGerman": {},
+  "contentLanguageNone": "No language",
+  "@contentLanguageNone": {},
+  "contentLanguageNoneHint": "For posts with no words — a photo or a clip. These reach everyone in the channel.",
+  "@contentLanguageNoneHint": {},
+  "composerLanguageTitle": "What language is this in?",
+  "@composerLanguageTitle": {},
+  "composerLanguageHint": "This decides who gets your post. Only people who read this language will see it.",
+  "@composerLanguageHint": {},
+  "composerLanguagePick": "Language",
+  "@composerLanguagePick": {},
+  "composerLanguageSuggested": "Suggested",
+  "@composerLanguageSuggested": {},
+  "composerLanguageNoneUnavailable": "Only for posts without text",
+  "@composerLanguageNoneUnavailable": {},
+  "createPostNeedsLanguage": "Pick a language so the right people get this.",
+  "@createPostNeedsLanguage": {},
+  "createPostLanguageNeedsNoText": "\"No language\" is only for posts without text. Pick the language you wrote in.",
+  "@createPostLanguageNeedsNoText": {},
+  "channelPriceRange": "{min}–{max}",
+  "@channelPriceRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "channelPriceRangeSemantics": "Costs {min} to {max} tokens, depending on the language",
+  "@channelPriceRangeSemantics": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "economyExplainerPriceRange": "A post costs {min} to {max} tokens right now, depending on the channel and language",
+  "@economyExplainerPriceRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguageSubtitle": "The language this app is shown in",
+  "@settingsLanguageSubtitle": {},
+  "settingsContentLanguagesTitle": "Post languages",
+  "@settingsContentLanguagesTitle": {},
+  "settingsContentLanguagesSubtitle": "Which languages you want to read posts in",
+  "@settingsContentLanguagesSubtitle": {},
+  "settingsContentLanguagesScreenTitle": "Post languages",
+  "@settingsContentLanguagesScreenTitle": {},
+  "settingsContentLanguagesDescription": "Pick the languages you can read. You'll only be sent posts written in one of them — plus posts with no words at all, like photos.",
+  "@settingsContentLanguagesDescription": {},
+  "settingsContentLanguagesNotAppLanguage": "This is separate from the app's own language, which you set above.",
+  "@settingsContentLanguagesNotAppLanguage": {},
+  "settingsContentLanguagesEmpty": "Pick at least one language, or there'd be nothing to send you.",
+  "@settingsContentLanguagesEmpty": {},
+  "settingsContentLanguagesFewPosts": "Fewer people write in these languages, so your feed may fill up slowly.",
+  "@settingsContentLanguagesFewPosts": {},
+  "errorPostLanguageInvalid": "That language isn't available. Pick another one.",
+  "@errorPostLanguageInvalid": {},
+  "errorPostLanguageRequiresNoText": "\"No language\" is only for posts without text. Pick the language you wrote in.",
+  "@errorPostLanguageRequiresNoText": {},
+  "errorContentLanguagesEmpty": "Pick at least one language, or there'd be nothing to send you.",
+  "@errorContentLanguagesEmpty": {},
+  "errorContentLanguagesInvalid": "One of those languages isn't available any more. Pick again.",
+  "@errorContentLanguagesInvalid": {},
+  "economyPriceRangeLabel": "{min}–{max} tokens per post",
+  "@economyPriceRangeLabel": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "economyPriceSingleLabel": "{price, plural, one{1 token per post} other{{price} tokens per post}}",
+  "@economyPriceSingleLabel": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
+  "economyComposerCostRange": "A post costs {min} to {max} tokens depending on channel and language, of your {balance}",
+  "@economyComposerCostRange": {
+    "placeholders": {
+      "min": { "type": "int" },
+      "max": { "type": "int" },
+      "balance": { "type": "int" }
+    }
+  },
+  "feedPrefsTitle": "Filters",
+  "@feedPrefsTitle": {},
+  "feedPrefsTabChannels": "Channels",
+  "@feedPrefsTabChannels": {},
+  "feedPrefsTabLanguages": "Languages",
+  "@feedPrefsTabLanguages": {},
+  "feedPrefsTipMessage": "Channels and languages both shape your Feed. Join the topics you're into, and pick the languages you can read.",
+  "@feedPrefsTipMessage": {},
+  "contentLanguagesSearchHint": "Search languages",
+  "@contentLanguagesSearchHint": {},
+  "contentLanguagesNoneFound": "No languages found",
+  "@contentLanguagesNoneFound": {},
+  "composerExactPriceLabel": "Price based on your selection:",
+  "@composerExactPriceLabel": {},
+  "composerExactPriceSemantics": "{price, plural, one{Based on your channel and language, this post costs 1 token} other{Based on your channel and language, this post costs {price} tokens}}",
+  "@composerExactPriceSemantics": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
+  "economySpentAnnouncement": "{price, plural, one{1 token spent} other{{price} tokens spent}}",
+  "@economySpentAnnouncement": {
+    "placeholders": {
+      "price": { "type": "int" }
+    }
+  },
+  "economySpendBadgeLabel": "Your tokens:",
+  "@economySpendBadgeLabel": {
+    "description": "Label in front of the balance on the spend badge shown over the composer after publishing."
+  }
 }

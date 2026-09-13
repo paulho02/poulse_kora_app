@@ -71,6 +71,7 @@ void main() {
         await repo.createPost(
           channelId: 2,
           blocks: [ComposerBlockInput.text('hello')],
+          language: 'en',
           isAnonymous: true,
         );
 
@@ -102,6 +103,7 @@ void main() {
             ComposerBlockInput.media(0),
             ComposerBlockInput.media(1, orientation: 'portrait'),
           ],
+          language: 'en',
           media: [
             PickedMedia(
               bytes: Uint8List.fromList([1]),
@@ -138,6 +140,7 @@ void main() {
           ComposerBlockInput.media(0),
           ComposerBlockInput.media(1),
         ],
+        language: 'en',
         media: [
           PickedMedia(
             bytes: Uint8List.fromList([1, 2, 3]),
@@ -176,6 +179,7 @@ void main() {
       final result = await repo.createPost(
         channelId: 1,
         blocks: [ComposerBlockInput.text('hi')],
+        language: 'en',
       );
 
       expect(result.post.id, 1);

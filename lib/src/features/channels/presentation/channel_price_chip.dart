@@ -20,8 +20,14 @@ import '../data/channel.dart';
 /// [InkWell] above the row's — the gesture arena gives it to the innermost hit,
 /// so the chip wins its own taps and the row keeps the rest.
 ///
-/// Renders nothing when the price is unknown ([Channel.postPrice] null, i.e. a
-/// list cached before per-channel pricing): null means unknown, never free.
+/// Shows a **range** rather than one number, because a channel is several
+/// routes — one per content language, plus the no-language one — each priced by
+/// its own congestion. The exact charge only exists once the author has also
+/// picked a language, which happens in the composer. Where the range collapses
+/// to a single number it is drawn as one, since "4–4" reads as a bug.
+///
+/// Renders nothing when the price is unknown ([Channel.postPriceMin] null, i.e.
+/// a list cached before this existed): null means unknown, never free.
 class ChannelPriceChip extends StatelessWidget {
   const ChannelPriceChip({super.key, required this.channel});
 
@@ -29,15 +35,20 @@ class ChannelPriceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final price = channel.postPrice;
-    if (price == null) return const SizedBox.shrink();
+    final low = channel.postPriceMin;
+    final high = channel.postPriceMax;
+    if (low == null || high == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final isSingle = channel.hasSinglePrice;
+    final text = isSingle ? '$low' : l10n.channelPriceRange(low, high);
 
     return Semantics(
       button: true,
-      label: l10n.channelPriceSemantics(price),
+      label: isSingle
+          ? l10n.channelPriceSemantics(low)
+          : l10n.channelPriceRangeSemantics(low, high),
       excludeSemantics: true,
       child: Material(
         // Outlined rather than bare text: a number under an avatar reads as a
@@ -65,7 +76,7 @@ class ChannelPriceChip extends StatelessWidget {
                 ),
                 const SizedBox(width: 3),
                 Text(
-                  '$price',
+                  text,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,

@@ -6,21 +6,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/settings/price_display_settings.dart';
-import '../../../core/tips/presentation/view_tip.dart';
 import '../../economy/application/economy_providers.dart';
 import '../application/channels_providers.dart';
 import '../data/channel.dart';
 import 'channel_avatar.dart';
 import 'channel_price_chip.dart';
 
-class ChannelsScreen extends ConsumerStatefulWidget {
-  const ChannelsScreen({super.key});
+/// The channel list, as one tab of `FeedPreferencesScreen`.
+///
+/// Deliberately no `Scaffold` or `AppBar` of its own: it is a tab body now, and
+/// the shell owns the bar (including the price switch, which it shows only
+/// while this tab is the one on screen — see `ChannelPriceSwitchAction`).
+class ChannelsTab extends ConsumerStatefulWidget {
+  const ChannelsTab({super.key});
 
   @override
-  ConsumerState<ChannelsScreen> createState() => _ChannelsScreenState();
+  ConsumerState<ChannelsTab> createState() => _ChannelsTabState();
 }
 
-class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
+class _ChannelsTabState extends ConsumerState<ChannelsTab> {
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -93,92 +97,78 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     final showPrices = ref.watch(showChannelPricesProvider);
     final l10n = AppLocalizations.of(context);
 
-    ref.listen<bool>(showChannelPricesProvider, (_, next) => _watchPrices(next));
+    ref.listen<bool>(
+      showChannelPricesProvider,
+      (_, next) => _watchPrices(next),
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.channelsTitle),
-        actions: [
-          _PriceSwitchAction(
-            value: showPrices,
-            onChanged: (value) =>
-                ref.read(showChannelPricesProvider.notifier).set(value),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(channelsNotifierProvider.notifier).refresh(),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l10n.channelsSearchHint,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (value) =>
+                  setState(() => _query = value.toLowerCase()),
+            ),
           ),
-          const SizedBox(width: 8),
+          Expanded(
+            child: channelsAsync.when(
+              data: (cached) {
+                final channels = cached.data;
+                final filtered = _query.isEmpty
+                    ? channels
+                    : channels
+                          .where(
+                            (c) =>
+                                c.name.toLowerCase().contains(_query) ||
+                                c.description.toLowerCase().contains(_query),
+                          )
+                          .toList();
+                return Column(
+                  children: [
+                    if (cached.staleLabel != null)
+                      StaleDataNotice(label: cached.staleLabel!),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(child: Text(l10n.channelsNoneFound))
+                          : ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) => _ChannelTile(
+                                channel: filtered[index],
+                                showPrice: showPrices,
+                              ),
+                            ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => ErrorStateView(
+                error: error,
+                onRetry: () =>
+                    ref.read(channelsNotifierProvider.notifier).refresh(),
+              ),
+            ),
+          ),
         ],
-      ),
-      body: ViewTip(
-        tipKey: 'tip.channels',
-        message: l10n.channelsTipMessage,
-        child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(channelsNotifierProvider.notifier).refresh(),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: l10n.channelsSearchHint,
-                    border: const OutlineInputBorder(),
-                  ),
-                  onChanged: (value) =>
-                      setState(() => _query = value.toLowerCase()),
-                ),
-              ),
-              Expanded(
-                child: channelsAsync.when(
-                  data: (cached) {
-                    final channels = cached.data;
-                    final filtered = _query.isEmpty
-                        ? channels
-                        : channels
-                              .where(
-                                (c) =>
-                                    c.name.toLowerCase().contains(_query) ||
-                                    c.description.toLowerCase().contains(
-                                      _query,
-                                    ),
-                              )
-                              .toList();
-                    return Column(
-                      children: [
-                        if (cached.staleLabel != null)
-                          StaleDataNotice(label: cached.staleLabel!),
-                        Expanded(
-                          child: filtered.isEmpty
-                              ? Center(child: Text(l10n.channelsNoneFound))
-                              : ListView.builder(
-                                  itemCount: filtered.length,
-                                  itemBuilder: (context, index) => _ChannelTile(
-                                    channel: filtered[index],
-                                    showPrice: showPrices,
-                                  ),
-                                ),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => ErrorStateView(
-                    error: error,
-                    onRetry: () =>
-                        ref.read(channelsNotifierProvider.notifier).refresh(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
 /// The price mode switch, in the app bar.
+///
+/// Public because the bar belongs to `FeedPreferencesScreen` now, which shows
+/// this only while the channels tab is selected — the switch is about the
+/// channel list and would be a control with no subject on the languages tab.
 ///
 /// It replaced an `isSelected` IconButton there — a coin glyph toggling between
 /// filled and outlined said nothing about what it did, and the only thing
@@ -195,8 +185,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
 /// The tooltip is back, but as a second name rather than the only one: the
 /// visible word does the everyday job, and the full sentence is what a screen
 /// reader announces and what a long press reveals.
-class _PriceSwitchAction extends StatelessWidget {
-  const _PriceSwitchAction({required this.value, required this.onChanged});
+class ChannelPriceSwitchAction extends StatelessWidget {
+  const ChannelPriceSwitchAction({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
 
   final bool value;
   final ValueChanged<bool> onChanged;

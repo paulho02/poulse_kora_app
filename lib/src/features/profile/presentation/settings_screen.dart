@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+
 import '../../../core/presentation/language_picker.dart';
 import '../../../core/settings/locale_settings.dart';
 import '../../../core/tips/application/tip_providers.dart';
@@ -58,11 +59,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: Text(l10n.settingsQueuePriorityValue),
           ),
           _SectionHeader(l10n.settingsLanguageSectionHeader),
+          // Which languages you accept *posts* in is not here — it lives in
+          // Feed preferences, with the channel list, because it is a filter on
+          // delivery rather than an account preference. This row is the app's
+          // own interface language, and it keeps a subtitle saying so: the two
+          // sound identical, and mistaking one for the other is invisible —
+          // the app changes language and the feed does not.
           ListTile(
+            leading: const Icon(Icons.smartphone_outlined),
             title: Text(l10n.settingsLanguageSectionHeader),
+            subtitle: Text(l10n.settingsLanguageSubtitle),
             trailing: Text(localeLabel(l10n, localeOverride)),
             onTap: () => pickLanguage(context, ref),
           ),
+
           _SectionHeader(l10n.settingsSectionNotifications),
           SwitchListTile(
             title: Text(l10n.settingsNewPostsNotification),

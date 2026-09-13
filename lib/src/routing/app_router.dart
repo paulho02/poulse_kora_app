@@ -6,7 +6,7 @@ import '../core/app_config/application/app_config_providers.dart';
 import '../features/auth/application/auth_providers.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
-import '../features/channels/presentation/channels_screen.dart';
+import '../features/feed_preferences/presentation/feed_preferences_screen.dart';
 import '../features/create_post/presentation/create_post_screen.dart';
 import '../features/email_verification/presentation/email_verification_screen.dart';
 import '../features/feed/presentation/feed_screen.dart';
@@ -15,6 +15,7 @@ import '../features/history/presentation/post_history_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/application/profile_providers.dart';
 import '../features/profile/presentation/change_password_screen.dart';
+
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
@@ -253,7 +254,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/channels',
                 name: 'channels',
-                builder: (context, state) => const ChannelsScreen(),
+                builder: (context, state) => const FeedPreferencesScreen(),
               ),
             ],
           ),
@@ -293,6 +294,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         builder: (context, state) =>
                             const ChangePasswordScreen(),
                       ),
+
                     ],
                   ),
                   GoRoute(

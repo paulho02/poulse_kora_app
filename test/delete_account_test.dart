@@ -35,6 +35,7 @@ void main() {
     authProvider: authProvider,
     googleEmail: authProvider == 'google' ? 'ada@example.com' : null,
     profilePictureUrl: null,
+    contentLanguages: const ['en', 'de'],
   );
 
   testWidgets('the first slide defaults to the less destructive option', (

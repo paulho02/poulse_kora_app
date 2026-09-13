@@ -13,6 +13,7 @@ import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
 import 'package:poulse_kora_app/src/features/channels/presentation/channel_avatar.dart';
 import 'package:poulse_kora_app/src/features/channels/presentation/channel_price_chip.dart';
 import 'package:poulse_kora_app/src/features/channels/presentation/channels_screen.dart';
+import 'package:poulse_kora_app/src/features/feed_preferences/presentation/feed_preferences_screen.dart';
 import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
 import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
 import 'package:poulse_kora_app/src/features/economy/presentation/economy_explainer.dart';
@@ -33,7 +34,8 @@ void main() {
       color: '#2563EB',
       description: 'Tech talk, hardware and software',
       isSubscribed: false,
-      postPrice: 3,
+      postPriceMin: 3,
+      postPriceMax: 3,
     ),
     Channel(
       id: 2,
@@ -41,7 +43,8 @@ void main() {
       color: '#16A34A',
       description: 'Hiking, climbing and everything outside',
       isSubscribed: true,
-      postPrice: 12,
+      postPriceMin: 12,
+      postPriceMax: 12,
     ),
   ];
 
@@ -50,6 +53,7 @@ void main() {
     required bool showPrices,
     double textScale = 1.0,
     Size size = const Size(360, 640),
+    bool withShell = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
@@ -81,7 +85,13 @@ void main() {
             ).copyWith(textScaler: TextScaler.linear(textScale)),
             child: child!,
           ),
-          home: const ChannelsScreen(),
+          // The tab body alone by default: these tests are about how a
+          // channel row lays out, and `FeedPreferencesScreen`'s bar and tabs
+          // would only take vertical space away from the thing measured. The
+          // one test about the bar itself asks for the whole shell.
+          home: withShell
+              ? const FeedPreferencesScreen()
+              : const Scaffold(body: ChannelsTab()),
         ),
       ),
     );
@@ -123,11 +133,13 @@ void main() {
   testWidgets('the price switch is a labelled switch in the app bar', (
     tester,
   ) async {
-    await pumpChannels(tester, showPrices: false);
+    await pumpChannels(tester, showPrices: false, withShell: true);
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
     // A real switch with a word beside it, not the `isSelected` coin glyph it
     // replaced — and in the header, not spending a full row over the list.
+    // The header belongs to `FeedPreferencesScreen` now, and the switch shows
+    // only while the channels tab is the one on screen.
     expect(find.text(l10n.channelsShowPricesLabel), findsOneWidget);
     expect(find.byType(Switch), findsOneWidget);
     expect(

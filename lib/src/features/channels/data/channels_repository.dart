@@ -32,6 +32,24 @@ class ChannelsRepository {
     );
   }
 
+  /// The exact price for one (channel, language) route — see [PostPrice].
+  ///
+  /// Deliberately **not** cached. It is a quote the backend guarantees for the
+  /// current price window and nothing longer, so serving a stale one offline
+  /// would show a number the next publish would not honour. The composer treats
+  /// a failure as "price unknown" and falls back to the channel's range, which
+  /// is the honest answer when we cannot ask.
+  Future<PostPrice> fetchPostPrice({
+    required int channelId,
+    required String language,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/posts/price',
+      queryParameters: {'channel_id': channelId, 'language': language},
+    );
+    return PostPrice.fromJson(response.data!);
+  }
+
   Future<Channel> subscribe(int channelId) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/channels/$channelId/subscribe',

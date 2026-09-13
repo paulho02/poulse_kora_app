@@ -11,6 +11,7 @@ class UserProfile {
     required this.authProvider,
     required this.googleEmail,
     required this.profilePictureUrl,
+    required this.contentLanguages,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -36,7 +37,26 @@ class UserProfile {
     authProvider: json['auth_provider'] as String? ?? 'password',
     googleEmail: json['google_email'] as String?,
     profilePictureUrl: json['profile_picture_url'] as String?,
+    // Defaulted to every language this app ships copy for: a cache entry
+    // written before this field existed belongs to an account the backend
+    // migration also widened, so anything narrower here would show a settings
+    // screen that disagrees with what the server is actually delivering.
+    contentLanguages:
+        (json['content_languages'] as List<dynamic>?)?.cast<String>() ??
+        const ['en', 'de'],
   );
+
+  /// The languages this reader accepts posts in — the other half of the feed's
+  /// routing key (see the backend's `keys.audience`). Never empty: the backend
+  /// refuses an empty set, because it would leave no audience anywhere and so a
+  /// feed that stays empty with nothing to explain it.
+  ///
+  /// Changed through `PUT /users/me/content-languages`, not the profile PATCH:
+  /// the column is only half the change, the other half is rewriting Redis
+  /// audience memberships. Unrelated to the app's *interface* language, which is
+  /// a device preference and never leaves the phone
+  /// (`core/settings/locale_settings.dart`).
+  final List<String> contentLanguages;
 
   final String id;
   final String email;
@@ -89,6 +109,7 @@ class UserProfile {
     bool? darkMode,
     int? settingsRevision,
     bool? onboardingCompleted,
+    List<String>? contentLanguages,
   }) => UserProfile(
     id: id,
     email: email,
@@ -102,6 +123,7 @@ class UserProfile {
     darkMode: darkMode ?? this.darkMode,
     settingsRevision: settingsRevision ?? this.settingsRevision,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+    contentLanguages: contentLanguages ?? this.contentLanguages,
     isVerified: isVerified,
   );
 }
