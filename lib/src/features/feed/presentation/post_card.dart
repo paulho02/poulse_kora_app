@@ -43,6 +43,28 @@ class _PostCardState extends ConsumerState<PostCard>
   int? _score;
 
   @override
+  void initState() {
+    super.initState();
+    // A card built for a post the server has already ruled on is the remains of
+    // a review whose `State` did not survive — so finish it rather than offering
+    // the reader a second verdict on a post that has had one. The animation is
+    // lost with the `State` that was playing it; the post leaving the list is
+    // the part that matters. See `FeedNotifier.pendingRemoval` for how this
+    // happens at all.
+    final pending = ref
+        .read(feedNotifierProvider.notifier)
+        .pendingRemoval(widget.post.id);
+    if (pending == null) return;
+    _leaving = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(feedNotifierProvider.notifier)
+          .applyReviewResult(widget.post.id, pending);
+    });
+  }
+
+  @override
   void dispose() {
     _exit.dispose();
     _scorePop.dispose();

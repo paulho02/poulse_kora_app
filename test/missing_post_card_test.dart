@@ -26,6 +26,9 @@ void main() {
   testWidgets('a hole in the queue renders as a card, not as nothing', (
     tester,
   ) async {
+    // The server hands the queue back newest-placement-first ([2, 1]: 2 is
+    // newer), and the feed displays it oldest-first — so the erased post (2)
+    // is the *older* of the two and lands last on screen, not first.
     final backend = _FakeBackend()
       ..queue = [2, 1]
       ..erased = {2};
@@ -34,7 +37,7 @@ void main() {
     expect(find.text(l10n.feedMissingPostTitle), findsOneWidget);
     expect(find.text('post 1'), findsOneWidget);
     expect(
-      container.read(feedNotifierProvider).value!.data.first,
+      container.read(feedNotifierProvider).value!.data.last,
       isA<MissingPost>(),
     );
   });

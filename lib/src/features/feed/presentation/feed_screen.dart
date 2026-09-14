@@ -232,6 +232,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                     child: feedAsync.when(
                       data: (feed) {
                         final entries = feed.data;
+                        // Which row each queue slot currently sits on, for
+                        // `findChildIndexCallback` below.
+                        final rowOfPostId = {
+                          for (var i = 0; i < entries.length; i++)
+                            entries[i].postId: i,
+                        };
                         if (subscribedChannels.isEmpty) {
                           return _ScrollableEmptyState(
                             icon: Icons.forum_outlined,
@@ -276,6 +282,29 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8,
                                 ),
+                                // Without this, a sliver matches its children
+                                // by *index*: removing the card at row i hands
+                                // row i+1's widget to the element that was
+                                // showing row i, `Widget.canUpdate` says no
+                                // (different `ValueKey`), and every card below
+                                // the removed one is destroyed and rebuilt from
+                                // scratch. A `ValueKey` alone only prevents the
+                                // wrong reuse — it cannot move state across
+                                // rows; this is what lets the sliver find where
+                                // a key went. It matters because a card that is
+                                // rebuilt loses the review it is in the middle
+                                // of: its `_exit`/`_scorePop` controllers go
+                                // with the old `State`, the `await`s on them
+                                // never complete, and the `applyReviewResult`
+                                // that was to follow never runs — so a post the
+                                // server has already accepted a verdict on
+                                // stays on the list, with its buttons live
+                                // again and good for nothing but a 409. Which
+                                // is exactly what reviewing a second post while
+                                // the first was still animating did.
+                                findChildIndexCallback: (key) => key is ValueKey<int>
+                                    ? rowOfPostId[key.value]
+                                    : null,
                                 // One past the end for the footer: scrolling off
                                 // the last post should land on a statement about
                                 // what happens next, not on a hard stop that

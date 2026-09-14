@@ -109,6 +109,8 @@ Future<ProviderContainer> _container(_FakeBackend backend) async {
   return container;
 }
 
+/// The list on screen, oldest-at-top — the notifier's `data` is already in
+/// this order (see `FeedNotifier._oldestFirst`), so this just names it.
 List<int> _ids(ProviderContainer c) =>
     c.read(feedNotifierProvider).value!.data.map((e) => e.postId).toList();
 
@@ -117,18 +119,39 @@ void main() {
     test(
       'appends an arrival to the end instead of splicing it in at the top',
       () async {
-        // The whole point of appending: the server orders the queue newest-first,
-        // so inserting an arrival where the server puts it would shove the post
-        // being read down the screen mid-sentence.
+        // `_FakeBackend.queue` is given newest-placement-first, matching the
+        // real `/posts/feed` route — so `[3, 2]` (3 placed after 2) is shown
+        // as `[2, 3]`, the longer-waiting post on top. An arrival spliced in
+        // where the server puts it (the top) would shove the post being read
+        // down the screen mid-sentence.
         final backend = _FakeBackend()..queue = [3, 2];
         final container = await _container(backend);
         await container.read(feedNotifierProvider.future);
-        expect(_ids(container), [3, 2]);
+        expect(_ids(container), [2, 3]);
 
         backend.queue = [4, 3, 2];
         await container.read(feedNotifierProvider.notifier).checkForArrivals();
 
-        expect(_ids(container), [3, 2, 4]);
+        expect(_ids(container), [2, 3, 4]);
+      },
+    );
+
+    test(
+      'two arrivals in the same batch still land oldest-then-newest',
+      () async {
+        // The server answers a batch of several new posts in its own
+        // newest-first order too, so appending it as-is would put the newer
+        // of the two arrivals above the older one within that batch — even
+        // though the batch as a whole correctly sits below everything older.
+        final backend = _FakeBackend()..queue = [2];
+        final container = await _container(backend);
+        await container.read(feedNotifierProvider.future);
+        expect(_ids(container), [2]);
+
+        backend.queue = [5, 4, 2]; // 5 placed after 4, both after 2
+        await container.read(feedNotifierProvider.notifier).checkForArrivals();
+
+        expect(_ids(container), [2, 4, 5]);
       },
     );
 
@@ -155,7 +178,7 @@ void main() {
         final container = await _container(backend);
         container.read(selectedChannelFilterProvider.notifier).set(1);
         await container.read(feedNotifierProvider.future);
-        expect(_ids(container), [3, 1]);
+        expect(_ids(container), [1, 3]);
 
         backend.queue = [2, 3, 1]; // post 2 is channel 2 — filtered out
         final notifier = container.read(feedNotifierProvider.notifier);
@@ -163,7 +186,7 @@ void main() {
         final afterFirstLook = backend.feedRequests;
         await notifier.checkForArrivals();
 
-        expect(_ids(container), [3, 1]);
+        expect(_ids(container), [1, 3]);
         expect(backend.feedRequests, afterFirstLook);
       },
     );
@@ -180,6 +203,43 @@ void main() {
       expect(container.read(feedQueueStatusProvider)!.isFull, isTrue);
     });
 
+    test('a manual refresh leaves the posts where the reader had them', () async {
+      // The server orders the queue newest-placement-first, but arrivals are
+      // appended to the bottom — so taking the server's order wholesale on a
+      // refresh resorted the whole list under the reader, jumping the post at
+      // the bottom to the top. A review reliably produces such an arrival (it
+      // frees the slot the worker then fills), which is how "I forwarded one
+      // post, pulled to refresh, and everything moved" happened.
+      final backend = _FakeBackend()..queue = [3, 2];
+      final container = await _container(backend);
+      await container.read(feedNotifierProvider.future);
+
+      backend.queue = [4, 3, 2];
+      await container.read(feedNotifierProvider.notifier).checkForArrivals();
+      expect(_ids(container), [2, 3, 4]);
+
+      await container.read(feedNotifierProvider.notifier).refresh();
+
+      expect(
+        _ids(container),
+        [2, 3, 4],
+        reason: 'not replaced wholesale with the raw fetch order',
+      );
+    });
+
+    test('a manual refresh still syncs membership, only not order', () async {
+      // Position is the reader's, membership is the server's: a post that has
+      // left the queue goes, and one that has arrived lands at the end.
+      final backend = _FakeBackend()..queue = [3, 2];
+      final container = await _container(backend);
+      await container.read(feedNotifierProvider.future);
+
+      backend.queue = [5, 2];
+      await container.read(feedNotifierProvider.notifier).refresh();
+
+      expect(_ids(container), [2, 5]);
+    });
+
     test('never removes a held post, only ever adds', () async {
       // Removal is the review's job alone. A top-up that pruned to whatever the
       // server currently holds would yank a card out mid-exit-animation, since
@@ -192,7 +252,7 @@ void main() {
       backend.queue = [4];
       await container.read(feedNotifierProvider.notifier).checkForArrivals();
 
-      expect(_ids(container), [3, 2, 4]);
+      expect(_ids(container), [2, 3, 4]);
     });
   });
 }

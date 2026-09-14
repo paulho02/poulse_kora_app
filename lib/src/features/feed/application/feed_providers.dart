@@ -92,19 +92,37 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   /// of a scroll-triggered top-up would append the same arrival twice.
   bool _fetching = false;
 
+  /// Reviews the server has accepted but whose card has not finished leaving
+  /// yet — see [reviewPost] and [pendingRemoval].
+  ///
+  /// Several may be open at once: reviewing a second post while the first is
+  /// still playing its score-and-slide is ordinary use, not a race to guard
+  /// against, so this is a map rather than a single slot.
+  final Map<int, PostReviewResult> _confirmed = {};
+
   @override
   Future<Cached<List<FeedEntry>>> build() async {
     // Changing the filter is a different queue view: refetch from scratch.
     final channelId = ref.watch(selectedChannelFilterProvider);
     ref.onDispose(_cancelTimer);
     _accountedFor.clear();
+    _confirmed.clear();
     final feed = await ref
         .read(feedRepositoryProvider)
         .fetchFeed(channelId: channelId);
     _accountedFor.addAll(feed.data.map((e) => e.postId));
     _ensureTimer();
-    return feed;
+    return feed.map(_oldestFirst);
   }
+
+  /// The server hands the queue back newest-placement-first (see the
+  /// `/posts/feed` route's own docstring); the feed reads top-to-bottom, so
+  /// this flips it to oldest-at-top. Every place that takes the server's order
+  /// wholesale — here, and the stale-copy fallbacks in [_fetchAndAppend] and
+  /// [_ontoHeldOrder] — goes through this, so "newer is always lower" holds
+  /// everywhere, not just for the arrivals [_fetchAndAppend] appends.
+  List<FeedEntry> _oldestFirst(List<FeedEntry> fetched) =>
+      fetched.reversed.toList();
 
   // --- staying current ------------------------------------------------------
 
@@ -193,10 +211,13 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   ///
   /// Append, never reorder or remove. The server hands the queue back
   /// newest-first, so splicing arrivals in at the top would shove the post being
-  /// read down the screen mid-sentence — the opposite of continuous. And
-  /// removal stays [applyReviewResult]'s job alone, so a card already playing
-  /// its exit animation is never yanked out from under it by a poll that landed
-  /// a moment after the review was accepted.
+  /// read down the screen mid-sentence — the opposite of continuous. Reversed
+  /// to oldest-first before appending (see [_oldestFirst]), so a batch of two+
+  /// simultaneous arrivals still lands with the newer one lower, not just the
+  /// batch as a whole below what was already on screen. And removal stays
+  /// [applyReviewResult]'s job alone, so a card already playing its exit
+  /// animation is never yanked out from under it by a poll that landed a
+  /// moment after the review was accepted.
   Future<bool> _fetchAndAppend() async {
     if (_fetching) return false;
     final channelId = ref.read(selectedChannelFilterProvider);
@@ -213,11 +234,11 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
       // Coming back from a stale copy, take the live list wholesale: what we
       // were showing is of unknown age and may not be queued any more.
       if (held.isStale) {
-        state = AsyncData(fetched);
+        state = AsyncData(fetched.map(_oldestFirst));
         return fetched.data.isNotEmpty;
       }
       final heldIds = held.data.map((e) => e.postId).toSet();
-      final arrivals = fetched.data
+      final arrivals = fetched.data.reversed
           .where((e) => !heldIds.contains(e.postId))
           .toList();
       if (arrivals.isEmpty) return false;
@@ -247,7 +268,52 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
     _accountedFor
       ..clear()
       ..addAll(feed.data.map((e) => e.postId));
-    state = AsyncData(feed);
+    state = AsyncData(feed.map(_ontoHeldOrder));
+  }
+
+  /// A freshly fetched queue, laid out in the order the reader already has.
+  ///
+  /// The server hands the queue back newest-placement-first, but [_fetchAndAppend]
+  /// deliberately puts arrivals at the *end* so nothing shoves the post being
+  /// read down the screen. Taking the server's order wholesale here undid that:
+  /// a reader who had picked up one arrival — which a review reliably produces,
+  /// since it frees the queue slot the worker then fills — saw the whole list
+  /// resort itself the next time they pulled to refresh, with the bottom post
+  /// jumping to the top. Two orderings for the same set of posts, and the
+  /// refresh was the one that moved things under a reader who was mid-sentence.
+  ///
+  /// So the fetch decides *membership* and the list on screen decides
+  /// *position*: what the reader is already looking at stays where it is, what
+  /// the queue no longer holds goes, and anything genuinely new lands at the
+  /// end. Same rule as an arrival, so there is only one order to learn.
+  List<FeedEntry> _ontoHeldOrder(List<FeedEntry> fetched) {
+    final held = state.value;
+    // Nothing to preserve, or what we hold came off disk and is of unknown age
+    // — the live list is the better answer in both cases.
+    if (held == null || held.isStale) return _oldestFirst(fetched);
+    final position = {
+      for (var i = 0; i < held.data.length; i++) held.data[i].postId: i,
+    };
+    final known = <FeedEntry>[];
+    final arrivals = <FeedEntry>[];
+    // Oldest-of-`fetched`-first, so a batch of several new arrivals keeps the
+    // newer one lower within that batch too — see [_oldestFirst].
+    for (final entry in fetched.reversed) {
+      (position.containsKey(entry.postId) ? known : arrivals).add(entry);
+    }
+    // A post the server has already taken a verdict on has left the queue but
+    // is still on screen, mid-exit. Dropping it here would yank the card out
+    // from under its own animation — [applyReviewResult] retires it a beat
+    // later, which is the one place removal belongs.
+    final fetchedIds = fetched.map((e) => e.postId).toSet();
+    for (final entry in held.data) {
+      if (_confirmed.containsKey(entry.postId) &&
+          !fetchedIds.contains(entry.postId)) {
+        known.add(entry);
+      }
+    }
+    known.sort((a, b) => position[a.postId]!.compareTo(position[b.postId]!));
+    return [...known, ...arrivals];
   }
 
   // --- reviewing ------------------------------------------------------------
@@ -258,15 +324,37 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   /// then an exit (the card's slide, the detail page's pop) — and none of that
   /// may start before the review is known to have succeeded. So callers review
   /// first and commit the removal with [applyReviewResult] once they are done.
-  Future<PostReviewResult> reviewPost(int postId, String kind) {
-    return ref.read(feedRepositoryProvider).reviewPost(postId, kind);
+  ///
+  /// The confirmation is remembered until they do, so that a caller which never
+  /// gets to finish cannot strand the post here. See [pendingRemoval].
+  Future<PostReviewResult> reviewPost(int postId, String kind) async {
+    final result = await ref
+        .read(feedRepositoryProvider)
+        .reviewPost(postId, kind);
+    _confirmed[postId] = result;
+    return result;
   }
+
+  /// The confirmation for a post the server has already taken a verdict on but
+  /// which is still on the list, or null if there is none.
+  ///
+  /// The safety net under the animation: the verdict lives on the server the
+  /// moment [reviewPost] resolves, but the removal is owed by a widget that may
+  /// be gone by then — and a post left here would be shown again, with live
+  /// buttons, good for nothing but a 409. A card rebuilt for one of these
+  /// commits it instead of rendering (see `PostCard.initState`). Nothing else
+  /// re-adds a post, so this stays empty in the normal case.
+  PostReviewResult? pendingRemoval(int postId) => _confirmed[postId];
 
   /// Drops one slot from the list on screen, whatever kind it was.
   ///
   /// Kept apart from [applyReviewResult] because dismissing a [MissingPost] is
   /// the only other thing that removes an entry, and it has none of a review's
   /// side effects — no score, no token, no history to invalidate.
+  /// Whether [postId] is still on the list on screen.
+  bool _holds(int postId) =>
+      state.value?.data.any((e) => e.postId == postId) ?? false;
+
   void _removeFromList(int postId) {
     final current = state.value;
     if (current == null) return;
@@ -295,6 +383,12 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   /// successful review's side effects. Only call this once the server has
   /// confirmed the review (i.e. after [reviewPost] resolved).
   void applyReviewResult(int postId, PostReviewResult result) {
+    if (_confirmed.remove(postId) == null && !_holds(postId)) {
+      // Already committed — a card that was rebuilt mid-exit can hand us the
+      // same result its predecessor was carrying. The list work below is
+      // idempotent but the token balance and the review-gate counters are not.
+      return;
+    }
     _removeFromList(postId);
     ref
         .read(reviewGateStatusProvider.notifier)
