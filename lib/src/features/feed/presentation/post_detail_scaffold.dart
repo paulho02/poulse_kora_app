@@ -5,6 +5,7 @@ import '../../../core/presentation/slide_up_route.dart';
 import '../data/post.dart';
 import 'post_author_avatar.dart';
 import 'post_blocks_view.dart';
+import 'probe_marker.dart';
 
 /// The chrome every full-screen post view shares: grab handle, author row,
 /// scrolling article body, and an optional pinned footer.
@@ -90,7 +91,25 @@ class PostDetailScaffold extends StatelessWidget {
                             ],
                           ],
                         ),
-                        Text(metaLine, style: theme.textTheme.labelSmall),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                metaLine,
+                                style: theme.textTheme.labelSmall,
+                              ),
+                            ),
+                            // Placed here rather than in each caller so every
+                            // way of opening a post - the feed, history, the
+                            // composer's preview - marks a check identically.
+                            // A check that showed its mark in one view and not
+                            // another would teach readers to check the view.
+                            if (post.isProbe) ...[
+                              const SizedBox(width: 6),
+                              const ProbeMarker(),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),

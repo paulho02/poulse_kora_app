@@ -432,5 +432,22 @@
   "composerExactPriceLabel": "Preis für deine Auswahl:",
   "composerExactPriceSemantics": "{price, plural, one{Für deinen Channel und deine Sprache kostet dieser Post 1 Token} other{Für deinen Channel und deine Sprache kostet dieser Post {price} Token}}",
   "economySpentAnnouncement": "{price, plural, one{1 Token ausgegeben} other{{price} Token ausgegeben}}",
-  "economySpendBadgeLabel": "Deine Tokens:"
+  "economySpendBadgeLabel": "Deine Tokens:",
+  "probeMarkerTooltip": "Aufmerksamkeits-Test – Dies ist kein echter Beitrag sondern ein Test um dein Vertrauen zu prüfen.",
+  "probeResultCorrect": "Gut – Aufmerksamkeits-Test bestanden",
+  "probeResultWrong": "Aufmerksamkeits-Test leider NICHT bestanden",
+  "probeResultNeutral": "Das war ein Aufmerksamkeits-Test.",
+  "trustExplainerTitle": "Wie Vertrauen funktioniert",
+  "trustExplainerScore": "Dein Vertrauen liegt bei {score} – {band}",
+  "trustExplainerReach": "{count, plural, one{Jeder Beitrag, den du weiterleitest, erreicht jetzt 1 Person} other{Jeder Beitrag, den du weiterleitest, erreicht jetzt {count} Personen}}",
+  "trustBandLow": "geringere Reichweite",
+  "trustBandNormal": "normale Reichweite",
+  "trustBandHigh": "größere Reichweite",
+  "trustExplainerWhat": "Vertrauen misst, wie aufmerksam du Beiträge liest, bevor du über sie entscheidest.",
+  "trustExplainerEffect": "Es bestimmt, wie weit deine Weiterleitungen reichen. Wenn du aufmerksam liest, erreichst du mit weitergeleiteten Beiträgen mehr Leute; wenn du Beiträge verwirfst oder weiterleitest ohne sie wirklich zu lesen sinkt dein Vertrauens-Score.",
+  "trustExplainerChecks": "Ab und zu taucht ein Aufmerksamkeits-Test in deinem Feed auf. Er sieht aus wie ein Beitrag, ist durch ein kleines Icon erkennbar, und der Text fordert dich auf, ihn weiterzuleiten oder zu verwerfen. Es wirkt sich positiv auf deinen Score aus, wenn du die Anweisung korrekt befolgst.",
+  "trustExplainerReading": "Stumpfes Spammen von verwerfen oder weiterleiten wirkt sich ebenfalls negativ auf den Score aus.",
+  "trustExplainerRecent": "Keine Sorge, negative Aktionen werden nach {days} Tagen vergessen. Du hast also die Chance dich zu bessern.",
+  "trustExplainerNoQuota": "Wir wollen damit erreichen, dass die Qualität von Posts und Interaktionen wichtiger ist als die schiere Masse.",
+  "trustExplainerRecentUnknown": "Keine Sorge, negative Aktionen werden nach einiger Zeit vergessen. Du hast also die Chance dich zu bessern. Genauso darfst du dich aber nicht auf einem guten Score ausruhen."
 }

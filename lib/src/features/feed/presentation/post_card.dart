@@ -9,6 +9,8 @@ import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 import 'forward_score_badge.dart';
+import 'probe_marker.dart';
+import 'probe_result_badge.dart';
 import 'post_author_avatar.dart';
 import 'post_media_thumbnail.dart';
 
@@ -41,6 +43,12 @@ class _PostCardState extends ConsumerState<PostCard>
   // The post's forwarding score, once the server has disclosed it — which it
   // only does in a review's response, and so only after the verdict below.
   int? _score;
+
+  /// Set instead of [_score] when the post just reviewed was a trust check: a
+  /// probe has no forwarding score to reveal (see [ProbeResultBadge]). Null
+  /// inside it means "a check, but nothing to score it against".
+  bool _wasProbe = false;
+  bool? _probeCorrect;
 
   @override
   void initState() {
@@ -104,7 +112,11 @@ class _PostCardState extends ConsumerState<PostCard>
     // the post is still there to attach it to. Then the card leaves, carrying
     // the badge with it, and the removal is committed to the provider (which
     // drops it from the underlying list).
-    setState(() => _score = result.postForwardedCount);
+    setState(() {
+      _wasProbe = result.isProbe;
+      _probeCorrect = result.probeCorrect;
+      _score = result.isProbe ? null : result.postForwardedCount;
+    });
     await _scorePop.forward();
     await Future<void>.delayed(kForwardScoreHold);
     if (!mounted) return;
@@ -121,21 +133,19 @@ class _PostCardState extends ConsumerState<PostCard>
     final card = _buildCard(context);
     // Inside the exit transform below, not above it, so the badge slides off
     // with the card it belongs to rather than hanging in the empty row.
-    final content = _score == null
+    final reveal = _wasProbe
+        ? ProbeResultBadge(correct: _probeCorrect, animation: _scorePop)
+        : _score == null
+        ? null
+        : ForwardScoreBadge(count: _score!, animation: _scorePop);
+    final content = reveal == null
         ? card
         : Stack(
             alignment: Alignment.center,
             children: [
               card,
               Positioned.fill(
-                child: IgnorePointer(
-                  child: Center(
-                    child: ForwardScoreBadge(
-                      count: _score!,
-                      animation: _scorePop,
-                    ),
-                  ),
-                ),
+                child: IgnorePointer(child: Center(child: reveal)),
               ),
             ],
           );
@@ -243,6 +253,10 @@ class _PostCardState extends ConsumerState<PostCard>
                     post.channelName,
                     style: theme.textTheme.labelSmall?.copyWith(color: color),
                   ),
+                  if (post.isProbe) ...[
+                    const SizedBox(width: 6),
+                    const ProbeMarker(),
+                  ],
                   const Spacer(),
                   Text(post.timeAgo, style: theme.textTheme.labelSmall),
                 ],

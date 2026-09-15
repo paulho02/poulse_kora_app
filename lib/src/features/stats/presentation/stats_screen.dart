@@ -9,6 +9,7 @@ import '../application/stats_providers.dart';
 import '../data/global_stats.dart';
 import '../data/user_stats.dart';
 import 'forwarding_distribution_chart.dart';
+import 'trust_explainer.dart';
 import 'weekly_activity_chart.dart';
 
 class StatsScreen extends ConsumerWidget {
@@ -130,7 +131,21 @@ class _TrustScoreCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.statsTrustScore, style: theme.textTheme.labelSmall),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.statsTrustScore,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ),
+                // The same explanation the profile tile opens. Offered in both
+                // places because this is a number with a consequence, and the
+                // consequence is invisible: a reader whose forwards started
+                // reaching fewer people has nothing else to connect that to.
+                const TrustInfoButton(),
+              ],
+            ),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,

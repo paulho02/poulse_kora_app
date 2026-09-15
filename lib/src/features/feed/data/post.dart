@@ -196,6 +196,7 @@ class Post {
     required this.author,
     required this.subscriptionKind,
     required this.created,
+    this.isProbe = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) => Post(
@@ -209,6 +210,7 @@ class Post {
     author: PostAuthor.fromJson(json['author'] as Map<String, dynamic>),
     subscriptionKind: json['subscription_kind'] as String?,
     created: DateTime.parse(json['created'] as String),
+    isProbe: json['is_probe'] as bool? ?? false,
   );
 
   final int id;
@@ -225,6 +227,21 @@ class Post {
   // subscription status.
   final String? subscriptionKind;
   final DateTime created;
+
+  /// A trust check rather than someone's post: its text asks, in its own words,
+  /// to be forwarded or dropped, and whether the reader does as it asks is what
+  /// their Reviewer Trust is measured from (see the backend's app/core/probes.py).
+  ///
+  /// Rendered with a small, quiet marker rather than hidden. Measuring people
+  /// without telling them is a trick played on the reader, and the marker is the
+  /// disclosure — but it stays quiet, because one loud enough to spot without
+  /// reading the card would measure attention to badges instead of attention to
+  /// text.
+  ///
+  /// Reviewing one earns a token like any other post and otherwise leaves no
+  /// trace: it does not count as a review, never reaches anyone else, and never
+  /// appears in history.
+  final bool isProbe;
 
   /// All the post's text blocks, joined into one string — used for the feed
   /// card's 2-line preview and for history search/highlighting

@@ -89,6 +89,8 @@ class PostReviewResult {
     required this.tokenBalance,
     required this.postForwardedCount,
     required this.postReviewedCount,
+    this.isProbe = false,
+    this.probeCorrect,
   });
 
   factory PostReviewResult.fromJson(Map<String, dynamic> json) =>
@@ -101,6 +103,8 @@ class PostReviewResult {
         tokenBalance: json['token_balance'] as int,
         postForwardedCount: json['post_forwarded_count'] as int,
         postReviewedCount: json['post_reviewed_count'] as int,
+        isProbe: json['is_probe'] as bool? ?? false,
+        probeCorrect: json['probe_correct'] as bool?,
       );
 
   final int postId;
@@ -119,6 +123,17 @@ class PostReviewResult {
   /// denominator, so "2 of 9" can be shown rather than a bare count.
   final int postForwardedCount;
   final int postReviewedCount;
+
+  /// Whether the post just reviewed was a trust check (see [Post.isProbe]).
+  /// The two counts above are zeroed for one and must not be shown: a probe is
+  /// created for a single reader, so its score could only ever read "1 of 1".
+  final bool isProbe;
+
+  /// Whether the check was answered as it asked, or null when there was nothing
+  /// to score (an ordinary post, or a probe whose wording the server no longer
+  /// recognises). Shown to the reader rather than kept quiet — otherwise the
+  /// only feedback a careless reader ever gets is reach quietly disappearing.
+  final bool? probeCorrect;
 }
 
 /// Result of publishing an original post: the created post plus what it cost.

@@ -8,6 +8,7 @@ import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 import 'forward_score_badge.dart';
+import 'probe_result_badge.dart';
 import 'post_detail_scaffold.dart';
 
 /// Opens a post for review, full screen.
@@ -41,6 +42,11 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
 
   bool _leaving = false;
   int? _score;
+
+  /// See the same pair in `post_card.dart`: a trust check reveals whether it
+  /// was answered correctly, where an ordinary post reveals its score.
+  bool _wasProbe = false;
+  bool? _probeCorrect;
 
   @override
   void dispose() {
@@ -76,7 +82,11 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
     }
 
     if (!mounted) return;
-    setState(() => _score = result.postForwardedCount);
+    setState(() {
+      _wasProbe = result.isProbe;
+      _probeCorrect = result.probeCorrect;
+      _score = result.isProbe ? null : result.postForwardedCount;
+    });
     await _scorePop.forward();
     await Future<void>.delayed(kForwardScoreHold);
     if (!mounted) return;
@@ -133,7 +143,18 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
             ),
           ),
         ),
-        if (_score != null)
+        if (_wasProbe)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: ProbeResultBadge(
+                  correct: _probeCorrect,
+                  animation: _scorePop,
+                ),
+              ),
+            ),
+          )
+        else if (_score != null)
           Positioned.fill(
             child: IgnorePointer(
               child: Center(

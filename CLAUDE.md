@@ -325,6 +325,47 @@ drops the channel while it is open — but an empty post raises the composer's e
 `_PublishBlocker.emptyPost` line rather than opening a blank screen. Covered by
 `test/post_preview_test.dart`.
 
+### Trust checks, and the score they feed
+
+A **trust check** is a post that measures the reader: its text asks, in its own words, to be
+forwarded or dropped, and whether they do as it asks is what their Reviewer Trust is built from
+(the backend mints them — see its CLAUDE.md, `app/core/probes.py`). Trust decides how far the
+reader's *forwards* travel, so a careless reader's relayed post reaches fewer people and a careful
+one's reaches more. It never touches posts they write themselves.
+
+Three client-side rules, and each of them is a test in `test/probe_post_test.dart`:
+
+- **The check is marked, up front, before it is answered** (`probe_marker.dart`, rendered by
+  `PostCard` and by `PostDetailScaffold` so every way of opening a post marks one identically).
+  Measuring people without telling them is a trick played on the reader, and a marker that only
+  appeared *after* the verdict would be an explanation rather than a disclosure. But it has to stay
+  quiet, for a reason that is easy to get backwards: a marker loud enough to spot from across the
+  feed would let someone sort checks from posts without reading either, and the score would then be
+  measuring how well people spot badges. Hence one small outline glyph in the meta line, in the
+  meta line's own ink, with the words on a tooltip and a semantics label rather than on screen — a
+  long-press and a screen reader are both told plainly, and neither is a way to skim. Do not give
+  it a colour, a fill, or a visible word.
+- **A check never shows a forwarding score** (`probe_result_badge.dart` takes the badge's place in
+  the same beat, with the same pop-in and hold, because a check that resolved faster or slower
+  would be a tell in itself). It is minted for one reader and goes no further, so any score it
+  could show would be a true number that means nothing — the server zeroes the counts and sets
+  `is_probe` rather than leaving the client to remember.
+- **Getting one wrong is said plainly.** Without that, the only feedback a careless reader ever
+  gets is their forwards quietly reaching fewer people, with nothing to connect it to anything they
+  did. Telling them costs nothing, because answering correctly *is* reading.
+
+`showTrustExplainer` (`features/stats/presentation/trust_explainer.dart`) is where the score is
+explained, opened by the "i" on the profile's Trust tile and beside the stats card's heading. Same
+shape as `showEconomyExplainer` and for the same reasons: a full-screen `slideUpRoute` rather than
+a sheet, live figures first, then short points. Two things about its copy are deliberate. It
+**leads with the effect, not the number** — "each post you forward now reaches 4 people" is a
+sentence someone can act on, where "your trust is 78" is trivia. And it **names the inputs but not
+their weights**: a reader is owed an honest account of what is measuring them and what it costs
+them, but the score is only worth anything while the cheapest way to raise it is to read the posts,
+so it is an explanation, not a specification. The window length is quoted from
+`UserStats.trustWindowDays` rather than hardcoded, with a number-free wording for the moment before
+the stats land.
+
 ### Refreshing history
 
 `PostHistoryScreen` offers both an app-bar button and pull-to-refresh, and the button drives the

@@ -8,6 +8,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/tips/presentation/view_tip.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../stats/application/stats_providers.dart';
+import '../../stats/presentation/trust_explainer.dart';
 import '../application/profile_providers.dart';
 import 'editable_profile_avatar.dart';
 
@@ -84,6 +85,8 @@ class ProfileScreen extends ConsumerWidget {
                         _StatTile(
                           label: l10n.profileStatTrust,
                           value: stats.data.trustScore,
+                          isInfo: true,
+                          onTap: () => showTrustExplainer(context),
                         ),
                       ],
                     ),
@@ -137,11 +140,21 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, this.onTap});
+  const _StatTile({
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.isInfo = false,
+  });
 
   final String label;
   final int value;
   final VoidCallback? onTap;
+
+  /// Marks a tile whose tap opens an explanation rather than a list, so it gets
+  /// an "i" instead of the drill-in chevron. Trust is a number that needs saying
+  /// what it means; the other two tiles are numbers you can go and look behind.
+  final bool isInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +180,7 @@ class _StatTile extends StatelessWidget {
                     if (onTap != null) ...[
                       const SizedBox(width: 2),
                       Icon(
-                        Icons.chevron_right,
+                        isInfo ? Icons.info_outline : Icons.chevron_right,
                         size: 16,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
