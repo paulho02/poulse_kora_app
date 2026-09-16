@@ -146,7 +146,6 @@ class _ContentLanguagesTabState extends ConsumerState<ContentLanguagesTab> {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   hintText: l10n.contentLanguagesSearchHint,
-                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) =>
                     setState(() => _query = value.toLowerCase()),

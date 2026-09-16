@@ -57,6 +57,10 @@ class FeedQueueStatusNotifier extends Notifier<FeedQueueStatus?> {
   FeedQueueStatus? build() => null;
 
   void set(FeedQueueStatus status) => state = status;
+
+  /// Drop one post from the count, once the server has confirmed it is gone
+  /// from the queue. See [FeedQueueStatus.withoutPost].
+  void remove(int postId) => state = state?.withoutPost(postId);
 }
 
 final feedQueueStatusProvider =
@@ -361,6 +365,13 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
     state = AsyncData(
       current.map((entries) => entries.where((e) => e.postId != postId).toList()),
     );
+    // The list and the status describe the same queue, so they have to move
+    // together. The list is what this screen renders; the status is what the
+    // *other* tabs read for the nav-bar count, and it is only otherwise
+    // refreshed by a poll. Both callers of this reach it after the server has
+    // confirmed the slot is gone, which is the only point at which this is
+    // true rather than optimistic.
+    ref.read(feedQueueStatusProvider.notifier).remove(postId);
   }
 
   /// Clear a slot whose post no longer exists — the ghost card's one button.

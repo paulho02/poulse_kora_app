@@ -79,6 +79,55 @@ class AppTheme {
             ? colorScheme.surfaceContainerHigh
             : colorScheme.surfaceContainerLowest,
       ),
+      // Every text field in the app, given one look.
+      //
+      // There were three before this. Material's own default — an underline,
+      // unfilled — on the login, register, change-password, feedback and
+      // username fields; a `4dp` `OutlineInputBorder` on the four search
+      // fields that asked for one explicitly, which matched nothing else on
+      // screen since everything here is rounded to `radius` (12); and
+      // `InputBorder.none` in the composer and the history search bar, which
+      // is the one deliberate case and stays.
+      //
+      // Filled rather than outlined, because an outlined field draws a second
+      // rectangle inside a card that already has one — the forms in this app
+      // are lists of fields on cards, and the box-in-a-box was most of what
+      // made them look busy. The fill also gives a field a silhouette when
+      // it is empty and unfocused, which an underline does not: on the login
+      // screen the only thing marking where to type was a label floating over
+      // the background.
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        // Borderless until focused. `OutlineInputBorder` with a transparent
+        // side rather than `InputBorder.none`, so the corner radius still
+        // clips the fill and the focused border grows from the same geometry
+        // instead of appearing around it.
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: colorScheme.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.6),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide.none,
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(shape: shape),
       ),

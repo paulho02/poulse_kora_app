@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/generated/app_localizations.dart';
+import '../features/feed/presentation/feed_waiting_icon.dart';
 
 /// Bottom-nav shell for the 5 main tabs (Feed/Filters/Create/Stats/Profile),
 /// wrapping a [StatefulShellRoute.indexedStack] so each tab keeps its own
@@ -30,7 +31,10 @@ class AppShell extends StatelessWidget {
         ),
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.forum_outlined),
+            // Carries the count of posts waiting to be read — see
+            // [FeedWaitingIcon] for why that belongs here and not in the feed's
+            // own app bar.
+            icon: FeedWaitingIcon(selected: navigationShell.currentIndex == 0),
             selectedIcon: const Icon(Icons.forum),
             label: l10n.feedTitle,
           ),

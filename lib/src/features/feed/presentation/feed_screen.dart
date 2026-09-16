@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/presentation/empty_state.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/tips/presentation/view_tip.dart';
@@ -15,6 +16,7 @@ import '../../economy/application/economy_providers.dart';
 import '../../economy/presentation/economy_header_status.dart';
 import '../application/feed_providers.dart';
 import '../data/post.dart';
+import 'feed_skeleton.dart';
 import 'missing_post_card.dart';
 import 'post_card.dart';
 import 'post_detail_view.dart';
@@ -239,7 +241,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                             entries[i].postId: i,
                         };
                         if (subscribedChannels.isEmpty) {
-                          return _ScrollableEmptyState(
+                          return ScrollableEmptyState(
                             icon: Icons.forum_outlined,
                             title: l10n.feedEmptyNoChannelsTitle,
                             subtitle: l10n.feedEmptyNoChannelsSubtitle,
@@ -255,7 +257,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                           // posts went.
                           final filtered = selectedChannel;
                           if (filtered != null) {
-                            return _ScrollableEmptyState(
+                            return ScrollableEmptyState(
                               icon: Icons.filter_alt_off_outlined,
                               title: l10n.feedEmptyFilteredTitle(filtered.name),
                               subtitle: l10n.feedEmptyFilteredSubtitle,
@@ -265,7 +267,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                   .set(null),
                             );
                           }
-                          return _ScrollableEmptyState(
+                          return ScrollableEmptyState(
                             icon: Icons.check_circle_outline,
                             title: l10n.feedEmptyCaughtUpTitle,
                             subtitle: l10n.feedEmptyCaughtUpSubtitle,
@@ -332,8 +334,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                           ],
                         );
                       },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      // A skeleton rather than a spinner: the feed is the
+                      // screen people open cold most often, and its shape is
+                      // the most worth promising in advance. See
+                      // `core/presentation/skeleton.dart`.
+                      loading: () => const FeedSkeleton(),
                       // Only reached with no cached feed at all — otherwise the
                       // repository served the saved copy above.
                       error: (error, _) => ErrorStateView(
@@ -548,91 +553,6 @@ class _EndOfFeedNotice extends ConsumerWidget {
         textAlign: TextAlign.center,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Wraps [_EmptyState] in a scrollable so `RefreshIndicator` still picks up
-/// the pull-down gesture when there's no list to scroll (empty feed).
-class _ScrollableEmptyState extends StatelessWidget {
-  const _ScrollableEmptyState({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: _EmptyState(
-            icon: icon,
-            title: title,
-            subtitle: subtitle,
-            actionLabel: actionLabel,
-            onAction: onAction,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: theme.colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            if (actionLabel != null) ...[
-              const SizedBox(height: 20),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-          ],
         ),
       ),
     );

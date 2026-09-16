@@ -94,7 +94,6 @@ class _ChannelPickerSheetState extends ConsumerState<_ChannelPickerSheet> {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   hintText: l10n.channelsSearchHint,
-                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) =>
                     setState(() => _query = value.toLowerCase()),

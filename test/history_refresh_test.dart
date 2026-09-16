@@ -47,7 +47,10 @@ void main() {
     final repository = await pumpHistory(tester, postCount: 0);
 
     await tester.fling(
-      find.text('You haven\'t posted anything yet.'),
+      // The empty state's own title. Flung rather than the scroll view
+      // itself, because the point of the test is that the *message* is
+      // inside something pullable — see `_EmptyHistory`.
+      find.text('Nothing posted yet'),
       const Offset(0, 300),
       1000,
     );

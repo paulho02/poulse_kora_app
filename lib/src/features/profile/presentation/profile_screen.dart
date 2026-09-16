@@ -11,6 +11,7 @@ import '../../stats/application/stats_providers.dart';
 import '../../stats/presentation/trust_explainer.dart';
 import '../application/profile_providers.dart';
 import 'editable_profile_avatar.dart';
+import 'profile_skeleton.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -85,6 +86,14 @@ class ProfileScreen extends ConsumerWidget {
                         _StatTile(
                           label: l10n.profileStatTrust,
                           value: stats.data.trustScore,
+                          // The only tile whose number has a ceiling, and the
+                          // only one where the number alone says nothing: 68
+                          // posts is 68 posts, but 68 trust is meaningless
+                          // without knowing what it is out of. The stats
+                          // screen already spells this out beside its big
+                          // figure (`statsOutOf100`); this is the same fact at
+                          // tile size.
+                          suffix: l10n.profileStatTrustSuffix,
                           isInfo: true,
                           onTap: () => showTrustExplainer(context),
                         ),
@@ -128,7 +137,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const ProfileSkeleton(),
           error: (error, _) => ErrorStateView(
             error: error,
             onRetry: () => ref.invalidate(profileProvider),
@@ -144,12 +153,17 @@ class _StatTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.onTap,
+    this.suffix,
     this.isInfo = false,
   });
 
   final String label;
   final int value;
   final VoidCallback? onTap;
+
+  /// Drawn small and muted after [value], for a number that is out of
+  /// something. Null for a plain count.
+  final String? suffix;
 
   /// Marks a tile whose tap opens an explanation rather than a list, so it gets
   /// an "i" instead of the drill-in chevron. Trust is a number that needs saying
@@ -168,7 +182,21 @@ class _StatTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               children: [
-                Text('$value', style: theme.textTheme.headlineSmall),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text('$value', style: theme.textTheme.headlineSmall),
+                    if (suffix != null)
+                      Text(
+                        suffix!,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,

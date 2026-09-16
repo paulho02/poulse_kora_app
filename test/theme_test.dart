@@ -38,4 +38,38 @@ void main() {
     final shape = AppTheme.light().filledButtonTheme.style?.shape?.resolve({});
     expect(shape, isA<RoundedRectangleBorder>());
   });
+
+  // Text fields had three looks before one theme owned them: Material's
+  // unfilled underline, a 4dp `OutlineInputBorder` on the search fields that
+  // asked for one, and `InputBorder.none` in the composer. The first two are
+  // gone; the third is now an explicit `filled: false` opt-out at each site,
+  // which only works while the theme is the thing setting `filled`.
+  testWidgets('text fields are filled and share the app corner radius', (
+    tester,
+  ) async {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      final input = theme.inputDecorationTheme;
+      expect(input.filled, isTrue);
+
+      final border = input.border;
+      expect(border, isA<OutlineInputBorder>());
+      expect(
+        (border! as OutlineInputBorder).borderRadius,
+        BorderRadius.circular(AppTheme.radius),
+      );
+      // Nothing drawn around a field until it is focused — the fill is what
+      // gives it a silhouette.
+      expect(border.borderSide, BorderSide.none);
+    }
+  });
+
+  testWidgets('a focused field is outlined in the accent', (tester) async {
+    final theme = AppTheme.light();
+    final focused = theme.inputDecorationTheme.focusedBorder;
+    expect(focused?.borderSide.color, theme.colorScheme.primary);
+    expect(
+      theme.inputDecorationTheme.focusedErrorBorder?.borderSide.color,
+      theme.colorScheme.error,
+    );
+  });
 }

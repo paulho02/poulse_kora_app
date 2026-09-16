@@ -280,7 +280,6 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
               labelText: l10n.feedbackMessageLabel,
               hintText: _messageHint(l10n, _kind),
               alignLabelWithHint: true,
-              border: const OutlineInputBorder(),
             ),
             // The "say something first" line is only stale once there is
             // something, so it clears with the typing rather than on the next

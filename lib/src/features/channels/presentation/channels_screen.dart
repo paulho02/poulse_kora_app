@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/presentation/empty_state.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/settings/price_display_settings.dart';
 import '../../economy/application/economy_providers.dart';
@@ -11,6 +12,7 @@ import '../application/channels_providers.dart';
 import '../data/channel.dart';
 import 'channel_avatar.dart';
 import 'channel_price_chip.dart';
+import 'channels_skeleton.dart';
 
 /// The channel list, as one tab of `FeedPreferencesScreen`.
 ///
@@ -113,7 +115,6 @@ class _ChannelsTabState extends ConsumerState<ChannelsTab> {
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search),
                 hintText: l10n.channelsSearchHint,
-                border: const OutlineInputBorder(),
               ),
               onChanged: (value) =>
                   setState(() => _query = value.toLowerCase()),
@@ -137,8 +138,22 @@ class _ChannelsTabState extends ConsumerState<ChannelsTab> {
                     if (cached.staleLabel != null)
                       StaleDataNotice(label: cached.staleLabel!),
                     Expanded(
+                      // An empty search is one tap from not being empty, so
+                      // it gets the shared empty state with a way out rather
+                      // than the bare centred line it used to be — which said
+                      // nothing about *why* the list was empty and left
+                      // clearing the query as something to work out.
                       child: filtered.isEmpty
-                          ? Center(child: Text(l10n.channelsNoneFound))
+                          ? EmptyStateView(
+                              icon: Icons.search_off,
+                              title: l10n.channelsNoneFound,
+                              subtitle: l10n.channelsNoneFoundSubtitle(_query),
+                              actionLabel: l10n.channelsClearSearch,
+                              onAction: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                            )
                           : ListView.builder(
                               itemCount: filtered.length,
                               itemBuilder: (context, index) => _ChannelTile(
@@ -150,7 +165,7 @@ class _ChannelsTabState extends ConsumerState<ChannelsTab> {
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const ChannelsSkeleton(),
               error: (error, _) => ErrorStateView(
                 error: error,
                 onRetry: () =>

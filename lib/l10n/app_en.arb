@@ -239,6 +239,10 @@
   "@settingsNewPostsNotification": {},
   "settingsWeeklyDigestNotification": "Weekly stats digest",
   "@settingsWeeklyDigestNotification": {},
+  "settingsNotificationsUnavailable": "Notifications aren't built yet. Relay won't send you anything until they are — nothing here is switched on behind the scenes.",
+  "@settingsNotificationsUnavailable": {},
+  "settingsComingSoonBadge": "Soon",
+  "@settingsComingSoonBadge": {},
   "settingsSectionHelp": "Help",
   "@settingsSectionHelp": {},
   "settingsResetTutorialHints": "Reset tutorial hints",
@@ -473,6 +477,12 @@
   "@emailVerifyResendSnackbar": {},
   "feedTitle": "Feed",
   "@feedTitle": {},
+  "feedWaitingBadge": "{count, plural, =0{No posts waiting} =1{1 post waiting to be read} other{{count} posts waiting to be read}}",
+  "@feedWaitingBadge": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "feedTipMessage": "This is your feed — review each post and forward or drop it. Nothing here is ranked by an algorithm.",
   "@feedTipMessage": {},
   "feedAllChannelsChip": "All",
@@ -630,6 +640,14 @@
   "@channelsSearchHint": {},
   "channelsNoneFound": "No channels found",
   "@channelsNoneFound": {},
+  "channelsNoneFoundSubtitle": "Nothing matches “{query}”. Try a shorter word, or clear the search to see every channel.",
+  "@channelsNoneFoundSubtitle": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "channelsClearSearch": "Clear search",
+  "@channelsClearSearch": {},
   "channelsJoinedButton": "Joined",
   "@channelsJoinedButton": {},
   "channelsJoinButton": "Join",
@@ -758,6 +776,8 @@
   "@profileStatCreated": {},
   "profileStatTrust": "Trust",
   "@profileStatTrust": {},
+  "profileStatTrustSuffix": "/100",
+  "@profileStatTrustSuffix": {},
   "historyPostedTitle": "My Posts",
   "@historyPostedTitle": {},
   "historyReviewedTitle": "My Reviews",
@@ -772,10 +792,18 @@
   "@historyRefreshTooltip": {},
   "historyNoMatches": "No matches found",
   "@historyNoMatches": {},
-  "historyEmptyPosted": "You haven't posted anything yet.",
+  "historyEmptyPosted": "Nothing posted yet",
   "@historyEmptyPosted": {},
-  "historyEmptyReviewed": "You haven't reviewed anything yet.",
+  "historyEmptyPostedSubtitle": "Posts you publish show up here, with what happened to each one.",
+  "@historyEmptyPostedSubtitle": {},
+  "historyEmptyPostedAction": "Write a post",
+  "@historyEmptyPostedAction": {},
+  "historyEmptyReviewed": "Nothing reviewed yet",
   "@historyEmptyReviewed": {},
+  "historyEmptyReviewedSubtitle": "Every post you forward or drop is kept here, so you can find one again.",
+  "@historyEmptyReviewedSubtitle": {},
+  "historyEmptyReviewedAction": "Go to your feed",
+  "@historyEmptyReviewedAction": {},
   "historyNoPostsOnOrBeforeDate": "No posts found on or before that date.",
   "@historyNoPostsOnOrBeforeDate": {},
   "historyDateToday": "Today",

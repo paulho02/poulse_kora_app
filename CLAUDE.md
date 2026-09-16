@@ -669,6 +669,72 @@ that it has to earn a permanent row. Three consequences worth keeping:
     channel selected until an app restart — inherited silently by the next post, and noticed
     only after relaying to the wrong place.
 
+### Waiting, and having nothing
+
+Three states every screen in this app can be in — loading, empty, broken — and one rule: each one
+is a *designed* screen, not the absence of one. Before this, the first two were a centred
+`CircularProgressIndicator` and (in three places) a centred sentence, which is how a screen looks
+when nobody decided what it should look like.
+
+- **A cold load shows the shape of what is coming** (`core/presentation/skeleton.dart`, plus one
+  `*_skeleton.dart` per screen). A spinner says "something is happening" and nothing else: it is
+  the same picture on all five tabs, it gives no idea what is arriving, and the layout it is
+  replaced by lands as one abrupt jump. Two rules for anything built on this. **Shapes must match
+  what replaces them** — the skeletons are built from the same numbers as the real widgets (the
+  12/6 card margin, the 24dp author avatar, the 40dp action row), and a skeleton whose proportions
+  are wrong is worse than a spinner because it promises a layout and then reflows out of it. So
+  changing a card's geometry means changing its skeleton in the same commit. And **only on a cold
+  load, never on a refresh**: every screen here falls back to cached content (`core/cache/`), and
+  replacing something being read with grey boxes would be a regression — these are reached from
+  `AsyncValue.loading` with no cached value, exactly where the spinner used to be.
+  The sweep is one controller per `Shimmer` painting a `ShaderMask` over the whole subtree, not one
+  per box, and it is **stopped** under `MediaQuery.disableAnimations` rather than merely unpainted —
+  a repeating controller drives a frame callback whether or not anything reads it, which is the one
+  thing reduce-motion exists to prevent. Note a `Shimmer` on screen means `pumpAndSettle` never
+  returns; a test has to reach a state where the skeleton is gone.
+- **An empty screen names its way out** (`core/presentation/empty_state.dart`). `EmptyStateView`
+  insists on three things the bare-text version dropped: an icon (so the state is recognisable
+  before it is read), a subtitle saying *why* it is empty rather than only that it is, and an
+  action wherever there is one — most empty states here are one tap from not being empty (join a
+  channel, clear a filter, clear a search, write a post). It was previously a private widget inside
+  `feed_screen.dart`, which is the whole reason the channel list and the history screens each had a
+  worse one. Anything under a pull-to-refresh uses `ScrollableEmptyState`: "surely there is
+  something by now" is the reflex in exactly the state that has no list left to pull.
+- **`ErrorStateView` is the third member of the same family** and predates both. The shared shape
+  is the point — an empty screen and a failed one should look like two states of one app, not two
+  accidents.
+- **A switch must not lie.** Settings' two notification rows were live switches over two `bool`
+  fields that nothing read, nothing persisted and no notification system backed; flipping one
+  changed no behaviour ever, and failed in *silence* — the only way to find out was to wait for a
+  notification that was never coming. They are now `_DisabledSetting`, which shows a "Soon" badge
+  rather than a greyed-out switch, because a disabled switch still shows a position and so still
+  answers "is this on?" with a lie in one direction or the other.
+
+### The Feed tab carries the count
+
+`FeedWaitingIcon` (`features/feed/presentation/feed_waiting_icon.dart`) badges the bottom nav with
+how many posts are waiting. Read against **The feed keeps itself current** above, which is where
+the number comes from, and against the app bar's *removed* count, which this is not:
+
+- **The app bar's count went because the list was underneath it.** When you are looking at the
+  feed, the list is the count. On another tab it is not, and the number is then the only thing
+  that can say whether going back is worth it — the queue is something the server pushes into, so
+  nothing else would ever tell you. Same reasoning applied consistently: the badge is **hidden
+  while the feed is the selected tab**.
+- **It must not overcount.** Undercounting is survivable (the next poll corrects it upward);
+  overcounting sends someone to an empty feed. The status was previously replaced wholesale by a
+  poll and by nothing else, which was fine while only the end-of-feed notice read it — so
+  `_removeFromList` now also calls `FeedQueueStatusNotifier.remove`, at the one point where the
+  server has confirmed the slot is gone. The list and the status describe the same queue and have
+  to move together.
+- **It costs no polling.** The count is whatever the last `GET /posts/feed/status` said, minus what
+  has been reviewed since. Polling still runs only while the feed is on screen — extending it would
+  be a real change to the app's network behaviour, and the badge does not need one.
+- **"9+" past nine.** `FEED_QUEUE_MAX_SLOTS` is a server setting this app does not know and should
+  not have to, and past a handful the exact number changes nothing anyone does. It is the accent
+  colour rather than `Badge`'s default red: posts waiting is the app working, and red is what this
+  app uses for Drop and for deleting an account.
+
 ### Offline behaviour
 
 The app stays usable without a connection. Four rules that new code must not break:

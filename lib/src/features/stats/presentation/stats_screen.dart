@@ -9,6 +9,7 @@ import '../application/stats_providers.dart';
 import '../data/global_stats.dart';
 import '../data/user_stats.dart';
 import 'forwarding_distribution_chart.dart';
+import 'stats_skeleton.dart';
 import 'trust_explainer.dart';
 import 'weekly_activity_chart.dart';
 
@@ -105,7 +106,7 @@ class StatsScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const StatsSkeleton(),
           error: (error, _) => ErrorStateView(
             error: error,
             onRetry: () => ref.invalidate(statsProvider),
@@ -268,33 +269,106 @@ class _MetricsGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       childAspectRatio: 2,
+      // Each tile carries the icon its verb already has elsewhere in the app —
+      // the forward arrow off the feed card's Forward button, the cross off
+      // Drop — so the grid can be read at a glance instead of by parsing four
+      // identical number-over-label stacks. Forwarded and dropped are also the
+      // only two that are *coloured*, because they are the pair a reader
+      // compares; colouring all four would make none of them stand out.
       children: [
-        _MetricTile(label: l10n.statsReviewed, value: stats.reviewedCount),
-        _MetricTile(label: l10n.statsForwarded, value: stats.forwardedCount),
-        _MetricTile(label: l10n.statsDropped, value: stats.droppedCount),
-        _MetricTile(label: l10n.statsAvgHops, value: stats.avgHops),
+        _MetricTile(
+          icon: Icons.visibility_outlined,
+          label: l10n.statsReviewed,
+          value: stats.reviewedCount,
+        ),
+        _MetricTile(
+          icon: Icons.arrow_forward,
+          label: l10n.statsForwarded,
+          value: stats.forwardedCount,
+          tone: _MetricTone.forward,
+        ),
+        _MetricTile(
+          icon: Icons.close,
+          label: l10n.statsDropped,
+          value: stats.droppedCount,
+          tone: _MetricTone.drop,
+        ),
+        _MetricTile(
+          icon: Icons.route_outlined,
+          label: l10n.statsAvgHops,
+          value: stats.avgHops,
+        ),
       ],
     );
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
+/// Which of the three colours a [_MetricTile] draws its icon in.
+///
+/// Only the two verbs get one. `neutral` is not "no opinion about this
+/// number", it is "this number is not one of the pair".
+enum _MetricTone { neutral, forward, drop }
 
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.tone = _MetricTone.neutral,
+  });
+
+  final IconData icon;
   final String label;
   final num value;
+  final _MetricTone tone;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = switch (tone) {
+      _MetricTone.forward => theme.colorScheme.primary,
+      _MetricTone.drop => theme.colorScheme.error,
+      _MetricTone.neutral => theme.colorScheme.onSurfaceVariant,
+    };
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text('$value', style: theme.textTheme.headlineSmall),
-            Text(label, style: theme.textTheme.labelSmall),
+            // A tinted disc rather than a bare glyph, matching the empty
+            // states (`core/presentation/empty_state.dart`) so the app has one
+            // way of framing an icon rather than two.
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.12),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$value',
+                    style: theme.textTheme.headlineSmall,
+                    maxLines: 1,
+                  ),
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

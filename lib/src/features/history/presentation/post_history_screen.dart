@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/presentation/empty_state.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../feed/data/post.dart';
 import '../application/history_providers.dart';
 import '../data/reviewed_post.dart';
 import 'history_post_detail_view.dart';
+import 'history_skeleton.dart';
 
 enum HistoryMode { posted, reviewed }
 
@@ -362,10 +365,6 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
     final title = widget.mode == HistoryMode.posted
         ? l10n.historyPostedTitle
         : l10n.historyReviewedTitle;
-    final emptyLabel = widget.mode == HistoryMode.posted
-        ? l10n.historyEmptyPosted
-        : l10n.historyEmptyReviewed;
-
     // Computed up front, not inside `body:`'s `data:` callback below: Dart
     // evaluates named-argument expressions in source order, so `appBar:`
     // (which reads `_matches` for the match counter) would otherwise be
@@ -391,7 +390,7 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
                 // "you haven't posted anything yet" is exactly when someone
                 // pulls to check again, and a bare `Center` cannot be pulled.
                 child: _rows.isEmpty
-                    ? _EmptyHistory(label: emptyLabel)
+                    ? _EmptyHistory(mode: widget.mode)
                     : ScrollablePositionedList.builder(
                         itemScrollController: _itemScrollController,
                         itemPositionsListener: _itemPositionsListener,
@@ -414,7 +413,7 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const HistorySkeleton(),
         error: (error, _) => ErrorStateView(
           error: error,
           onRetry: () => widget.mode == HistoryMode.posted
@@ -448,6 +447,10 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
+            // Same opt-out as the composer: this field *is* the app bar while
+            // search is open, so the app-wide fill would draw a second bar
+            // inside the one it already sits in.
+            filled: false,
             hintText: l10n.historySearchHint,
             border: InputBorder.none,
           ),
@@ -504,29 +507,40 @@ class _PostHistoryScreenState extends ConsumerState<PostHistoryScreen> {
 }
 
 /// "Nothing here yet", as a scrollable — the whole point is that it can be
-/// pulled down. [ConstrainedBox] against the viewport height keeps the message
-/// centred rather than pinned under the app bar, which is what a plain
-/// [SingleChildScrollView] would do.
+//// The history screens' empty state.
+///
+/// It used to be one centred sentence — "You haven't posted anything yet." —
+/// with no icon and, more to the point, no way out. Both of these screens are
+/// reached by tapping a `0` on the profile, so arriving at an empty one is the
+/// *expected* first visit, and the useful thing to say is what to do about it.
+/// So it states the two halves separately (what is empty, why that is normal)
+/// and offers the tab that fills it.
+///
+/// Still inside the `RefreshIndicator` rather than instead of it: "nothing
+/// here yet" is exactly when someone pulls to check again, and a bare `Center`
+/// cannot be pulled. [ScrollableEmptyState] is what keeps that working.
 class _EmptyHistory extends StatelessWidget {
-  const _EmptyHistory({required this.label});
+  const _EmptyHistory({required this.mode});
 
-  final String label;
+  final HistoryMode mode;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(label, textAlign: TextAlign.center),
-            ),
-          ),
-        ),
-      ),
+    final l10n = AppLocalizations.of(context);
+    final posted = mode == HistoryMode.posted;
+    return ScrollableEmptyState(
+      icon: posted ? Icons.edit_outlined : Icons.fact_check_outlined,
+      title: posted ? l10n.historyEmptyPosted : l10n.historyEmptyReviewed,
+      subtitle: posted
+          ? l10n.historyEmptyPostedSubtitle
+          : l10n.historyEmptyReviewedSubtitle,
+      actionLabel: posted
+          ? l10n.historyEmptyPostedAction
+          : l10n.historyEmptyReviewedAction,
+      // `go`, not `push`: both destinations are bottom-nav tabs, and pushing
+      // one on top of a profile sub-route would leave a back arrow over a tab
+      // that already has its own place in the shell.
+      onAction: () => context.go(posted ? '/create' : '/feed'),
     );
   }
 }
@@ -628,6 +642,10 @@ class _HighlightedText extends StatelessWidget {
     final baseStyle = DefaultTextStyle.of(context).style;
     if (query.isEmpty) return Text(text, style: baseStyle);
 
+    final scheme = Theme.of(context).colorScheme;
+    final highlight = scheme.primaryContainer;
+    final onHighlight = scheme.onPrimaryContainer;
+
     final lowerText = text.toLowerCase();
     final lowerQuery = query.toLowerCase();
     final spans = <TextSpan>[];
@@ -645,7 +663,14 @@ class _HighlightedText extends StatelessWidget {
         TextSpan(
           text: text.substring(index, index + query.length),
           style: TextStyle(
-            backgroundColor: Colors.amber.withValues(alpha: 0.6),
+            // Was a hardcoded `Colors.amber` under whatever colour the row's
+            // text happened to be — which in dark mode is near-white on
+            // yellow, i.e. a highlight that hides the thing it is pointing at.
+            // The container/on-container pair is the one construct that is
+            // guaranteed to be legible in both themes, and it is the same
+            // accent the rest of the app highlights with.
+            backgroundColor: highlight,
+            color: onHighlight,
             fontWeight: FontWeight.bold,
           ),
         ),

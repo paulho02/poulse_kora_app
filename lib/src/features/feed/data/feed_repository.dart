@@ -77,6 +77,22 @@ class FeedQueueStatus {
   final int capacity;
 
   bool get isFull => postIds.length >= capacity;
+
+  /// The same status with [postId] gone — what a confirmed review or dismissal
+  /// leaves behind.
+  ///
+  /// The status used to be replaced wholesale by a poll and by nothing else,
+  /// which was fine while the only thing reading it was the end-of-feed notice
+  /// (where "full" or "up to date" barely differ a few seconds out of date).
+  /// It is not fine for the queue count on the nav bar: a reader working
+  /// through a long queue reviews many posts between polls, and a badge that
+  /// only ever counts *down on a timer* would sit there claiming posts that are
+  /// already dealt with. Undercounting is survivable — the next poll corrects
+  /// it upward — but overcounting sends someone to an empty feed.
+  FeedQueueStatus withoutPost(int postId) => FeedQueueStatus(
+    postIds: postIds.where((id) => id != postId).toList(),
+    capacity: capacity,
+  );
 }
 
 class PostReviewResult {

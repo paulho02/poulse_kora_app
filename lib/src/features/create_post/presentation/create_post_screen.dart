@@ -1119,6 +1119,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                 maxLines: null,
                 decoration: InputDecoration(
                   hintText: l10n.createPostHint,
+                  // Opts out of the app-wide filled field
+                  // (`AppTheme.inputDecorationTheme`). A text block is not a
+                  // form field — it is the post, rendered where the post goes,
+                  // and a grey slab behind it would wrap every paragraph in a
+                  // control the reader will never see.
+                  filled: false,
                   border: InputBorder.none,
                 ),
               ),
