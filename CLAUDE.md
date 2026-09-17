@@ -1,994 +1,525 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 ## Project
 
-Flutter client app for Poulse Kora. Its backend is the sibling repo `poulse_kora_backend`
-(FastAPI + `fastapi-users` JWT auth + Postgres) — see that repo's `CLAUDE.md` for API details.
-The backend's React Admin frontend is unrelated/disabled; this Flutter app is the actual product
-client going forward.
-
-Scaffolded with `flutter create` on Flutter 3.44.5 / Dart 3.12.2 (stable), org
-`com.poulsekora`, applicationId `com.poulsekora.poulse_kora_app`. Targets: Android, Web (iOS/desktop
-not enabled — add with `flutter create --platforms=ios .` etc. if needed later).
+Flutter client for Poulse Kora (branded "Relay" in the UI). The backend is the sibling repo
+`poulse_kora_backend` (FastAPI, `fastapi-users` JWT auth, Postgres, Redis, S3 bucket) — its
+CLAUDE.md holds the API rationale this file refers to. Flutter 3.44.x stable / Dart 3.12, org
+`com.poulsekora`, applicationId `com.poulsekora.poulse_kora_app`. Targets: Android and Web
+(add iOS with `flutter create --platforms=ios .` if ever needed).
 
 ## Commands
 
 ```bash
-flutter pub get                      # install dependencies
-flutter analyze                      # static analysis / lints (flutter_lints)
-flutter test                         # run all tests
-flutter test test/widget_test.dart   # run a single test file
-flutter run                          # run on a connected device/emulator/browser
-flutter run -d chrome --web-port=3000   # run in a browser; port must be 3000, see below
-flutter devices                      # list available run targets
-flutter pub add <package>            # add a dependency
-flutter pub outdated                 # check for newer package versions
+flutter pub get                          # deps; also regenerates lib/l10n/generated/
+flutter analyze
+flutter test
+flutter test test/widget_test.dart
+flutter run                              # connected device/emulator
+flutter run -d chrome --web-port=3000    # port must be 3000, see below
+flutter run --dart-define-from-file=env.json   # physical device: cp env.example.json env.json, set your LAN IP
+flutter devices
+flutter pub add <package>
+flutter pub outdated
 ```
 
-The backend must be running (`docker compose up -d` in `poulse_kora_backend`) for anything that
-hits the network to work — see Architecture below for how the base URL is resolved.
-
-**Web CORS gotcha**: the backend's `BACKEND_CORS_ORIGINS` (`.env`) only whitelists
-`http://localhost:3000`/`http://127.0.0.1:3000`. Flutter's web dev server otherwise binds a random
-port, which the browser then blocks via CORS. Always run web with `--web-port=3000`, or add the
-port you need to the backend's `.env`.
+The backend must be running (`docker compose up -d` in `poulse_kora_backend`). **Web CORS**: the
+backend's `BACKEND_CORS_ORIGINS` whitelists only `localhost:3000`/`127.0.0.1:3000`; Flutter's web
+dev server otherwise binds a random port the browser then blocks. `env.json` is gitignored
+(per-machine IP).
 
 ## Deploying (Railway)
 
-`Dockerfile` (repo root) builds the web target with Flutter, then serves the static output via
-nginx (`nginx.conf.template` + `docker-entrypoint.sh`, which substitutes Railway's injected `$PORT`
-into the nginx config at container start — no Flutter/Nixpacks buildpack exists on Railway, hence
-the explicit Dockerfile). `railway.json` wires it up as the Dockerfile builder with a `/` healthcheck.
-
-`API_BASE_URL` and `BETA_DISCLAIMER_ENABLED` (see `core/config/app_config.dart`) are **build-time**,
-not runtime — they're compiled into the JS bundle via `--dart-define`. They must exist as Railway
-**service Variables** on this service; the Dockerfile declares matching `ARG`s in the build stage,
-and Railway auto-populates any `ARG` from a same-named Variable with no extra config needed.
-
-Because `API_BASE_URL` has to be known at build time, there's a one-time bootstrapping order when
-standing up both services fresh: deploy the backend first, note its Railway domain, set that as this
-service's `API_BASE_URL`, deploy this service, then go back and add *this* service's domain to the
-backend's `BACKEND_CORS_ORIGINS` and redeploy the backend once more. Full details in the backend
-repo's `RAILWAY.md`.
+`Dockerfile` builds the web target and serves it via nginx (`nginx.conf.template` +
+`docker-entrypoint.sh`, which substitutes Railway's `$PORT` at container start); `railway.json`
+wires it as the Dockerfile builder with a `/` healthcheck. `API_BASE_URL`,
+`BETA_DISCLAIMER_ENABLED` and `GOOGLE_SERVER_CLIENT_ID` (`core/config/app_config.dart`) are
+**build-time** `--dart-define`s, declared as `ARG`s in the Dockerfile and auto-filled from
+same-named Railway service Variables. Bootstrapping order for a fresh pair of services: deploy
+the backend, put its domain in this service's `API_BASE_URL`, deploy this, then add this domain to
+the backend's `BACKEND_CORS_ORIGINS` and redeploy it. Details in the backend's `RAILWAY.md`.
 
 ## Architecture
 
-Feature-first layout under `lib/src/`, each feature split into `data/` (repositories talking to
-the backend), `application/` (Riverpod providers/state), `presentation/` (widgets/screens):
+Feature-first under `lib/src/`: each feature has `data/` (repositories), `application/` (Riverpod
+providers/state), `presentation/` (widgets/screens). Plain Riverpod (`Provider`, `FutureProvider`,
+`ConsumerWidget`), no codegen; for mutable state prefer `NotifierProvider`/`AsyncNotifierProvider`.
+`features/channels/` or `features/history/` are the shape to copy for a new feature.
 
-- `core/config/app_config.dart` — resolves the backend base URL. Reads `API_BASE_URL` from
-  `--dart-define` first; otherwise defaults per platform (`10.0.2.2:8000` on Android emulator,
-  since it can't reach the host via `localhost`; `localhost:8000` elsewhere). API path prefix is
-  `/api/v1`, matching the backend's `settings.API_PATH`.
-- `core/network/dio_client.dart` — single `Dio` instance per app (via `dioClientProvider`), with
-  an interceptor that reads the JWT from `TokenStorage` and sets `Authorization: Bearer <token>`
-  on every outgoing request. Any new repository should take this `Dio` instance rather than
-  creating its own.
-- `core/storage/token_storage.dart` — `flutter_secure_storage` wrapper, currently just the access
-  token (`fastapi-users` issues a single JWT bearer token, no refresh token flow). It **caches the
-  token in memory** after the first read and dedupes concurrent cold reads, because the interceptor
-  attaches it to every request and each keystore read is a native round trip plus a decrypt. Keep
-  `saveAccessToken`/`clear` as the only writers, so the cache can't go stale.
-- `core/providers.dart` — top-level Riverpod providers (`tokenStorageProvider`, `dioClientProvider`)
-  that feature-level providers build on top of.
-- `routing/app_router.dart` — `go_router` config as a Riverpod provider (`routerProvider`), so
-  routes can later depend on auth state (e.g. redirect logic reading `tokenStorageProvider`).
-- **Media loading** (`core/media/presentation/network_media_image.dart`) — every image in the app,
-  avatars and post photos alike, is a plain `Image.network` on the URL the backend returned.
-  That is only true because media moved out of Postgres and into an S3-compatible bucket: the
-  backend now returns **presigned URLs** whose query-string signature *is* the authorization
-  (see `app/core/storage.py` in the backend repo). Three rules follow, and all three are the
-  opposite of what this app used to do:
-  - **Never attach the bearer token, and never rewrite the URL.** S3 rejects a request carrying
-    both a query signature and an `Authorization` header, and the signature covers the path and
-    the query, so touching either 403s every image. This replaced an `AuthenticatedByteCache`
-    that fetched bytes through Dio and rendered `Image.memory`, plus its API-relative path
-    munging — both existed purely because the old routes required the token.
-    `test/network_media_image_test.dart` pins it.
-  - **No hand-written cache.** Flutter's `ImageCache` (and the browser's HTTP cache on web) does
-    it, and does it better. It works here only because the backend keeps a presigned URL
-    byte-identical for ~15 min instead of re-signing per request, and stamps every object
-    `Cache-Control: private, max-age=86400, immutable`. The one thing Flutter cannot do by
-    itself is re-resolve a *settled* failure, which is what `mediaReloadProvider` is for:
-    `app.dart` calls `reload()` on `backOnline` (an image that failed while offline would
-    otherwise stay a fallback all session) and at every session boundary (the image cache is
-    keyed by URL and would happily paint the previous account's faces).
-  - **A replaced profile picture needs no eviction.** Every upload writes a new object key, so
-    the URL genuinely changes and the widget reloads because its inputs did. The old URL was
-    derived from the user id and identical before and after, which is why `ProfileNotifier` used
-    to have to evict explicitly and the cache had to be a `ChangeNotifier` to reach avatars
-    already on screen. All of that is gone.
-  On web this is also what dodges CORS: a cross-origin byte fetch needs CORS on the bucket, and
-  a Railway Bucket offers no way to set one (its credentials have no `s3:PutBucketCors`). So
-  images pass `webHtmlElementStrategy: fallback` — normal byte-fetching, dropping to an `<img>`
-  element only if the fetch is blocked — and video needs nothing, since `video_player_web`
-  renders into a bare `<video>` element, which is not CORS-gated.
-- `core/avatars/` — profile pictures. `UserAvatar` renders picture-or-fallback over
-  `NetworkMediaImage` and `MonogramAvatar` is the coloured initial;
-  `features/feed/presentation/post_author_avatar.dart` wraps both with the anonymity rule for the
-  three places a post is drawn. There is deliberately no spinner: an avatar is decoration around a
-  name that already reads fine, and swapping a spinner for an image makes every feed card jitter
-  on scroll.
-  Setting a picture lives on the profile header's own avatar (`EditableProfileAvatar`), not in
-  Settings — the profile view already shows the picture, so a settings row would be a second,
-  less obvious answer to "where do I change this?". Picking is followed by `CropAvatarScreen`,
-  a thin wrapper over the shared `core/media/presentation/crop_media_screen.dart`, which
-  **always re-encodes to PNG** (512px square, here). That is what makes the upload's declared
-  content type true by construction: `image_picker` re-encodes differently per platform (its web
-  resizer goes through a canvas and emits PNG, Android emits JPEG, and neither renames the file),
-  so anything derived from the picker's own output would have been a guess. Format validation is
-  likewise Flutter's decoder rejecting the bytes (`decodeImageBytes`), rather than an extension or
-  magic-number check. The crop geometry is the one part that can be subtly wrong, so it lives in
-  `core/media/presentation/crop_geometry.dart` as pure functions (`cropSourceRect`, `fitAspectRatio`,
-  `outputSizeFor`) tested on their own rather than only through the widget.
-- `core/media/` — **post attachments**. Three rules, all downstream of one decision: every
-  published attachment is one of **two fixed shapes**, 4:3 wide or 4:5 upright
-  (`post_media_format.dart`, mirroring the backend's `POST_MEDIA_*_RATIO` — kept in sync by hand,
-  and a drift surfaces as a `post_media_invalid_aspect_ratio` rejection rather than silently).
-  A single-column feed reads far better for it, and a media block can size itself from
-  `PostMedia.width/height` before a byte has arrived instead of reflowing as each image decodes.
-  - **A photo is cropped here; a video is not.** The composer pushes `CropMediaScreen` per picked
-    photo — mandatory, not offered, since the backend rejects any other ratio, so a "skip" would
-    only build an upload that fails later; backing out drops *that* photo and moves on. A Flutter
-    client has no video encoder, so a clip instead gets `showVideoOrientationSheet` and the server
-    center-crops it inside the transcode it already runs (`ComposerBlockInput.orientation`, sent
-    for videos only).
-  - **A video is never a black rectangle.** The backend stores a poster frame as its own object
-    beside every clip; `PostMedia.previewUrl` resolves to it, and `PostMediaPreview` renders it —
-    so a feed card and an unplayed inline block both show a real frame, at the cost of one small
-    JPEG rather than any of the clip's bytes. Both `posterUrl` and `width`/`height` are nullable
-    (old rows, and deliberately non-fatal poster extraction), and **null means "unknown shape,
-    letterbox it"** — never "assume a default", which would crop an old post's photo in half.
-  - **The player is pointed straight at the media URL, on every platform.** That deleted a
-    web-only path worth remembering: while media came from an authenticated backend route, a
-    browser `<video>` could not fetch it (an element cannot carry an `Authorization` header), so
-    web downloaded the whole clip through Dio and handed the player a `blob:` URL — up to
-    `POST_VIDEO_MAX_BYTES` in memory before the first frame. A presigned URL needs no header, so
-    the browser now streams it with range requests like every other platform already did.
-  - **The player chrome is ours, not chewie's** (`core/media/presentation/video_player_surface.dart`,
-    mounted by `InlineMediaBlock` once the poster is tapped). chewie's material controls are built
-    for long-form video — two ten-second seek buttons flanking play, an options bar, and a
-    `black54` sheet over the whole frame — and all of it is driven by chewie's `PlayerNotifier`,
-    so it sat on top of a clip of at most a minute whether it was playing or paused. The rule here
-    is that **playing means nothing on screen**: the chrome auto-hides ~2.2s after the last touch,
-    a tap brings it back, and a *paused* clip keeps it (hiding it would leave a still frame with no
-    way back in). Two further consequences of the same rule, and neither should be undone: **every
-    control sits in one row along the bottom edge**, play/pause included, so nothing is ever drawn
-    on the picture (a centred play glyph belongs on the *poster*, where it is the only affordance
-    there is, not over moving video), and **the clip loops** rather than ending on a frozen frame
-    under a replay button — pausing is how it stops. A bottom gradient rather than a full-surface
-    scrim, for the same reason the poster frame exists: a clip is never a dark rectangle, and a
-    scrim would put that back. `wakelock_plus` is a direct dependency because chewie held the
-    screen awake and a 60-second clip still needs that.
-  - **Exactly one clip plays at a time, and only while it is on screen.** `InlineMediaBlock`
-    claims `activeVideoProvider` (`core/media/application/active_video.dart`) whenever its player
-    starts — from the controller, not from the button, so every entry point counts — and pauses
-    itself the moment someone else claims it; it also pauses when less than a quarter of the block
-    is left in the viewport (via the enclosing `ScrollPosition`) and when the app is backgrounded.
-    This is not tidiness: leaving a scrolled-past clip running is what produced both playback bugs
-    a post with several videos used to have — a clip heard but not seen (its audio under the one
-    being watched), and a clip stuck on a spinner forever (two streams competing for Android's
-    decoders). The blocks *pause* rather than tear the controller down, so scrolling back
-    resumes where you left off instead of returning to the poster with the download to redo.
-  - A feed card is a *preview*, so `PostMediaThumbnail` clamps to `minAspectRatio` (square): a 4:5
-    photo at true shape is ~440dp tall on a phone and pushes the drop/forward buttons off screen.
-    The full shape is what the opened post shows.
-- `features/feedback/` — the feedback / bug-report form (`/feedback`), reachable from the profile
-  **and from the login and register screens**. That last part is the constraint the feature is
-  built around, and it shows up in three places that should not be undone:
-  - **The route sits outside every redirect gate.** `app_router.dart`'s `redirect` early-returns
-    for `/feedback` before the signed-in / verified / onboarded chain, because the reports most
-    worth receiving come from exactly the people those gates have stopped. The backend accepts the
-    endpoint unauthenticated for the same reason.
-  - **Signed out, anonymity is shown locked on rather than hidden**, and "you can contact me" is
-    not offered at all — there is no verified address to reply to. Choosing anonymity while signed
-    in really does cut the link (the backend stores no user id for one), so the contact option
-    disappears with it. The screen mirrors the backend's rules; it does not enforce them.
-  - **Attachments skip the cropper.** This is the one upload path with no `CropMediaScreen` in
-    front of it, because a screenshot has no shape to choose — so its content type comes from
-    `core/media/image_content_type.dart` sniffing the bytes instead of from a re-encode, and the
-    picker is deliberately given no `maxWidth`/`maxHeight` (those make it re-encode, turning a PNG
-    screenshot into a JPEG with ringing around the very text being reported). An unsupported file
-    is caught locally with a message rather than as a 400 after the upload.
-  Consent is a hard precondition, reported as a line above the button rather than by disabling it
-  — same rule as the composer's `_PublishBlocker`, and for the same reason. The screen depends on
-  `Navigator`, not `GoRouter`, so it mounts anywhere.
-- `features/onboarding/` + `features/tutorial/` — how a new account is introduced to the app.
-  Two features, because they answer two different questions and only one of them is mandatory.
-  `OnboardingScreen` is the post-registration flow the router forces
-  (`intro → tutorial offer → [tutorial] → [username] → channels → disclaimer`, the last three
-  conditional); the deck in `features/tutorial/` is the long explanation, and it is *asked for*
-  rather than imposed. Five things are load-bearing:
-  - **The tutorial is offered as a question with two real answers.** `TutorialOfferStep` puts
-    "Show me the idea behind Relay" and "I'll explore it on my own" on screen as two buttons of
-    the same weight, rather than hanging a "learn more" link off the last intro slide. A link is
-    an aside that gets skimmed past, and the people who skim it are the ones who later meet the
-    token economy as a surprise. Making it a step means declining is a decision. That is also why
-    the "you can start this anytime from Settings" hint sits on *that* screen and not only at the
-    end of the deck: the person who most needs it is the one who just said no.
-  - **The deck is a widget first and a route second.** Onboarding embeds `TutorialDeck`;
-    `/tutorial` (Settings → How Relay works) wraps the same widget in `TutorialScreen`. It cannot
-    be a route in both places: while `onboardingCompleted` is false, `app_router.dart`'s gate
-    chain bounces every location that isn't `/onboarding` straight back to it, so a route pushed
-    from inside the flow would not survive the push. `onSkip` is null on the Settings route
-    because the app bar's back button is already the way out.
-  - **The five chapters are a chain of consequences, not a feature list.** A post travels by hand
-    (1), so no ranking model is involved (2), so the decision is yours (3), which is worth
-    something and is therefore priced (4), and the result is a feed that is finite (5). Chapter 5
-    is there because a feed that runs dry is the most confusing thing about Relay for anyone
-    arriving from an infinite scroll: it looks broken, and it isn't. Chapters are the place for
-    depth; the intro slides stay at three sentences because everyone sees them.
-  - **The animations are hand-drawn `CustomPainter`s** (`tutorial_illustrations.dart`), with no
-    Lottie/Rive and no asset files. They have to read in both themes, and an exported animation
-    bakes its colours in, while these take every colour from `ColorScheme` at paint time. They are
-    also diagrams of a mechanic rather than artwork, so the part most likely to change is the part
-    a vector asset would freeze. Two rules every one of them follows, both in `_Loop`: it animates
-    **only while its page is the visible one** (a `PageView` builds its neighbours, so otherwise
-    three controllers tick for one drawing), and it honours **reduced motion** by pinning a chosen
-    representative frame rather than frame 0, which is generally an empty stage. Captions are
-    widgets over the canvas, never text painted into it, so they stay translated and scale with
-    the reader's text size.
-  - **The channel list is fetched when the flow starts, not when the channel step mounts**
-    (`OnboardingScreen.initState`). Nothing else in onboarding watches
-    `channelsNotifierProvider`, so the step used to be what started the request, and the step is
-    minutes downstream of registration for anyone who takes the tutorial. That put the one
-    request onboarding cannot continue without at the end of a long idle gap, on an account too
-    new to have a cached list: a single dropped connection ended the flow at a Retry button.
-    `ChannelSelectionStep` holds the other half, and it is narrow on purpose. It re-asks **only**
-    when the provider is already sitting on an error when the step mounts, because that error is
-    minutes old and was never on screen. A list that loaded is left alone, and a second failure
-    is shown, since that one is current. Pinned by `test/onboarding_channels_test.dart`.
-  Consequence for tests: an on-screen illustration repeats forever, and so does the intro
-  slides' icon badge, so **`pumpAndSettle` on anything in this flow never returns**. Drive it
-  with `pump(duration)`. `test/tutorial_test.dart` says so at the top and is the reference.
-- `features/channels/` — the channel list, and the two widgets any channel row is built from.
-  `ChannelAvatar` is the channel's badge: a **glyph for the topic**, in the channel's own colour
-  (`channelIcon`, falling back to `#` for a channel the map has never heard of — channels are
-  backend rows, so that case is real). It used to be the name's first initial on a coloured disc,
-  which is the convention for *people*: applied to a topic the list read as an address book, and
-  "T" said less than "#" would have. Rows are **cards**, same margin and radius as a `PostCard`,
-  rather than the undivided `ListTile`s they were — at three lines each those ran together into one
-  column of text, and a channel is a thing you join rather than a row in a settings table. Both the
-  badge and `ChannelPriceChip` are shared with the composer's `showChannelPickerSheet`, which is
-  the other place a channel is drawn; two looks for one thing is one to keep in step forever.
-- `features/home/` — reference implementation of the data → application → presentation pattern:
-  calls the backend's `/hello-world` endpoint as an end-to-end connectivity check. Copy this shape
-  for new features rather than inventing a new structure.
+Core plumbing:
+- `core/config/app_config.dart` — base URL: `API_BASE_URL` dart-define, else `10.0.2.2:8000` on
+  the Android emulator (can't reach the host as `localhost`), `localhost:8000` elsewhere. Prefix
+  `/api/v1` matches the backend's `API_PATH`.
+- `core/network/dio_client.dart` — one `Dio` (`dioClientProvider`); its interceptor sets
+  `Authorization: Bearer` from `TokenStorage` and `Accept-Language` from the active locale. New
+  repositories take this instance.
+- `core/storage/token_storage.dart` — `flutter_secure_storage` wrapper for the single access
+  token (no refresh flow). Caches in memory and dedupes concurrent cold reads, since every request
+  reads it and a keystore read is a native round trip. `saveAccessToken`/`clear` are the only
+  writers, so the cache can't go stale.
+- `core/providers.dart` (top-level providers), `routing/app_router.dart` (`routerProvider`,
+  go_router, so routes can depend on auth state).
+
+### Media loading
+
+Every image is a plain `Image.network` on the **presigned URL** the backend returned
+(`core/media/presentation/network_media_image.dart`); the query-string signature *is* the
+authorization. Three rules, each the opposite of what this app once did:
+- **Never attach the bearer token, never rewrite the URL.** S3 rejects a request carrying both a
+  query signature and an `Authorization` header, and the signature covers path and query.
+  `test/network_media_image_test.dart` pins it.
+- **No hand-written cache.** Flutter's `ImageCache` (and the browser's) does it, viable because
+  the backend keeps a URL byte-identical for ~15 min and stamps objects `Cache-Control: private,
+  max-age=86400, immutable`. What Flutter can't do is re-resolve a *settled* failure — that is
+  `mediaReloadProvider`: `app.dart` calls `reload()` on `backOnline` and at every session boundary
+  (the cache is keyed by URL and would paint the previous account's faces).
+- **A replaced profile picture needs no eviction**: every upload writes a new key, so the URL
+  changes and the widget reloads on its own.
+On web, images pass `webHtmlElementStrategy: fallback` (byte fetch, dropping to an `<img>` only
+when CORS blocks it — a Railway Bucket allows no CORS config); video needs nothing, since
+`video_player_web` renders a bare `<video>`, which isn't CORS-gated. Debug builds log
+`media.load_failed` with host and path only — never the query string, which is the read capability.
+
+**The bucket is a second host and fails on its own.** Media comes from `S3_PUBLIC_ENDPOINT_URL`
+(MinIO on port **9000** locally, a Railway Bucket in prod), not the API. "The app ignored my
+upload" is usually the bucket being unreachable from the device: the `PUT` succeeds, `GET
+/users/me` returns the picture, and the monogram still shows — because `UserAvatar` renders
+`fallback` for loading, no-picture and failed-fetch alike. Open
+`http://<lan-ip>:9000/minio/health/live` in the phone's browser before touching Dart. The host is
+part of what is signed, so "point it at localhost" is not a fix — that is why the backend has
+`S3_PUBLIC_ENDPOINT_URL` beside `AWS_ENDPOINT_URL`.
+
+### Avatars
+
+`core/avatars/`: `UserAvatar` (picture-or-fallback over `NetworkMediaImage`) and `MonogramAvatar`;
+`features/feed/presentation/post_author_avatar.dart` applies the anonymity rule for every place a
+post is drawn. No spinner — an avatar is decoration beside a name, and swapping spinner for image
+jitters every card. Setting one lives on the profile header's own avatar (`EditableProfileAvatar`),
+not in Settings. Picking goes through `CropAvatarScreen`, a wrapper over the shared
+`core/media/presentation/crop_media_screen.dart`, which **always re-encodes to PNG** (512px square)
+— that is what makes the declared content type true: `image_picker` emits PNG on web and JPEG on
+Android and renames nothing. Format validation is Flutter's decoder (`decodeImageBytes`), not an
+extension check. Crop geometry is pure functions in `crop_geometry.dart`, tested directly.
+
+### Post attachments
+
+Every attachment is one of **two fixed shapes**, 4:3 or 4:5 (`post_media_format.dart`, mirroring
+the backend's `POST_MEDIA_*_RATIO` by hand — drift surfaces as `post_media_invalid_aspect_ratio`).
+A media block can size itself from `PostMedia.width/height` before a byte arrives.
+- **A photo is cropped here; a video is not.** The composer pushes `CropMediaScreen` per photo —
+  mandatory, since the backend rejects any other ratio; backing out drops that photo. Flutter has
+  no video encoder, so a clip gets `showVideoOrientationSheet` and the server center-crops inside
+  its transcode (`ComposerBlockInput.orientation`, videos only).
+- **A video is never a black rectangle**: `PostMedia.previewUrl` resolves to the backend's poster
+  frame and `PostMediaPreview` renders it. `posterUrl` and `width`/`height` are nullable, and
+  **null means "unknown shape, letterbox it"** — never a default, which would crop an old photo.
+- **The player is pointed straight at the media URL on every platform**; a presigned URL needs no
+  header, so the browser streams with range requests like everyone else.
+- **The player chrome is ours** (`video_player_surface.dart`, mounted by `InlineMediaBlock` once
+  the poster is tapped; chewie was removed, `wakelock_plus` stays a direct dependency). Rule:
+  **playing means nothing on screen** — chrome auto-hides ~2.2s after the last touch, a tap brings
+  it back, a paused clip keeps it. Consequences not to undo: every control sits in one bottom row
+  so nothing is drawn over the picture (a centred play glyph belongs on the *poster* only); the
+  clip loops rather than ending under a replay button; a bottom gradient, not a full scrim.
+- **Exactly one clip plays at a time, and only on screen.** `InlineMediaBlock` claims
+  `activeVideoProvider` (`core/media/application/active_video.dart`) from the controller — so every
+  entry point counts — and pauses when someone else claims it, when under a quarter of the block
+  is visible, or when the app is backgrounded. This is what fixed audio playing under another clip
+  and clips stuck on a spinner (two streams competing for Android's decoders). Blocks *pause*
+  rather than dispose, so scrolling back resumes.
+- A feed card is a preview: `PostMediaThumbnail` clamps to square (a 4:5 photo at true shape
+  pushes the drop/forward buttons off a phone screen).
+
+### Feedback (`features/feedback/`)
+
+The form (`/feedback`) is reachable from the login and register screens as well as the profile,
+and that constraint shapes three things:
+- **The route sits outside every redirect gate** — `app_router.dart`'s `redirect` early-returns for
+  `/feedback` before the signed-in/verified/onboarded chain. The backend accepts it unauthenticated.
+- **Signed out, anonymity is shown locked on**, and "you can contact me" isn't offered. Signed in,
+  choosing anonymity hides the contact option (the backend stores no user id for one). The screen
+  mirrors the backend's rules; it doesn't enforce them.
+- **Attachments skip the cropper** (a screenshot has no shape to choose), so content type comes
+  from `core/media/image_content_type.dart` sniffing bytes, and the picker gets no
+  `maxWidth`/`maxHeight` (those re-encode a PNG screenshot into JPEG with ringing on the text being
+  reported). Unsupported files are caught locally.
+Consent is a line above the button, not a disabled button — same rule as the composer's
+`_PublishBlocker`. The screen uses `Navigator`, not `GoRouter`, so it mounts anywhere.
+
+### Onboarding and tutorial
+
+`OnboardingScreen` (`features/onboarding/`) is the router-forced post-registration flow
+(`intro → tutorial offer → [tutorial] → [username] → channels → disclaimer`); the deck in
+`features/tutorial/` is the long explanation, offered rather than imposed.
+- **The offer is a question with two equal buttons** (`TutorialOfferStep`), not a "learn more"
+  link — declining must be a decision, and the "start it anytime from Settings" hint sits on that
+  screen because the person who most needs it just said no.
+- **The deck is a widget first, a route second.** Onboarding embeds `TutorialDeck`; `/tutorial`
+  (Settings → How Relay works) wraps it in `TutorialScreen`. It can't be a route inside the flow:
+  while `onboardingCompleted` is false the router bounces every other location back.
+- **The five chapters are a chain of consequences** — travels by hand (1) → no ranking model (2)
+  → the decision is yours (3) → so it's priced (4) → so the feed is finite (5). Chapter 5 exists
+  because a feed that runs dry looks broken to anyone from an infinite scroll. Intro slides stay at
+  three sentences.
+- **Illustrations are hand-drawn `CustomPainter`s** (`tutorial_illustrations.dart`), no
+  Lottie/Rive: they take colours from `ColorScheme` at paint time and are diagrams of a mechanic.
+  `_Loop` animates only while its page is visible (a `PageView` builds neighbours) and honours
+  reduced motion by pinning a representative frame, not frame 0. Captions are widgets over the
+  canvas, never painted text.
+- **The channel list is fetched in `OnboardingScreen.initState`**, not when the channel step
+  mounts minutes later — one dropped connection there used to end the flow at a Retry button.
+  `ChannelSelectionStep` re-asks only when the provider already holds an error when it mounts
+  (`test/onboarding_channels_test.dart`).
+Tests: illustrations and the intro icon badge repeat forever, so **`pumpAndSettle` never returns
+in this flow** — drive with `pump(duration)`. `test/tutorial_test.dart` is the reference.
+
+### Channels
+
+`features/channels/`: `ChannelAvatar` is a **topic glyph** in the channel's colour (`channelIcon`,
+falling back to `#` for an unknown channel — channels are backend rows, so that case is real), not
+a name initial (that convention is for people). Rows are cards with the same margin/radius as
+`PostCard`. Both the badge and `ChannelPriceChip` are shared with the composer's
+`showChannelPickerSheet` — one look for one thing.
 
 ### Reading a post
 
-Opening a post is a **full-screen route**, not a bottom sheet: `slideUpRoute`
-(`core/presentation/slide_up_route.dart`) keeps the slide-from-bottom motion a sheet had, because
-that part was right, and drops the size cap, because a post is mostly media and a sheet kept a
-barrier and rounded corners over the top of the picture however far it was dragged.
-`PostDetailScaffold` is the shared chrome for both the feed's reviewable post and history's
-read-only one, which used to be near-identical copies. Two things follow from having the whole
-screen and should not be undone: media is **full-bleed** (text keeps its reading margin —
-`PostBlocksView`'s `fullBleed`), and the drop/forward footer is **pinned** rather than appended
-after the article, so acting on a long post no longer means scrolling to the end of something you
-had already decided about.
+Opening a post is a full-screen `slideUpRoute` (`core/presentation/slide_up_route.dart`), not a
+bottom sheet — a post is mostly media and a sheet kept a barrier and rounded corners over it.
+`PostDetailScaffold` is the shared chrome for the feed's reviewable post and history's read-only
+one. Media is **full-bleed** (`PostBlocksView.fullBleed`; text keeps its margin) and the
+drop/forward footer is **pinned**, so a long post needn't be scrolled to act on.
 
-### The forwarding score
+**The forwarding score** (`forward_score_badge.dart`, sequenced by `PostCard._review` and the
+detail page's `_review`) shows after a verdict — and only after — as a badge that pops in, holds,
+and leaves with the card. The server makes "only after" true: the count arrives on
+`PostReviewResult` and is absent from `PostRead`, so `ForwardScoreBadge` takes a number from a
+review result and has no way to read one off a `Post`. Don't add one. Loudness is logarithmic
+(`heatFor`: 0 at 1 forward, 1 at 500), driving colour, size and glow together. Order is reveal,
+hold, exit: `FeedNotifier.reviewPost` doesn't touch the list; the caller commits removal with
+`applyReviewResult` once its animation ends. A drop discloses it on the same terms. The badge is a
+glyph and numeral; the localized string is the screen-reader announcement
+(`postForwardScoreAnnouncement`). `test/forward_score_test.dart`.
 
-After a verdict — and only after — the card shows how many forwards the post has, as a badge that
-pops in, holds a beat, and then leaves with the card (`features/feed/presentation/`:
-`forward_score_badge.dart`, sequenced by `PostCard._review` and the detail page's `_review`).
-Four things are load-bearing:
+**Preview** (`features/create_post/presentation/post_preview.dart`) opens the same
+`PostDetailScaffold` via the same `slideUpRoute` — the opened post, not the card, since that is
+where forwarding is decided. `buildPreviewPost` assembles a real `Post` locally with placeholder
+ids, running the same drop-empty-paragraphs walk as `_submit`. Anonymity previews *as* anonymity;
+`subscription_kind` can't be anticipated (the backend snapshots it), so a supporter's post previews
+as ordinary. A picked attachment renders from `PostMedia.local` bytes — callers branch on
+`isLocal`; a photo draws for real, a clip shows a placeholder at its published shape. The footer is
+shown disabled with a line saying it's a preview. No channel is required; an empty post raises
+`_PublishBlocker.emptyPost` instead. `test/post_preview_test.dart`.
 
-- **The server is what makes "only after" true.** The count arrives on `PostReviewResult` and is
-  deliberately absent from `PostRead`, so no feed or detail response carries it (see the backend's
-  CLAUDE.md). Hiding it client-side would leave the raw API as the way around it, and a reader who
-  can see that everyone else forwarded a post is voting on the crowd rather than on the post. So
-  `ForwardScoreBadge` takes a number from a review result and has no way to read one off a `Post`
-  — there is nothing there to read. Don't "helpfully" add one.
-- **Loudness is logarithmic** (`ForwardScoreBadge.heatFor`, 0 at 1 forward, 1 at 500). A forward
-  re-fans the post out to more readers, so counts compound; on a linear ramp nearly every real post
-  would look identical and only freak ones would register. The ramp drives colour (grey → accent →
-  amber), size and glow together, so the number reads before it is read.
-- **The order is reveal, hold, exit** — the reveal has to land while the card the score belongs to
-  is still there. `FeedNotifier.reviewPost` deliberately doesn't touch the list; the caller commits
-  the removal with `applyReviewResult` once its own animation is done.
-- **A drop discloses it on the same terms.** The number describes the post, not a reward for
-  agreeing with the crowd.
+### Trust checks
 
-The badge shows an arrow and a numeral, nothing to translate; the localized string is the
-screen-reader announcement (`postForwardScoreAnnouncement`), which is what says *what* was counted.
-`test/forward_score_test.dart`.
-
-The composer's **Preview** button opens that same screen
-(`features/create_post/presentation/post_preview.dart`): same `PostDetailScaffold`, same
-`slideUpRoute`, so there is no second post layout to keep in step with the real one. Four things
-make it work and are worth keeping:
-- **It previews the *opened* post, not the feed card.** That is the view carrying every block the
-  author wrote, and the one where forwarding is actually decided. Reusing `PostCard` instead would
-  have meant a non-interactive fork of a widget whose buttons hit the network.
-- **The post is assembled locally** (`buildPreviewPost`) into a real `Post` with placeholder ids
-  that never leave the device — publishing still goes through `_submit`'s `ComposerBlockInput`
-  list. It runs the same "drop empty paragraphs, keep the order" walk, so what is previewed is what
-  would be published. Anonymity is previewed *as anonymity* (no name, no picture, the neutral
-  glyph), which is the single thing here most worth being sure about before relaying;
-  `subscription_kind` is the one thing it cannot anticipate — the backend snapshots it at creation
-  — so a supporter's post previews as an ordinary one, which under-promises rather than over-.
-- **A picked attachment renders from its bytes** — `PostMedia.local` carries them and `isLocal` is
-  what every caller must branch on, since there is no URL and no poster yet. A **photo** draws for
-  real (the bytes *are* the cropper's output, so it is exactly what publishes); a **clip** shows a
-  placeholder at the shape it will publish in, because the crop, the transcode and the poster frame
-  are all still the server's to do and playing the raw file would preview a shape the reader never
-  sees.
-- **The drop/forward footer is shown, disabled.** It takes the bottom of the screen away from the
-  article, so omitting it would preview more room than the post gets; a line above it says the
-  screen is a preview, which is otherwise only discoverable by tapping something that does nothing.
-No channel is required to preview — that choice is made at publish time and the meta line simply
-drops the channel while it is open — but an empty post raises the composer's existing
-`_PublishBlocker.emptyPost` line rather than opening a blank screen. Covered by
-`test/post_preview_test.dart`.
-
-### Trust checks, and the score they feed
-
-A **trust check** is a post that measures the reader: its text asks, in its own words, to be
-forwarded or dropped, and whether they do as it asks is what their Reviewer Trust is built from
-(the backend mints them — see its CLAUDE.md, `app/core/probes.py`). Trust decides how far the
-reader's *forwards* travel, so a careless reader's relayed post reaches fewer people and a careful
-one's reaches more. It never touches posts they write themselves.
-
-Three client-side rules, and each of them is a test in `test/probe_post_test.dart`:
-
-- **The check is marked, up front, before it is answered** (`probe_marker.dart`, rendered by
-  `PostCard` and by `PostDetailScaffold` so every way of opening a post marks one identically).
-  Measuring people without telling them is a trick played on the reader, and a marker that only
-  appeared *after* the verdict would be an explanation rather than a disclosure. But it has to stay
-  quiet, for a reason that is easy to get backwards: a marker loud enough to spot from across the
-  feed would let someone sort checks from posts without reading either, and the score would then be
-  measuring how well people spot badges. Hence one small outline glyph in the meta line, in the
-  meta line's own ink, with the words on a tooltip and a semantics label rather than on screen — a
-  long-press and a screen reader are both told plainly, and neither is a way to skim. Do not give
-  it a colour, a fill, or a visible word.
-- **A check never shows a forwarding score** (`probe_result_badge.dart` takes the badge's place in
-  the same beat, with the same pop-in and hold, because a check that resolved faster or slower
-  would be a tell in itself). It is minted for one reader and goes no further, so any score it
-  could show would be a true number that means nothing — the server zeroes the counts and sets
-  `is_probe` rather than leaving the client to remember.
-- **Getting one wrong is said plainly.** Without that, the only feedback a careless reader ever
-  gets is their forwards quietly reaching fewer people, with nothing to connect it to anything they
-  did. Telling them costs nothing, because answering correctly *is* reading.
-
-`showTrustExplainer` (`features/stats/presentation/trust_explainer.dart`) is where the score is
-explained, opened by the "i" on the profile's Trust tile and beside the stats card's heading. Same
-shape as `showEconomyExplainer` and for the same reasons: a full-screen `slideUpRoute` rather than
-a sheet, live figures first, then short points. Two things about its copy are deliberate. It
-**leads with the effect, not the number** — "each post you forward now reaches 4 people" is a
-sentence someone can act on, where "your trust is 78" is trivia. And it **names the inputs but not
-their weights**: a reader is owed an honest account of what is measuring them and what it costs
-them, but the score is only worth anything while the cheapest way to raise it is to read the posts,
-so it is an explanation, not a specification. The window length is quoted from
-`UserStats.trustWindowDays` rather than hardcoded, with a number-free wording for the moment before
-the stats land.
+A **trust check** is a probe post the backend mints per reader (`app/core/probes.py` there); its
+text asks to be forwarded or dropped, and compliance feeds the reader's Reviewer Trust, which
+scales how far their *forwards* travel. Three rules, each a test in `test/probe_post_test.dart`:
+- **The check is marked up front** (`probe_marker.dart`, rendered by `PostCard` and
+  `PostDetailScaffold`) — measuring people secretly is a trick — but *quietly*: one small outline
+  glyph in the meta line's own ink, words only on the tooltip and semantics label. A loud marker
+  would let people sort checks from posts without reading. No colour, fill or visible word.
+- **A check never shows a forwarding score**: `probe_result_badge.dart` takes the badge's place
+  in the same beat (a different tempo would be a tell). The server zeroes the counts and sets
+  `is_probe`.
+- **Getting one wrong is said plainly** — otherwise the only feedback is forwards quietly reaching
+  fewer people.
+`showTrustExplainer` (`features/stats/presentation/trust_explainer.dart`) — full-screen
+`slideUpRoute` like `showEconomyExplainer`, live figures first — **leads with the effect, not the
+number** ("each post you forward now reaches 4 people") and **names the inputs but not their
+weights**, so the cheapest way to raise the score stays reading. The window length comes from
+`UserStats.trustWindowDays`.
 
 ### Refreshing history
 
-`PostHistoryScreen` offers both an app-bar button and pull-to-refresh, and the button drives the
-`RefreshIndicator` through its `GlobalKey` rather than running its own fetch — one gesture, one
-spinner, one code path (it falls back to the provider only before a first page exists, when there
-is no indicator mounted). Two details are load-bearing and were exactly where the gesture used to
-die: the **empty state lives inside the indicator** (a bare `Center` cannot be pulled, and "you
-haven't posted anything yet" is precisely when someone pulls to check again), and the
-`ScrollablePositionedList` is given **`AlwaysScrollableScrollPhysics`** (default physics refuse the
-drag on a list that fits on screen, so the shortest histories were the un-refreshable ones). Both
-are covered by `test/history_refresh_test.dart`. A refresh invalidates the provider, which drops
-every loaded page and resets the pager's `hasMore` — deliberate, so an exhausted history can be
-paged again.
+`PostHistoryScreen` has an app-bar button and pull-to-refresh; the button drives the
+`RefreshIndicator` through its `GlobalKey` (one gesture, one spinner, one path; falls back to the
+provider only before a first page exists). Two details are where the gesture used to die: the
+**empty state lives inside the indicator**, and the `ScrollablePositionedList` gets
+**`AlwaysScrollableScrollPhysics`** (default physics refuse the drag on a list that fits).
+`test/history_refresh_test.dart`. A refresh invalidates the provider, dropping every page and
+resetting `hasMore`, so an exhausted history can be paged again.
 
 ### The token economy in the UI
 
-`EconomyHeaderStatus` takes an `EconomyBarVariant` and states **one fact** per screen, as a pill
-among the app bar's `actions`: a number, the clause that says what the number means, and a bar
-filling toward affording a post. The **feed** variant is the balance and how far it is from a post
-("12 · 2 more tokens to post"). The **composer** variant is `Cost 3`, what this post takes off that
-balance, and its clause is the **price-lock countdown** ("Cost 3 · held for 4:32").
-The number is *named* rather than signed — a leading `−` read as a balance change
-(the way a transaction is written) beside a feed pill stating a bare balance, so it
-invited being read as the new total — the composer is
-the screen you sit in for minutes while the quote's window runs out, so that is where the clock
-belongs, and it stays worded as the promise it is rather than shown as a bare `4:32`, which reads
-as a deadline to race. The clause gives way to "2 more needed" (and the pill to `errorContainer`)
-when the balance can't cover the post, since how long an unaffordable price holds is nobody's
-question; it falls back to "of your 12" for a cached quote with no expiry, and to a **spinner**
-once expired or stale — which is also when `_ComposerPill` re-fetches. A full bar means "you can
-post", which is why the feed never needs the price as a number.
+`EconomyHeaderStatus` takes an `EconomyBarVariant` and states **one fact** per screen as a pill in
+the app bar's `actions`: a number, a clause saying what it means, and a bar filling toward
+affording a post. **Feed**: balance and distance to a post ("12 · 2 more tokens to post", or
+"2–6 tokens per post" once affordable). **Composer**: `Cost 3` and the price-lock countdown
+("Cost 3 · held for 4:32") — named, not signed (a leading `−` read as a balance change); worded
+as a promise, not a bare deadline. The clause becomes "2 more needed" (pill in `errorContainer`)
+when unaffordable, "of your 12" for a cached quote with no expiry, and a **spinner** once expired
+— which is when `_ComposerPill` re-fetches (it keeps a timer; retries, since `refresh()` swallows
+connectivity failures). Details:
+- Number and clause are separated by a **middot** (two facts, not one sentence) and the rate leads
+  ("1 token per post", not "Posts cost 1 token" — a plural noun after a number reads as a count).
+- The spinner state centres the row: a baseline-aligned row inside `IntrinsicWidth` asks for a
+  dry baseline, and a painter throws. The sentence survives on the tooltip/semantics
+  (`economyPillCheckingPrice`).
+- The clause is **one line, width-capped** (`_labelCap`) — app bar actions get unbounded width.
+  Anything longer belongs in `showEconomyExplainer`, opened by tapping either pill: a full-screen
+  `slideUpRoute` (a sheet arrived already scrolled), live figures first. New economy copy goes
+  there. "You need 2 more tokens" is `_ShortOnTokensHint`, one line above the disabled Relay button,
+  only while it applies.
 
-Three details of that line are load-bearing. The number and the clause are separated by a **middot**,
-not a space: they are two different facts — on the feed pill a balance and a price — and run
-together they read as one sentence, which is exactly what "3 Posts cost 1 token" was. For the same
-reason the price clause leads with the rate rather than the noun ("1 token per post", not "Posts
-cost 1 token"): a plural noun immediately after a number reads as that number *of* them. And the
-checking state is a spinner rather than the words it used to be, because "checking price…" is a
-whole clause competing with a screen title for one toolbar, to say something a glyph says — the
-sentence survives on the tooltip and for a screen reader (`economyPillCheckingPrice`), which is now
-its only appearance. It is the one thing in the pill without a baseline, hence the row centring its
-children in that state: a baseline-aligned row inside an `IntrinsicWidth` asks every child for a
-*dry* baseline, and a painter throws rather than declining.
+**Posting is priced per route (channel, language), so nothing quotes one number until both are
+chosen.** `GET /posts/economy` gives base rate + deployment-wide `post_price_min/max`;
+`GET /channels` the range per channel (`Channel.postPriceMin/Max`); `GET /posts/price`
+(`ChannelsRepository.fetchPostPrice`, deliberately uncached) the exact charge. The composer walks
+that ladder. Three rules, pinned by `test/channel_pricing_test.dart` and
+`test/content_language_test.dart`:
+- **The composer states one price and gates Relay on that same price**: `_effectiveEconomy`
+  collapses the range onto `_effectivePrice`, because the affordability getters read the range's
+  low end — otherwise a cheap route elsewhere could vouch for this one.
+- **Everywhere else, affordability is judged against the cheapest end** (`priceRange.$1`,
+  `Economy.canAffordPost`), since the feed pill is about the balance, not one post.
+- **Null means unknown, never free**: `postPriceMin` is nullable and the chip renders nothing.
+`hasSinglePrice` renders "4" not "4–4" — common, since `FEED_PRICE_CHANNEL_BAND` (±50%) rounds
+away at the bottom of the scale. **On a quiet dev backend every route is `FEED_PRICE_MIN` and the
+range is invisible**; raise that floor to see a spread, don't change anything here.
+`_ExactPriceLine` ("Price based on your selection: 4") is keyed on `_routePrice` being non-null —
+a quote the backend actually returned — so it never sits over an interpolation.
 
-What changed is *how much room this gets*, not what it says: both variants used to be full-width
-bars stacked under the app bar, a permanent row of chrome on the two screens with the least space
-to spare. Two rules keep it that way. The clause is **one line, width-capped** against the screen
-(`_labelCap`) — app bar actions get unbounded width, so nothing else would stop a long translation
-from pushing the title off the left edge, and the full sentence is on the tooltip either way.
-Anything longer than that clause belongs in `showEconomyExplainer`, reachable by tapping
-either pill — that is the one place the model is spelled out, and it opens with the live figures
-precisely because no bar states them any more. New economy copy goes there rather than growing the
-pill. It is a **full-screen `slideUpRoute`**, the same route a post opens through, and not the
-bottom sheet it started as: a sheet is capped at a fraction of the screen while this is four
-paragraphs, a figures panel and a switch, so it arrived already scrolled — a clipped explanation
-that had to be dragged taller to finish. An explanation is the last thing that should be read
-through a letterbox.
+**Spending is animated over the editor** (`TokenSpendBadge`, `token_spend_badge.dart`): the
+balance you had, a red "−N" rising away, digits easing down. Deliberately the sibling of
+`ForwardScoreBadge` — same position, pop-in and beat (`kTokenSpendPlay`/`kTokenSpendHold` vs
+`kForwardScorePopIn`/`kForwardScoreHold`); only the hold differs, because these digits are still
+falling when the play ends. Labelled "Your tokens:" (`economySpendBadgeLabel`). It plays on the
+composer *before* `context.go('/feed')` and navigation awaits it — an animation in the feed's app
+bar corner was over before anyone found it and needed a cross-screen provider. Driven by the
+actual delta (`balanceBefore - result.tokenBalance`), so a superuser's free post raises no badge.
+**The controller is built in `initState`, never as a `late final` initializer** — lazy init would
+first construct it inside `dispose` and a `Ticker` on a deactivated element throws.
 
-Two things the bars used to do still need doing and now happen elsewhere. The composer's price
-quote expires, so `_ComposerPill` keeps a timer and re-fetches when it lapses (retrying, since
-`refresh()` swallows connectivity failures) — it just no longer renders a countdown. And "you
-need 2 more tokens", which was permanent chrome for everyone including the people it didn't
-concern, is now `_ShortOnTokensHint`: one line, only while it applies, directly above the disabled
-Relay button it explains.
-
-**Posting is priced per *route* — a (channel, language) pair — so nothing quotes one number until
-both halves are chosen.** `GET /posts/economy` returns a base rate plus the observed
-`post_price_min`/`post_price_max` across the deployment; `GET /channels` returns the same range
-scoped to each channel (`Channel.postPriceMin`/`postPriceMax`); and only `GET /posts/price`
-(`ChannelsRepository.fetchPostPrice`, deliberately uncached) gives the exact figure `POST /posts`
-will charge. The composer walks that ladder: the channel's cheapest route while only a channel is
-picked, the exact quote once a language is too.
-
-Three rules follow, and `test/channel_pricing_test.dart` + `test/content_language_test.dart` pin
-them:
-- **The composer states one price and gates Relay on that same price.** `_effectiveEconomy`
-  collapses the range onto whatever `_effectivePrice` resolved — not just `postPrice` — because the
-  affordability getters read the range's low end. Leaving a spread in place would let a cheap route
-  in another channel vouch for this one, and the pill would read "Cost 4" beside an enabled button
-  on a balance of 3.
-- **Affordability is judged against the cheapest end everywhere else.** `Economy.canAffordPost` and
-  the feed pill's "2 more tokens to post" both count to `priceRange.$1`, because that pill is about
-  the balance rather than any one post: counting to the dearest route would keep saying no to
-  someone who could already publish. The exact number always arrives before publishing, since a
-  language is required.
-- **Null means unknown, never free.** `postPriceMin` is nullable (a channel list cached before this
-  existed) and the price chip renders nothing rather than a `0`.
-
-Expect both ends to be the same number often — `FEED_PRICE_CHANNEL_BAND` is ±50%, which rounds away
-entirely at the bottom of the scale, so a base price of 1 can only ever be 1. `hasSinglePrice`
-exists so those cases render "4" and not "4–4". **On a quiet dev backend every route prices at
-`FEED_PRICE_MIN` and the range is invisible** — that is the formula working, and the way to see a
-spread locally is to raise that floor for a session (see the backend's `env-template`), not to
-change anything here.
-
-Where the range actually appears: the **feed pill's** sentence states what posts cost once the
-reader can afford one ("2–6 tokens per post"), replacing the old "Enough to post", which named no number
-and pointed at nothing — there is no longer a single price to go and look up. The **composer pill**
-opens on the range and narrows to the exact figure as the author picks a channel and then a
-language, which is also the clearest signal available that those two choices are what move it.
-Once both are picked, `_ExactPriceLine` says so in words ("Price based on your selection: 4") above
-the chips — the pill states the number but not that it has *become* exact, and a figure that
-quietly stops being a range looks identical to one that never was. It is keyed on `_routePrice`
-being non-null, i.e. a quote the backend actually returned for that pair, so it never appears over
-an interpolation or a stale channel figure.
-
-**Spending is animated, centred over the editor** (`TokenSpendBadge`,
-`features/create_post/presentation/token_spend_badge.dart`). Publishing drops the token count, and
-a number that is simply smaller afterwards says nothing about why — so the composer replays the
-subtraction: the balance you had, a red "−N" rising away, then the digits easing down to what is
-left. Four things are load-bearing:
-- **It is the sibling of `ForwardScoreBadge`, deliberately.** Same centred position over the
-  content, same pop-in, same beat before the screen moves on (`kTokenSpendPlay`/`kTokenSpendHold`
-  against `kForwardScorePopIn`/`kForwardScoreHold`). These are the only two moments in the app where
-  a number the user cares about moves as a *result* of something they just did — one earns, one
-  spends — and they should read as one kind of event. The hold is the one value that does *not*
-  match: the forward score's number is final the instant it appears, while this one is still
-  falling when the play ends, so the hold is the only part of the beat where the balance you are
-  left with can actually be read.
-- **The balance is labelled** ("Your tokens:", `economySpendBadgeLabel`). Unlabelled it is a bare
-  count in a pill on a screen whose other number is the post's price — which is what the "−N" above
-  it is.
-- **It plays on the composer, before `context.go('/feed')`, and the navigation genuinely awaits
-  it** — the same shape as `PostCard._review` holding its score before letting the card leave. The
-  first attempt put this on the feed's app-bar pill instead, which was wrong twice over: an
-  animation in the corner is over before an eye on the Relay button finds it, and it had to survive
-  a route change, which needed a cross-screen provider for something that is one screen's business.
-- **Driven by the actual delta** (`balanceBefore - result.tokenBalance`), not the quoted price, so a
-  superuser's free post yields 0 and raises no badge at all — "−0" would be a claim about a balance
-  that never moved.
-- **The controller is built in `initState`, never as a `late final` initializer.** That form is
-  lazy, so a composer that never published would first construct it inside `dispose` — a `Ticker`
-  against an already-deactivated element, which throws.
-
-**Channel prices are off by default and live behind one switch** (`showChannelPricesProvider`,
-`core/settings/price_display_settings.dart`; a labelled `Switch` in the channels app bar, and a
-`SwitchListTile` in the explainer, which is where someone staring at a price they can't afford
-will find it). It is a mode switch, not a preference: nobody picks a channel by
-price, so a permanent column of figures would turn browsing into reading a market board — but
-someone who wants to post and is reviewing to earn the difference is watching exactly that. It is
-an ordinary switch with a word beside it because it replaced an `isSelected` `IconButton`: a coin
-glyph toggling between filled and outlined said nothing about what it did, and the only thing
-naming it was a tooltip — which on touch needs a long press, so nobody read it. It stays in the
-**header** rather than becoming a row over the list, for the reason the economy bars became pills:
-a full-width row is a lot of screen for a control that is off by default and touched rarely. The
-tooltip survives as a *second* name — the visible word does the everyday job, the sentence is what
-a screen reader announces.
-
-While prices are on, `ChannelsScreen` follows `post_price_expires_at` and re-fetches through
-`ChannelsNotifier.refreshPrices()` — a quiet refresh, since `refresh()` would replace the list
-being read with a spinner once per window. Nothing in this paragraph runs while the switch is off,
-including the economy fetch and the timer.
-
-`ChannelPriceChip` renders **a figure, not a sentence** — a token glyph and the number, under the
-channel's badge, in a bordered stadium so it reads as the control it is rather than as a caption
-(a bare number under an avatar invites no tap). It previously resolved the price against the balance ("3 · Enough to post"), which
-put two clauses on every row and turned a list of channels into a column of prose; the
-affordability question is already answered continuously by the app-bar pill, so here the price is
-a property of the channel and sits with the channel's other identity. The chip is tappable into
-`showEconomyExplainer` for the same reason the pill is — a number with no model behind it is
-trivia — and it carries its own `InkWell` above the row's, so tapping the price cannot select the
-channel. `postPrice` null still renders **nothing**: unknown, never free.
+**Channel prices are off by default, behind one switch** (`showChannelPricesProvider`,
+`core/settings/price_display_settings.dart`): a labelled `Switch` in the channels app bar and a
+`SwitchListTile` in the explainer. A mode switch, not a preference — nobody picks a channel by
+price, but someone reviewing to earn the difference watches exactly that. A labelled switch
+replaced an icon toggle whose only name was a long-press tooltip. While on, `ChannelsScreen`
+follows `post_price_expires_at` and re-fetches via `ChannelsNotifier.refreshPrices()` (quiet, no
+spinner); nothing — not the economy fetch, not the timer — runs while off. `ChannelPriceChip`
+renders **a figure, not a sentence** (token glyph + number in a bordered stadium so it reads as
+tappable), opens the explainer, and carries its own `InkWell` so tapping the price can't select the
+channel. Null renders nothing.
 
 ### The feed keeps itself current
 
-The review queue is something the backend's worker *pushes into*, so a client that fetches once
-holds a list that can only ever shrink — which is what made the feed feel like a page to reload
-rather than something to keep reading. `FeedNotifier` (`features/feed/application/`) closes that
-gap, and four decisions in it are load-bearing:
+The queue is pushed into by the backend's worker, so a one-shot fetch only ever shrinks.
+`FeedNotifier` (`features/feed/application/`) closes that gap:
+- **It polls `GET /posts/feed/status`, not the feed** — post ids, one `LRANGE` server-side, cheap
+  enough every 20s. `_accountedFor` (every id pulled *or* announced this session) is what keeps a
+  channel filter from turning every tick into a full feed fetch.
+- **Arrivals are appended, never spliced in or pruned out.** Inserting where the server puts
+  them would shove the post being read; removal stays `applyReviewResult`'s job so a card mid-exit
+  is never yanked.
+- **It watches only while someone is watching**: polling runs while the feed is the visible tab
+  *and* the app is in front. Tab visibility is `TickerMode.valuesOf(context).enabled` in
+  `didChangeDependencies` — `StatefulShellRoute.indexedStack` keeps every tab mounted, so
+  `initState` can't tell. The same request marks the user active for the price formula, so
+  background polling would lie about who is here. `_watching` is tracked apart from the timer
+  because `build` re-runs on a channel-filter change and takes `onDispose` with it. Stopping goes
+  through `_feed`, a cached notifier reference, because **`dispose` must not touch `ref`**:
+  Riverpod throws on a read from an unmounting widget, which aborts the unmount pass, leaves
+  `GlobalKey`s registered, and renders the whole tab as an `ErrorWidget` on its next activation —
+  every new account saw that the moment onboarding ended. `test/feed_branch_remount_test.dart`.
+- **Three things ask ahead of the timer**: reviewing down to the last few posts (a slot just
+  freed server-side), settling a scroll near the bottom (there is no next page, only what has
+  arrived), and returning to the tab or app.
+`_EndOfFeedNotice` says which ending it is — a full queue is work waiting, an empty one is waiting
+on other people. None of this creates *supply*: an empty queue stays empty until someone posts or
+forwards, because reach is what an author paid for (see the backend's CLAUDE.md).
 
-- **It polls `GET /posts/feed/status`, not the feed.** That route answers with the queue's post
-  ids and costs one `LRANGE` server-side, so the common answer ("nothing new") is cheap enough
-  to ask every 20 seconds. `_accountedFor` — every id this session has already pulled *or* been
-  told about — is what keeps it cheap: without it, a channel filter alone would guarantee a
-  wasted full feed fetch on every tick, since the status lists the whole queue while a filtered
-  list holds part of it, and the difference would read as news forever.
-- **Arrivals are appended, never spliced in or pruned out.** The server hands the queue back
-  newest-first; inserting where the server puts it would shove the post being read down the
-  screen mid-sentence, which is the opposite of continuous. And removal stays
-  `applyReviewResult`'s job alone, so a card already playing its exit animation is never yanked
-  out from under it by a poll landing the beat after the review was accepted.
-- **It watches only while someone is watching.** Polling starts when the feed is the visible tab
-  *and* the app is in front, and stops otherwise. Tab visibility comes from
-  `TickerMode.valuesOf(context).enabled` in `didChangeDependencies` —
-  `StatefulShellRoute.indexedStack` keeps every tab mounted and only turns the ticker off on the
-  ones you cannot see, so `initState` cannot tell you this. The other half of the reason is
-  honesty: the same request marks the user active for the backend's price formula, so a poll
-  that kept running in the background would be a lie about who is here. `_watching` is tracked
-  apart from the timer itself because `build` re-runs whenever the channel filter changes and
-  takes its `onDispose` with it — without that, choosing a channel would quietly leave the feed
-  static for the rest of the session. Stopping it on the way out goes through `_feed`, a cached
-  reference to the notifier, because **`dispose` must not touch `ref` at all**: Riverpod answers
-  a read from a widget that is already unmounting by *throwing*, and an exception thrown
-  mid-unmount aborts the framework's unmount pass — which left the feed branch's elements
-  defunct with their `GlobalKey`s still registered, so the next activation of that branch
-  (returning to `/feed` after the verify-email or onboarding redirect that disposed it) failed
-  and the entire tab rendered as an `ErrorWidget`: a blank body under a working navigation bar,
-  which is what every new account saw the moment onboarding ended. `test/feed_branch_remount_test.dart`
-  pins the sequence.
-- **Three things ask ahead of the timer**: reviewing down to the last few posts (a review is the
-  one moment a queue slot is *guaranteed* to have just freed up server-side, so the worker may
-  be placing something right now), settling a scroll near the bottom (the infinite-scroll
-  gesture, answered by asking the queue — there is no next page, only what has arrived since),
-  and coming back to the tab or the app.
-
-Where the list ends, `_EndOfFeedNotice` says which ending it is: a full queue is work waiting to
-be done, an empty one is a queue waiting on other people. A feed that just stops at the last card
-cannot be told apart from one that failed to load the rest — which is exactly the doubt the
-reload button used to exist to answer.
-
-Worth knowing when this feels wrong: none of it creates *supply*. A queue that is genuinely empty
-stays empty until someone posts or forwards, because reach is what an author paid for
-(`FEED_FANOUT` recipients per operation) and handing out undelivered posts on demand would be an
-economy change, not a UX one. See the backend's CLAUDE.md and the todo.
+**The Feed tab carries the count** (`feed_waiting_icon.dart`): posts waiting, badged on the bottom
+nav, **hidden while the feed is the selected tab** (there the list is the count). It must never
+overcount (undercounting self-corrects on the next poll; overcounting sends someone to an empty
+feed), so `_removeFromList` calls `FeedQueueStatusNotifier.remove` at the moment the server
+confirms a slot is gone. It costs no extra polling: last status minus reviews since. "9+" past
+nine (`FEED_QUEUE_MAX_SLOTS` is a server setting this app needn't know). Accent colour, not red —
+red is Drop and delete-account here.
 
 ### A slot can outlive its post
 
-The queue the feed renders is a list of *ids* on the backend, so a slot can survive the post that
-filled it: erasing an account erases its posts without walking every reader's queue to tidy up
-(see the backend's `app/core/account_deletion.py`). `GET /posts/feed` therefore answers
-`FeedEntry` envelopes, and `post.dart` mirrors that as a sealed pair — `FeedPost` or
-`MissingPost` — rather than a nullable field on `Post`. A vanished post has no channel, no author
-and no timestamp, so anything a `Post` carried for one would be invented, and the compiler makes
-every renderer say what it does with the case instead of tripping over a null later. Everything
-in `FeedNotifier` that used to key on `post.id` keys on `entry.postId` now; that is the whole
-ripple.
-
-`MissingPostCard` is what it draws: an explanation (most likely the author deleted their account)
-and one button. Three absences are the design:
-
-- **No forward.** There is nothing to pass on, so the button is gone rather than present and
-  disabled — a disabled button invites a tap and then explains itself.
-- **Not tappable.** There is no detail view to open; the card's whole content is its sentence.
-- **Not a drop.** It calls `DELETE /posts/feed/{id}`, which earns nothing and records no review —
-  nobody read anything, so calling it "Drop" would claim a verdict happened. The backend refuses
-  it with 409 `post_available` while the post is in fact still there, and the card treats that as
-  what it is: this list is stale, so the card stays put rather than hiding a post still owed a
-  verdict.
-
-A cache entry written before this shape existed simply fails to parse and is discarded as a miss
-(`JsonCache.read` catches it), so no migration was needed for the stored feed.
+The queue is a list of ids server-side, so erasing an account can leave slots pointing at nothing
+(backend `account_deletion.py`). `GET /posts/feed` answers `FeedEntry` envelopes, mirrored in
+`post.dart` as a sealed pair — `FeedPost` / `MissingPost` — not a nullable field, so every renderer
+must say what it does with the case. `FeedNotifier` keys on `entry.postId`. `MissingPostCard` is an
+explanation and one button; three absences are the design: **no forward** (nothing to pass on),
+**not tappable** (no detail to open), **not a drop** — it calls `DELETE /posts/feed/{id}`, which
+records no review, and a `409 post_available` (the post is in fact still there) leaves the card in
+place rather than hiding a post still owed a verdict. A cache entry from before this shape fails to
+parse and is discarded as a miss (`JsonCache.read`), so no migration was needed.
 
 ### Downloading your data
 
-Settings → Account → "Download my data" (`DataExportTile`), sitting above the divider that the
-delete row sits below. It is the GDPR Art. 15 / Art. 20 affordance, and it is *above* deleting
-on purpose: the copy of your data is the thing you want while the account still exists, and an
-export discoverable only from inside the deletion dialog is one nobody takes.
-
-`GET /users/me/export` answers with a ZIP — a README, a `data.json` and every file the account
-ever uploaded — so four things here differ from every other call the app makes:
-
-- **`ResponseType.bytes`, and a ten-minute receive timeout.** The client-wide 10 seconds is
-  sized for JSON; this response is built as it is sent, so the server is legitimately quiet
-  while it reads a video out of the bucket. Dio applies that timeout *between chunks*, so it
-  stays a stall detector rather than a size limit. The whole body is held in memory because
-  Dio's `download()` streams to a file only where there is a filesystem, and this app also
-  runs on the web — two code paths for a once-a-year action was the worse trade.
-- **That response type broke error handling, and the fix is in `api_exception.dart`.** Dio
-  decodes according to the *request's* options, so a 429 on this route arrives as raw bytes
-  and the structured `{"detail": {...}}` envelope was invisible — every refusal read as the
-  generic "something went wrong". `RelayApiException._decodedIfBytes` now decodes a small
-  byte body as JSON before reading the code out of it, which fixes this route and any future
-  one that downloads a file.
-- **Delivering the file is genuinely per-platform**, so `core/files/file_delivery.dart` is a
-  conditional export like `google_sign_in_button.dart`. Web gets the browser's own download
-  (not the Web Share API: file sharing is unevenly supported and would put one person's
-  entire personal data into an app picker). Android has no user-visible folder an app may
-  write to, so the file is staged in the app's cache and the system share sheet moves it
-  somewhere real — and the staging folder is cleared on the way *in*, never on the way out,
-  because the receiving app reads the file after the sheet closes and deleting it then is a
-  race that ends in a zero-byte file in somebody's Drive. It goes through
-  `fileDeliveryProvider` so a widget test can stand in for the platform channels.
-- **A 429 gets its own sentence.** The shared `rate_limited` copy counts seconds, which is
-  right for the posting budget and absurd for one measured in days (`ACCOUNT_EXPORT_RATE_LIMIT`
-  is 3 per 24h). A dismissed share sheet, by contrast, says *nothing* — nothing was saved, and
-  the person is who decided that.
+Settings → Account → "Download my data" (`DataExportTile`), placed *above* the delete row — an
+export discoverable only inside the deletion dialog is one nobody takes. `GET /users/me/export`
+returns a ZIP, so this call differs from every other:
+- **`ResponseType.bytes` with a ten-minute receive timeout.** Dio applies it *between chunks*, so
+  it stays a stall detector; the body is held in memory because `download()` streams to a file
+  only where there is a filesystem, and this app runs on web too.
+- **That response type broke error handling**: Dio decodes by the *request's* options, so a 429
+  arrived as bytes and read as "something went wrong". `RelayApiException._decodedIfBytes`
+  (`api_exception.dart`) decodes a small byte body as JSON first.
+- **Delivery is per platform**: `core/files/file_delivery.dart` is a conditional export. Web gets
+  the browser download (not the Web Share API). Android stages the file in the app cache and hands
+  it to the system share sheet — the staging folder is cleared on the way *in*, never out, because
+  the receiving app reads after the sheet closes. Through `fileDeliveryProvider` so tests can stub
+  it.
+- **A 429 gets its own sentence** — the shared copy counts seconds, and this budget is 3 per day.
+  A dismissed share sheet says nothing.
 
 ### Deleting an account
 
-Settings → Account ends in the one row drawn in the error colour, and `DeleteAccountDialog` is
-two slides in a single dialog rather than a chain of them — a chain cannot go back, and "wait,
-which did I pick?" is exactly the doubt this flow has to be able to answer.
-
-- **Slide one is a choice, stated in terms of what other people lose**: keep the posts (they stay
-  in Relay with no name on them) or erase them too (nobody can read them again, including whoever
-  has one waiting in their feed). It defaults to keeping them — both outcomes are permanent, so
-  the default is the one that destroys less.
-- **Slide two proves the account, not just the intent.** A password account types its password;
-  the backend requires it for the same reason `POST /auth/change-password` does. A Google account
-  has no password to prove (linking overwrote its hash with a random value), so it gets the
-  confirmation alone. Either way the slide repeats the choice, because it was one tap ago and the
-  two options sound alike.
-- **It ends by signing out**, through `AuthNotifier.logout` rather than a route push: the account
-  is gone, so what has to happen is what happens at every session boundary — token cleared, cache
-  wiped, router falling back to the login screen on its own.
+Settings → Account ends in the one row in the error colour. `DeleteAccountDialog` is two slides in
+one dialog (a chain can't go back). Slide one: keep the posts (they stay, unnamed) or erase them
+too — default keep, since both are permanent and that destroys less. Slide two proves the account:
+a password account types its password; a Google account (no password — linking overwrote it) gets
+the confirmation alone; either way the slide repeats the choice. It ends via
+`AuthNotifier.logout`, so token, cache and router fall back like any session boundary.
 
 ### Chrome that yields to content
 
-Both main screens are mostly other people's content, and the rule for anything else on them is
-that it has to earn a permanent row. Three consequences worth keeping:
-
-- **The feed's channel filter has two sizes.** `_ChannelFilter` cross-fades between the row of
-  chips and a one-line summary of what is being read, driven by `UserScrollNotification`
-  *direction* rather than by scroll offset: reaching back up for the filter is then the same
-  gesture as reaching back up the feed, instead of a header that snaps open at some magic pixel.
-  The collapsed line is the same control — tapping it brings the chips back, so the filter is
-  never more than one tap away from wherever the feed has been scrolled to. Note the listener
-  ignores horizontal notifications, since the chip row is itself a scroll view.
-- **The feed's app bar dropped the open-post count, and then the reload button.** The count was a
-  number nobody acts on (the queue is whatever it is, and the count moves on its own), and the
-  title bar was worth more as the place the token pill lives. The reload button went for a
-  stronger reason: the feed now keeps itself current (above), so a control whose whole job is
-  "check again" would be advertising a chore that no longer exists — and its presence was most
-  of what made the feed read as a static list. Pull-to-refresh stays, for impatience rather than
-  necessity, and it no longer blanks the list to a spinner: `FeedNotifier.refresh` writes no
-  `AsyncLoading` and throws on failure instead, so a failed reload leaves the reader where they
-  were and merely says so.
-- **The composer's publish row holds all three publishing decisions**: anonymous, channel, Relay.
-  The channel picker used to be a full-width labelled field above the editor — a whole row for one
-  word chosen once — and is now `_ChannelSelectorChip`, outlined in the primary colour while
-  unpicked so a required-but-open choice still looks like one. The picker sheet behind it is
-  unchanged, but three things about it follow from the move to the *bottom* of the screen and
-  should stay that way:
-  - **Publish preconditions are a line in the toolbar, not a snackbar** (`_PublishBlocker` /
-    `_PublishBlockerHint`). A snackbar is drawn over the bottom of the screen, which is now
-    where the controls are: "pick a channel" landed squarely on the channel chip it was asking
-    the author to tap, so the message had to time out before it could be acted on. The blocker
-    is held as an enum case rather than resolved text so a locale change can't strand it, and
-    it clears as soon as it stops being true (picking a channel, adding a block, typing).
-  - **Opening the picker drops keyboard focus**, before and after — a modal route hands focus
-    back to whatever held it, which reopened the keyboard over a post that was already written.
-    Reopening it made sense while the picker came *before* the editor; from the publish row the
-    next thing wanted is Relay.
-  - **A successful post clears the channel too.** The composer is a tab in the shell's
-    `IndexedStack`, so its state outlives the post it was written for and used to keep the last
-    channel selected until an app restart — inherited silently by the next post, and noticed
-    only after relaying to the wrong place.
-
-### The bucket is a second host, and it can fail on its own
-
-Media does not come from the API. The backend hands out **presigned URLs pointing at the
-bucket** — `S3_PUBLIC_ENDPOINT_URL`, which locally is MinIO on **port 9000** and in
-production a Railway Bucket — so every avatar, post photo and poster frame is fetched from a
-different host and port than every JSON call. Two consequences that have each cost real time:
-
-- **"The app ignored my upload" is usually the bucket being unreachable from the device.** The
-  symptom is a profile picture that uploads fine (`PUT` returns 200), stores fine, comes back on
-  `GET /users/me` fine — and still renders as the monogram, on every restart, forever. That is
-  not stale state: `UserAvatar` shows `fallback` for *loading*, for *no picture* and for *failed
-  to fetch* alike, so an unreachable bucket is pixel-identical to having no picture. Check the
-  bucket port from the device itself (open `http://<lan-ip>:9000/minio/health/live` in the
-  phone's browser) before looking at any Dart. Things that break it while leaving the API
-  working: a host firewall rule that opens the API port and not 9000, a laptop whose LAN address
-  moved out from under `S3_PUBLIC_ENDPOINT_URL`, a device on a different network.
-- **`NetworkMediaImage` says so now, in debug builds** (`media.load_failed`, host and path only —
-  never the query string, since a presigned URL's signature *is* the read capability). The
-  fallback stays silent on screen, which is the right call for a reader scrolling a feed; the
-  console is where the difference between the three cases belongs.
-
-Note the host is part of what gets **signed**, so a URL signed for one endpoint cannot be
-rewritten to another afterwards — which is why `S3_PUBLIC_ENDPOINT_URL` exists separately
-from `AWS_ENDPOINT_URL` on the backend, and why "just point it at localhost" is not a fix
-for a phone.
+Both main screens are mostly other people's content; anything else has to earn a permanent row.
+- **The feed's channel filter has two sizes**: `_ChannelFilter` cross-fades between the chip row
+  and a one-line summary, driven by `UserScrollNotification` *direction* (reaching back up for the
+  filter is the same gesture as reaching back up the feed). Tapping the collapsed line reopens it.
+  Horizontal notifications are ignored — the chip row is itself a scroll view.
+- **The feed's app bar has no count and no reload button.** The count moved to the tab badge;
+  reload went because the feed keeps itself current and the button advertised a chore that no
+  longer exists. Pull-to-refresh stays and doesn't blank the list: `FeedNotifier.refresh` writes
+  no `AsyncLoading` and throws on failure.
+- **The composer's publish row holds all three decisions** — anonymous, channel
+  (`_ChannelSelectorChip`, outlined in primary while unpicked), Relay. Because the controls are at
+  the bottom: publish preconditions are a toolbar line (`_PublishBlocker`/`_PublishBlockerHint`,
+  held as an enum so a locale change can't strand it, cleared as soon as untrue), not a snackbar
+  that would cover the chip it points at; opening the picker drops keyboard focus before and after;
+  a successful post clears the channel too, since the composer tab's state outlives the post in
+  the shell's `IndexedStack`.
 
 ### Waiting, and having nothing
 
-Three states every screen in this app can be in — loading, empty, broken — and one rule: each one
-is a *designed* screen, not the absence of one. Before this, the first two were a centred
-`CircularProgressIndicator` and (in three places) a centred sentence, which is how a screen looks
-when nobody decided what it should look like.
-
-- **A cold load shows the shape of what is coming** (`core/presentation/skeleton.dart`, plus one
-  `*_skeleton.dart` per screen). A spinner says "something is happening" and nothing else: it is
-  the same picture on all five tabs, it gives no idea what is arriving, and the layout it is
-  replaced by lands as one abrupt jump. Two rules for anything built on this. **Shapes must match
-  what replaces them** — the skeletons are built from the same numbers as the real widgets (the
-  12/6 card margin, the 24dp author avatar, the 40dp action row), and a skeleton whose proportions
-  are wrong is worse than a spinner because it promises a layout and then reflows out of it. So
-  changing a card's geometry means changing its skeleton in the same commit. And **only on a cold
-  load, never on a refresh**: every screen here falls back to cached content (`core/cache/`), and
-  replacing something being read with grey boxes would be a regression — these are reached from
-  `AsyncValue.loading` with no cached value, exactly where the spinner used to be.
-  The sweep is one controller per `Shimmer` painting a `ShaderMask` over the whole subtree, not one
-  per box, and it is **stopped** under `MediaQuery.disableAnimations` rather than merely unpainted —
-  a repeating controller drives a frame callback whether or not anything reads it, which is the one
-  thing reduce-motion exists to prevent. Note a `Shimmer` on screen means `pumpAndSettle` never
-  returns; a test has to reach a state where the skeleton is gone.
-- **An empty screen names its way out** (`core/presentation/empty_state.dart`). `EmptyStateView`
-  insists on three things the bare-text version dropped: an icon (so the state is recognisable
-  before it is read), a subtitle saying *why* it is empty rather than only that it is, and an
-  action wherever there is one — most empty states here are one tap from not being empty (join a
-  channel, clear a filter, clear a search, write a post). It was previously a private widget inside
-  `feed_screen.dart`, which is the whole reason the channel list and the history screens each had a
-  worse one. Anything under a pull-to-refresh uses `ScrollableEmptyState`: "surely there is
-  something by now" is the reflex in exactly the state that has no list left to pull.
-- **`ErrorStateView` is the third member of the same family** and predates both. The shared shape
-  is the point — an empty screen and a failed one should look like two states of one app, not two
-  accidents.
-- **A switch must not lie.** Settings' two notification rows were live switches over two `bool`
-  fields that nothing read, nothing persisted and no notification system backed; flipping one
-  changed no behaviour ever, and failed in *silence* — the only way to find out was to wait for a
-  notification that was never coming. They are now `_DisabledSetting`, which shows a "Soon" badge
-  rather than a greyed-out switch, because a disabled switch still shows a position and so still
-  answers "is this on?" with a lie in one direction or the other.
-
-### The Feed tab carries the count
-
-`FeedWaitingIcon` (`features/feed/presentation/feed_waiting_icon.dart`) badges the bottom nav with
-how many posts are waiting. Read against **The feed keeps itself current** above, which is where
-the number comes from, and against the app bar's *removed* count, which this is not:
-
-- **The app bar's count went because the list was underneath it.** When you are looking at the
-  feed, the list is the count. On another tab it is not, and the number is then the only thing
-  that can say whether going back is worth it — the queue is something the server pushes into, so
-  nothing else would ever tell you. Same reasoning applied consistently: the badge is **hidden
-  while the feed is the selected tab**.
-- **It must not overcount.** Undercounting is survivable (the next poll corrects it upward);
-  overcounting sends someone to an empty feed. The status was previously replaced wholesale by a
-  poll and by nothing else, which was fine while only the end-of-feed notice read it — so
-  `_removeFromList` now also calls `FeedQueueStatusNotifier.remove`, at the one point where the
-  server has confirmed the slot is gone. The list and the status describe the same queue and have
-  to move together.
-- **It costs no polling.** The count is whatever the last `GET /posts/feed/status` said, minus what
-  has been reviewed since. Polling still runs only while the feed is on screen — extending it would
-  be a real change to the app's network behaviour, and the badge does not need one.
-- **"9+" past nine.** `FEED_QUEUE_MAX_SLOTS` is a server setting this app does not know and should
-  not have to, and past a handful the exact number changes nothing anyone does. It is the accent
-  colour rather than `Badge`'s default red: posts waiting is the app working, and red is what this
-  app uses for Drop and for deleting an account.
+Loading, empty and broken are each a *designed* screen:
+- **A cold load shows the shape of what is coming** (`core/presentation/skeleton.dart` + one
+  `*_skeleton.dart` per screen). **Shapes must match what replaces them** — built from the same
+  numbers as the real widgets (12/6 card margin, 24dp author avatar, 40dp action row), so a
+  geometry change means changing the skeleton in the same commit. **Cold load only, never a
+  refresh**: every screen falls back to cached content (`core/cache/`), and grey boxes over
+  something being read would be a regression. One `Shimmer` controller per subtree, **stopped**
+  under `MediaQuery.disableAnimations` (a repeating controller ticks whether or not anything reads
+  it). A `Shimmer` on screen means `pumpAndSettle` never returns.
+- **An empty screen names its way out** (`EmptyStateView`, `core/presentation/empty_state.dart`):
+  icon, a subtitle saying *why*, and an action wherever one exists. Under pull-to-refresh use
+  `ScrollableEmptyState`.
+- **`ErrorStateView`** is the third member of the same family.
+- **A switch must not lie.** The two notification rows are `_DisabledSetting` with a "Soon" badge
+  rather than switches over fields nothing reads — a disabled switch still shows a position.
 
 ### Offline behaviour
 
-The app stays usable without a connection. Four rules that new code must not break:
-
 - **Preferences render from `core/settings/app_settings.dart`, never from the server profile.**
-  `appSettingsProvider` is the source of truth for `themeMode`; `profileProvider` is only a *sync
-  input* to it. Deriving the theme from a network call is what used to break dark mode offline.
-  Reconciliation is `decideSettingsSync` — it branches on a local `dirty` flag, not on comparing
-  timestamps, and on a genuine two-device conflict the local value wins. The server's
-  `settings_revision` (bumped only by settings PATCHes) is what detects that conflict.
-- **Reads fall back to cache; writes do not queue.** `core/cache/cached_fetch.dart` wraps each
-  read: write-through on success, serve the last good copy on a *connection* failure only — never
-  on a 4xx, which is a real answer and must surface. Writes fail with a message instead of being
-  replayed later, because reviews are guarded server-side by the Redis queue and posts are priced
-  at request time. Controls are never disabled by connectivity.
-- **All errors go through `core/errors/`.** `asRelayException` unwraps the `DioException` Dio
-  rethrows (`AsyncValue.guard` hands widgets the wrapper, not the failure inside it); `messageFor`
-  maps the backend's `detail.error` code to copy. Never render an exception's `toString()`.
-  When reporting an error after an await that may unmount the widget — an optimistic review
-  unmounts its `PostCard` — capture the `ScaffoldMessenger` first and use `showErrorSnackBarOn`.
-- **Session boundaries are handled centrally**, in `PoulseKoraApp`'s `authNotifierProvider`
-  listener. Logging out clears the token, the cache and local settings, but the providers holding
-  fetched data are keep-alive and survive it — so they're invalidated there. Signing in then warms
-  `profileProvider` to pull the new account's preferences; without that, `ref.read` on a provider
-  that still held state was a no-op and the theme silently stayed on defaults.
-- **Riverpod's auto-retry is disabled for connectivity failures** (`_retryPolicy` in `main.dart`).
-  Left on, a provider offline with no cache retries for minutes while pinned in `loading`, so the
-  screen never reaches its error state. `ConnectivityNotifier` owns recovery instead: it polls
-  `/api/v1/health` on a backoff, and `PoulseKoraApp` re-runs whatever failed on reconnect.
+  `appSettingsProvider` owns `themeMode`; `profileProvider` is only a sync input. Reconciliation
+  is `decideSettingsSync`: branches on a local `dirty` flag, local wins on a real two-device
+  conflict, detected via the server's `settings_revision`.
+- **Reads fall back to cache; writes do not queue.** `core/cache/cached_fetch.dart`: write-through
+  on success, serve the last copy on a *connection* failure only — never on a 4xx. Writes fail
+  with a message (reviews are guarded by the Redis queue, posts priced at request time). Controls
+  are never disabled by connectivity.
+- **All errors go through `core/errors/`.** `asRelayException` unwraps the `DioException`
+  (`AsyncValue.guard` hands widgets the wrapper); `messageFor` maps `detail.error` to copy. Never
+  render `toString()`. After an await that may unmount the widget (an optimistic review unmounts
+  its `PostCard`), capture the `ScaffoldMessenger` first and use `showErrorSnackBarOn`.
+- **Session boundaries are handled centrally** in `PoulseKoraApp`'s `authNotifierProvider`
+  listener. Logout clears token, cache and local settings and invalidates the keep-alive data
+  providers; sign-in warms `profileProvider`. Account-scoped providers are invalidated on the way
+  **in** as well (`_invalidateSessionScoped`, `app.dart`): the router's permanent listener on
+  `profileProvider` rebuilt it after logout with the token already gone, cached the 401, and the
+  next sign-in inherited "session expired".
+- **Riverpod's auto-retry is disabled for connectivity failures** (`_retryPolicy`, `main.dart`) —
+  left on, an offline provider with no cache spins for minutes. `ConnectivityNotifier` owns
+  recovery: polls `/api/v1/health` on a backoff; `PoulseKoraApp` re-runs what failed on reconnect.
 
-State management is plain Riverpod (`Provider`, `FutureProvider`, `ConsumerWidget`) — no
-`riverpod_generator`/`build_runner` code generation is wired up. If a feature needs mutable state
-beyond a `FutureProvider`, prefer `NotifierProvider`/`AsyncNotifierProvider` over introducing a new
-pattern.
+### Auth
 
-**Auth** lives in `features/auth/`. `authNotifierProvider` tracks token *presence* only (there is
-no refresh-token flow); `app_router.dart`'s `redirect` chain guards routes in a fixed order —
-signed-in, then email-verified, then onboarded — and a 401 from the Dio interceptor forces a logout
-via `onUnauthorizedProvider`, while a 403 deliberately does not. Backend endpoints:
-`POST /api/v1/auth/jwt/login`, `POST /api/v1/auth/register`, `POST /api/v1/auth/google`,
-`GET/PATCH /api/v1/users/me`.
+`features/auth/`: `authNotifierProvider` tracks token *presence* only. `app_router.dart`'s
+`redirect` chain guards in a fixed order — signed-in, email-verified, onboarded. A 401 from the Dio
+interceptor forces logout via `onUnauthorizedProvider`; a 403 deliberately does not. Endpoints:
+`POST /auth/jwt/login`, `POST /auth/register`, `POST /auth/google`, `GET/PATCH /users/me`.
 
-**Google sign-in** (`google_sign_in` 7.x) is an ID-token flow, not a redirect: the plugin yields a
-Google ID token, `POST /auth/google` verifies it server-side and returns our own JWT. No deep links
-or URL schemes are involved. Three things about it are load-bearing:
-- **One client ID, two names.** `AppConfig.googleServerClientId` (a `--dart-define`, also wired
-  into the `Dockerfile`) is passed as `serverClientId` on Android and `clientId` on web — the web
-  plugin *asserts* `serverClientId` is null. See `features/auth/data/google_sign_in_service.dart`.
-- **Web needs Google's own button.** `supportsAuthenticate()` is false there and `authenticate()`
-  throws, so `google_sign_in_button.dart` is a conditional export (`dart.library.js_interop`) and
-  the result arrives on `GoogleSignInService.idTokens` rather than from the call. Anything touching
-  that file must be checked with `flutter build web` *and* `flutter build apk` — `flutter analyze`
-  only ever sees the non-web branch.
-- **Account identity is one-way.** Linking a password account to Google destroys its password, so
-  `UserProfile.authProvider` (`"password"`/`"google"`) drives what the UI offers: Settings hides
-  Change password, and only Google signups get the onboarding username step (the backend derived
-  their name; password registrants typed one). The backend's 409 `google_link_required` is a
-  *prompt*, not a failure — `GoogleAuthSection` turns it into the irreversibility dialog and
-  re-sends the same ID token, which is why it is deliberately absent from `error_messages.dart`.
-  The two entry points differ and have separate dialog copy: from the **login screen** the Google
-  address *is* the account address (that is what matched them), whereas from **Settings** any
-  Google account may be linked and the account keeps its own email as its contact address.
-- **A taken username is shown under the field, not in a snackbar.** The backend answers 409
-  `username_taken` on both writers, and both screens that set a name (`register_screen.dart`,
-  `username_step.dart`) hold the refused string and feed it to `InputDecoration.errorText`,
-  clearing it on the first keystroke. Deliberately not a `validator` rule: a form only
-  re-validates on submit, so a validator version leaves the message under the field while the
-  user types the replacement. While it is set, submit returns early — the server's answer is
-  still true for that exact string, so a retry would only spend a round trip. `messageFor`
-  still maps the code (unlike `google_link_required`), as the fallback for anywhere that has
-  only a snackbar.
-  The same field carries a `FieldInfoIcon` (`core/presentation/`) saying the name is visible to
-  other people — it uses `TooltipTriggerMode.tap` because a default Tooltip opens on *long
-  press* on touch, which nobody finds, and a hint meant to be read before someone types their
-  real name has to be findable.
-
-Session boundaries invalidate the account-scoped providers on the way **in** as well as out
-(`_invalidateSessionScoped` in `app.dart`). Only invalidating on logout was not enough: the router
-keeps a permanent listener on `profileProvider`, so logout's invalidation rebuilt it immediately
-with the token already cleared, cached the resulting 401, and the next sign-in inherited that
-"session expired" — `ref.read(...future)` is a no-op on a provider that already holds state.
+**Google sign-in** (`google_sign_in` 7.x) is an ID-token flow: the plugin yields a token,
+`POST /auth/google` verifies it and returns our JWT. No deep links.
+- **One client ID, two names**: `AppConfig.googleServerClientId` is `serverClientId` on Android
+  and `clientId` on web — the web plugin asserts `serverClientId` is null
+  (`features/auth/data/google_sign_in_service.dart`).
+- **Web needs Google's own button**: `supportsAuthenticate()` is false there, so
+  `google_sign_in_button.dart` is a conditional export (`dart.library.js_interop`) and the result
+  arrives on `GoogleSignInService.idTokens`. Anything touching it must be checked with
+  `flutter build web` *and* `flutter build apk` — `flutter analyze` only sees the non-web branch.
+- **Account identity is one-way.** `UserProfile.authProvider` (`"password"`/`"google"`) drives the
+  UI: Settings hides Change password; only Google signups get the onboarding username step. The
+  backend's `409 google_link_required` is a *prompt* — `GoogleAuthSection` shows the irreversibility
+  dialog and re-sends the same token — so it is deliberately absent from `error_messages.dart`. The
+  login-screen and Settings entry points have separate copy: from login the Google address *is*
+  the account address; from Settings any Google account may be linked and the account keeps its
+  own email.
+- **A taken username is shown under the field** (`InputDecoration.errorText` in
+  `register_screen.dart` and `username_step.dart`, cleared on the first keystroke), not as a
+  `validator` rule (forms only re-validate on submit). While set, submit returns early. The field
+  carries a `FieldInfoIcon` (`core/presentation/`) with `TooltipTriggerMode.tap`, because a
+  long-press tooltip is never found.
 
 ### Localization (i18n)
 
-The app ships English + German today, built to extend to more languages later. **Every
-user-facing string is required to go through this system — a raw `Text('...')` literal in a
-widget is a bug**, the same way a hardcoded English error message on the backend would be. This
-applies to all new features, not just ones the user explicitly calls out as needing translation.
-
-- **Source of truth**: `lib/l10n/app_en.arb` (template, with `@key` metadata for placeholders/ICU
-  plurals) and `lib/l10n/app_de.arb` (translation, values only). Adding a string means adding it
-  to *both* files, in the same change that introduces the widget using it — not as a follow-up.
-  `flutter pub get` (or `flutter gen-l10n`) regenerates `lib/l10n/generated/` (gitignored); that
-  directory is never hand-edited.
-- **Usage**: `final l10n = AppLocalizations.of(context);` then `l10n.someKey` (or
-  `l10n.someKey(arg)` for a parameterized/plural one). `nullable-getter: false` in `l10n.yaml`
-  means `.of(context)` is non-null — never append `!`. Reference implementations:
-  `core/errors/error_messages.dart` (the error-code-to-copy layer, including how the backend's
-  structured password-policy violations get formatted) and
-  `features/profile/presentation/settings_screen.dart` (the language picker).
-- **German tone**: casual `du`-form, professional but warm — translate for *meaning*, not
-  word-for-word. Loanwords already established in this app's German copy (`Feed`, `Token`,
-  `Post`/`Beitrag`, `Score`) should stay loanwords rather than being forced into a stiffer native
-  equivalent; avoid literal, nominalized, or passive-voice German (`Nominalstil`) even when it's
-  what a direct translation would produce.
-- **Locale resolution**: device locale by default, with a manual override in Settings → Language
-  (`core/settings/locale_settings.dart`, persisted locally, never synced to the server — see
-  `activeLocaleProvider`). The active locale is sent on every backend request as `Accept-Language`
-  (`core/network/dio_client.dart`'s interceptor), which is what lets backend-authored text (the
-  admin banner, password-policy messages) match the app's language too — see the backend's
-  `app/core/locale.py` / `app/core/banner.py`.
-- **Interface language and content language are two different settings, and must stay that way.**
-  This section is about the first: the language the app is *drawn in*, a device preference that
-  never leaves the phone. The second is `User.contentLanguages` — which languages you accept posts
-  in, stored server-side, and the thing that actually decides what the feed sends you (see
-  **Content language** below). **They deliberately live in different places**: the interface
-  language is a row in Settings, the content languages are a tab of `FeedPreferencesScreen`
-  alongside the channel list — because accepting a language is the same kind of act as
-  subscribing to a channel, and neither is an account preference. Having both in one Settings
-  list was the original mistake; they read as one setting stated twice. What survives from that
-  is the **subtitle on the Settings row** ("The language this app is shown in") and the hint on
-  the languages tab saying it is separate from the app's own. Removing either is a real
-  regression and an invisible one: someone switches the app to German, sees no change in the
-  feed, and concludes the filter is broken.
-  Two separate lists on the backend too (`SUPPORTED_LOCALES` vs `CONTENT_LANGUAGES`), free to
-  diverge — a language people post in needs no translated error catalogue, and vice versa.
-- **Exceptions** (deliberately left untranslated): the `Relay` brand name, and example/placeholder
-  URLs (e.g. `server_settings_sheet.dart`'s hint text) — URLs aren't translated by convention.
+English + German. **Every user-facing string goes through this system — a raw `Text('...')`
+literal is a bug.**
+- **Source of truth**: `lib/l10n/app_en.arb` (template, `@key` metadata for placeholders/ICU
+  plurals) and `app_de.arb`. Add to *both* in the same change as the widget. `flutter pub get` /
+  `flutter gen-l10n` regenerates `lib/l10n/generated/` (gitignored, never hand-edited).
+- **Usage**: `final l10n = AppLocalizations.of(context); l10n.someKey`. `nullable-getter: false`,
+  so never append `!`. Reference: `core/errors/error_messages.dart` (error code → copy, including
+  the backend's structured password-policy violations) and `settings_screen.dart`.
+- **German tone**: casual `du`, warm; translate for meaning; keep established loanwords (`Feed`,
+  `Token`, `Post`/`Beitrag`, `Score`); avoid `Nominalstil` and passive voice.
+- **Locale resolution**: device locale, overridable in Settings → Language
+  (`core/settings/locale_settings.dart`, local only, never synced — `activeLocaleProvider`). Sent
+  as `Accept-Language` on every request, which is what localizes backend-authored text (banner,
+  password policy).
+- **Interface language and content language are two different settings and must stay in
+  different places**: the former is a Settings row (subtitle "The language this app is shown
+  in"), the latter (`User.contentLanguages`, server-side, decides what the feed sends) is a tab of
+  `FeedPreferencesScreen` beside the channel list, because accepting a language is the same act as
+  subscribing to a channel. Both used to sit in Settings and read as one setting stated twice;
+  removing the subtitle or the hint on the languages tab is an invisible regression (switch the app
+  to German, see no feed change, conclude the filter is broken). Backend mirrors this with
+  `SUPPORTED_LOCALES` vs `CONTENT_LANGUAGES`.
+- **Untranslated on purpose**: the `Relay` brand name and placeholder URLs.
 
 ### Content language
 
-What language a post is *written in*, and which languages a reader accepts. The backend routes on
-the pair — a post reaches only subscribers who accept its language — so getting this wrong sends
-someone a post they cannot read, and nothing anywhere reports an error. See the backend's
-CLAUDE.md, "Language routing".
-
+The backend routes on (post language × reader's accepted languages); getting it wrong sends
+someone an unreadable post with no error anywhere. See the backend's "Language routing".
 - **Both lists come from the server** (`GET /config` → `contentLanguagesProvider`,
-  `languageUnspecifiedProvider`), never from a Dart constant. That is what keeps the picker, the
-  detector's candidate set and the values `POST /posts` accepts from drifting apart: adding a
-  language becomes a backend setting plus a stopword list, not an app release.
-- **Detection is on-device and only ever prefills** (`core/languages/language_detector.dart`). A
-  pure-Dart stopword heuristic, chosen over ML Kit because it separates two well-spaced languages
-  nearly perfectly, needs no plugin, and works on Flutter web, which ML Kit does not.
-  `LanguageDetector` is the seam; swap it at `languageDetectorProvider` and nothing else moves.
-  Three rules matter more than the algorithm: **null is a real answer** (too short, too ambiguous)
-  and must leave the picker alone rather than clear it; the detector **stops proposing** once the
-  author opens the picker (`_languageTouched`), because a field that keeps overruling a deliberate
-  choice feels like it is fighting back; and the stopword lists must stay **disjoint** — an
-  ordinary English word left in the German list makes English prose read as faintly German.
-  `test/language_detector_test.dart` asserts the disjointness, not the individual entries.
-  **`_redetect` is a pure function of the post's current text, and every path that changes the set
-  of blocks has to call it.** Detection hung off a controller listener alone, so deleting a
-  paragraph fired nothing and the suggestion stayed pinned to a language the post no longer
-  contained — remove the last German block from a mixed post and the chip still said German.
-  `_removeBlock` now re-runs it immediately (one deliberate action, so no debounce). Note the two
-  null cases are *different*: "there is text but I am not confident" leaves the choice alone, while
-  "there is no text at all" withdraws the suggestion outright, since it describes a post that no
-  longer exists — and that is also what puts "no language" back within reach for a photo-only post.
-  An explicit choice (`_languageTouched`) survives both.
-  **`minimumWords` is 4, and that number was tuned against real posts, not in isolation.** At 8 it
-  abstained on "Hallo, das ist mein erster Post hier" — seven words, a completely ordinary first
-  post — so the feature looked broken rather than cautious. What keeps short text honest is
-  `minimumScore`/`minimumMargin`, not the word count: at four words "Berlin Hamburg Munich
-  Cologne" and "nice one" still get no answer. `test/composer_language_test.dart` drives the real
-  screen for this, because the failure mode is silence — no error, just a picker that never fills
-  in — and only an end-to-end test can tell "the detector abstained" from "the listener was never
-  attached".
-- **A language is required to publish, and is never defaulted to the app's own.** A phone set to
-  English is no evidence about what someone is writing, and the failure is silent. An unset
-  language raises the same kind of blocker line as an unset channel.
-- **"No language" is only offerable for a post with no text.** It routes through the whole channel
-  rather than one language's readers, so it is the widest audience a post can claim — text is the
-  one part of that claim the server can check. The picker greys it out *with a reason* instead of
-  hiding it, and the composer refuses it before spending an upload. Note the converse is not
-  enforced: a text-free post may still declare a real language, because a video can be spoken
-  German.
-- **`FeedPreferencesScreen`** (`features/feed_preferences/presentation/feed_preferences_screen.dart`)
-  is the bottom-nav tab named **"Filters"** (`l10n.feedPrefsTitle`, `Icons.filter_alt` — reusing
-  the icon `feed_screen.dart` already uses for "clear channel filter", since both are the same
-  concept). It replaced the old standalone Channels screen: `ChannelsTab` and `ContentLanguagesTab`
-  are now two `TabBarView` pages under one `TabController`, because channels and content languages
-  are the same *kind* of decision — both filter delivery, neither is an account preference — and
-  "Feed preferences" as a name was both too long for the nav bar and not what the screen actually
-  is. Both tabs carry their own search field (`TextField` + local `_query` state, same pattern in
-  each — filter client-side over whatever the provider already holds, no new endpoint). Two things
-  that only make sense once you know it is one screen with tabs:
-  - **The price switch (`ChannelPriceSwitchAction`) is in the `AppBar`'s `actions`, shown only
-    while `_tabs.index == 0`.** It is chrome about the channel list specifically, so leaving it up
-    unconditionally would put a control with no subject over the languages tab.
-  - **`ViewTip` wraps the `TabBarView`, not each tab separately** — one card, one `tipKey`
-    (`'tip.feedPreferences'`), explaining the screen's *purpose* ("channels and languages both
-    shape your feed") rather than one tab's mechanics while the other sits unintroduced.
-    Dismissing it is a screen-level fact: switching tabs must not bring it back on the other one,
-    which is why it lives in the shell and not inside `ChannelsTab`/`ContentLanguagesTab` (each of
-    which used to have — and `ChannelsTab` briefly did have — its own).
+  `languageUnspecifiedProvider`), never a Dart constant, so picker, detector candidates and
+  accepted values can't drift.
+- **Detection is on-device and only prefills** (`core/languages/language_detector.dart`, a
+  stopword heuristic — no plugin, works on web, unlike ML Kit; swap at `languageDetectorProvider`).
+  **Null is a real answer** and leaves the picker alone; the detector **stops proposing** once the
+  author opens the picker (`_languageTouched`); stopword lists stay **disjoint**
+  (`test/language_detector_test.dart`). **`_redetect` is a pure function of the current text and
+  every path that changes the block set must call it** — `_removeBlock` re-runs it immediately.
+  "Text but unsure" leaves the choice alone; "no text at all" withdraws the suggestion (which also
+  puts "no language" back within reach). `minimumWords` is 4, tuned against real posts (8 abstained
+  on an ordinary seven-word first post); `minimumScore`/`minimumMargin` keep short text honest.
+  `test/composer_language_test.dart` drives the real screen because the failure mode is silence.
+- **A language is required to publish and never defaulted to the app's own** — a phone set to
+  English says nothing about what someone is writing.
+- **"No language" is offerable only for a post with no text** (it routes to the whole channel).
+  The picker greys it out *with a reason*; the composer refuses it before spending an upload. The
+  converse is not enforced: a video can be spoken German.
+- **`FeedPreferencesScreen`** (`features/feed_preferences/`) is the bottom-nav tab "Filters"
+  (`feedPrefsTitle`, `Icons.filter_alt`): `ChannelsTab` and `ContentLanguagesTab` under one
+  `TabController`, each with its own client-side search field. `ChannelPriceSwitchAction` sits in
+  the `AppBar` actions only while `_tabs.index == 0` (it's chrome about the channel list). `ViewTip`
+  wraps the `TabBarView`, not each tab — one card, one `tipKey` (`'tip.feedPreferences'`) explaining
+  the screen's purpose, dismissed once for both tabs.
