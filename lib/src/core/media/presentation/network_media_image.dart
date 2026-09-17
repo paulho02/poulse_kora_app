@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,6 +49,34 @@ class NetworkMediaImage extends ConsumerWidget {
   final double? width;
   final double? height;
 
+  /// Says, in debug builds only, that a media fetch failed and why.
+  ///
+  /// [fallback] is shown for three different situations — still loading, no
+  /// image to show, and *could not fetch this one* — which is right for the
+  /// reader (see [fallback]) and was actively misleading for whoever has to
+  /// diagnose it. A profile picture that uploaded fine, stored fine and came
+  /// back on `/users/me` fine still renders as the monogram if the bucket is
+  /// unreachable from the device, and that is indistinguishable, on screen,
+  /// from having no picture at all. It cost an afternoon once.
+  ///
+  /// The commonest cause is not a bug in this app: the bucket is a *different
+  /// host and port* from the API (`STORAGE_PUBLIC_ENDPOINT_URL`, MinIO's 9000
+  /// locally), so a phone can reach the backend and still have every image time
+  /// out — a firewall rule that only opens the API port, a laptop whose LAN
+  /// address moved, a device on another network. The API keeps working
+  /// throughout, which is exactly what makes it look like the app is ignoring
+  /// the upload.
+  ///
+  /// Debug only, and the query string is dropped: a presigned URL's signature
+  /// *is* the capability to read the object, so it has no business in a log.
+  /// Host and path are what identify the problem anyway.
+  static void _reportFailure(String url, Object error) {
+    if (!kDebugMode) return;
+    final parsed = Uri.tryParse(url);
+    final where = parsed == null ? url : '${parsed.origin}${parsed.path}';
+    debugPrint('media.load_failed url=$where error=$error');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reloadToken = ref.watch(mediaReloadProvider);
@@ -75,7 +104,10 @@ class NetworkMediaImage extends ConsumerWidget {
       // no equivalent — `video_player_web` renders into a bare `<video>`
       // element, which is not CORS-gated either.
       webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
-      errorBuilder: (context, error, stackTrace) => fallback,
+      errorBuilder: (context, error, stackTrace) {
+        _reportFailure(url, error);
+        return fallback;
+      },
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded || frame != null) return child;
         return fallback;

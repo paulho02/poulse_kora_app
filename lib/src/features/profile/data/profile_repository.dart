@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/cache/cached.dart';
 import '../../../core/cache/cached_fetch.dart';
 import '../../../core/cache/json_cache.dart';
+import 'data_export.dart';
 import 'user_profile.dart';
 
 class ProfileRepository {
@@ -84,6 +87,44 @@ class ProfileRepository {
     );
     await _cache.write(CacheKeys.profile, response.data);
     return UserProfile.fromJson(response.data!);
+  }
+
+  /// Download everything the backend holds about this account, as a ZIP.
+  ///
+  /// The GDPR Art. 15 / Art. 20 copy (`GET /users/me/export`): a README, a
+  /// `data.json` and every file the account ever uploaded. Three things here are
+  /// not the defaults:
+  ///
+  /// - **The whole body is held in memory.** Dio's `download()` streams to a
+  ///   file, but only on platforms with a filesystem, and this app runs on the
+  ///   web too - so an export that is enormous is a problem on a phone. It is
+  ///   the right trade today: the archive is one person's posts and pictures,
+  ///   and the alternative is two code paths for a once-a-year action.
+  /// - **A long receive timeout.** The client-wide 10 seconds is sized for JSON;
+  ///   this response is built as it is sent, so the server may legitimately be
+  ///   quiet while it reads a video out of the bucket. Dio applies the timeout
+  ///   between chunks rather than to the whole transfer, so this is a stall
+  ///   detector, not a size limit.
+  /// - **Nothing is cached.** `JsonCache` is for things the app re-reads while
+  ///   offline; a copy of an account's personal data has no business sitting in
+  ///   `shared_preferences` afterwards.
+  Future<DataExport> downloadDataExport({
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final response = await _dio.get<List<int>>(
+      '/users/me/export',
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 10),
+      ),
+      onReceiveProgress: onProgress,
+    );
+    return DataExport(
+      filename: DataExport.filenameFrom(
+        response.headers.value('content-disposition'),
+      ),
+      bytes: Uint8List.fromList(response.data!),
+    );
   }
 
   /// Erase the account, and its posts too when [deletePosts] is set.

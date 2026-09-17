@@ -63,6 +63,20 @@ dependencies:
   # Keeps the screen awake while a clip plays; was a transitive dependency of
   # chewie, which did the same, and is direct now that chewie is gone.
   wakelock_plus: ^1.3.0
+  # The three below exist for one feature: handing the GDPR data export
+  # (Settings → Download my data) to the person as a file. See
+  # core/files/file_delivery.dart, which is a conditional export because the
+  # delivery is genuinely different per platform.
+  #
+  # Android has no folder an app may write to that a person can then find, so
+  # the archive is staged in the cache and the system share sheet moves it.
+  share_plus: ^13.3.0
+  # Where that staging happens (`getTemporaryDirectory`). Already a transitive
+  # dependency; direct now that we call it ourselves.
+  path_provider: ^2.1.6
+  # The web half: a Blob and an anchor download, which is what a browser's own
+  # download is. Also already transitive, and direct for the same reason.
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

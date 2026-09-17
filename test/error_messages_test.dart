@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,6 +72,42 @@ void main() {
         isFalse,
         reason: 'a server rejection must never fall back to cached data',
       );
+    });
+
+    test('reads the code out of an error body that arrived as raw bytes', () {
+      // A request made with `ResponseType.bytes` (the data export, and anything
+      // else that downloads a file) gets bytes back even when the server said
+      // no, because Dio decodes according to the request's options rather than
+      // the response's type. Without the decode, every refusal on those routes
+      // reads as the generic "something went wrong".
+      final e = DioException(
+        requestOptions: req,
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: req,
+          statusCode: 429,
+          data: utf8.encode(
+            '{"detail":{"error":"rate_limited","retry_after":86400}}',
+          ),
+        ),
+      );
+      final result = asRelayException(e);
+      expect(result.error, 'rate_limited');
+      expect(result.detail['retry_after'], 86400);
+    });
+
+    test('leaves a body that is not JSON alone', () {
+      // A proxy's HTML error page, say. Building an exception must not throw.
+      final e = DioException(
+        requestOptions: req,
+        type: DioExceptionType.badResponse,
+        response: Response(
+          requestOptions: req,
+          statusCode: 502,
+          data: utf8.encode('<html>Bad Gateway</html>'),
+        ),
+      );
+      expect(asRelayException(e).error, 'internal_error');
     });
 
     test('maps 401 to unauthorized', () {

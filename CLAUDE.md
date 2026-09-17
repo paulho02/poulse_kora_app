@@ -608,6 +608,42 @@ and one button. Three absences are the design:
 A cache entry written before this shape existed simply fails to parse and is discarded as a miss
 (`JsonCache.read` catches it), so no migration was needed for the stored feed.
 
+### Downloading your data
+
+Settings → Account → "Download my data" (`DataExportTile`), sitting above the divider that the
+delete row sits below. It is the GDPR Art. 15 / Art. 20 affordance, and it is *above* deleting
+on purpose: the copy of your data is the thing you want while the account still exists, and an
+export discoverable only from inside the deletion dialog is one nobody takes.
+
+`GET /users/me/export` answers with a ZIP — a README, a `data.json` and every file the account
+ever uploaded — so four things here differ from every other call the app makes:
+
+- **`ResponseType.bytes`, and a ten-minute receive timeout.** The client-wide 10 seconds is
+  sized for JSON; this response is built as it is sent, so the server is legitimately quiet
+  while it reads a video out of the bucket. Dio applies that timeout *between chunks*, so it
+  stays a stall detector rather than a size limit. The whole body is held in memory because
+  Dio's `download()` streams to a file only where there is a filesystem, and this app also
+  runs on the web — two code paths for a once-a-year action was the worse trade.
+- **That response type broke error handling, and the fix is in `api_exception.dart`.** Dio
+  decodes according to the *request's* options, so a 429 on this route arrives as raw bytes
+  and the structured `{"detail": {...}}` envelope was invisible — every refusal read as the
+  generic "something went wrong". `RelayApiException._decodedIfBytes` now decodes a small
+  byte body as JSON before reading the code out of it, which fixes this route and any future
+  one that downloads a file.
+- **Delivering the file is genuinely per-platform**, so `core/files/file_delivery.dart` is a
+  conditional export like `google_sign_in_button.dart`. Web gets the browser's own download
+  (not the Web Share API: file sharing is unevenly supported and would put one person's
+  entire personal data into an app picker). Android has no user-visible folder an app may
+  write to, so the file is staged in the app's cache and the system share sheet moves it
+  somewhere real — and the staging folder is cleared on the way *in*, never on the way out,
+  because the receiving app reads the file after the sheet closes and deleting it then is a
+  race that ends in a zero-byte file in somebody's Drive. It goes through
+  `fileDeliveryProvider` so a widget test can stand in for the platform channels.
+- **A 429 gets its own sentence.** The shared `rate_limited` copy counts seconds, which is
+  right for the posting budget and absurd for one measured in days (`ACCOUNT_EXPORT_RATE_LIMIT`
+  is 3 per 24h). A dismissed share sheet, by contrast, says *nothing* — nothing was saved, and
+  the person is who decided that.
+
 ### Deleting an account
 
 Settings → Account ends in the one row drawn in the error colour, and `DeleteAccountDialog` is
@@ -668,6 +704,32 @@ that it has to earn a permanent row. Three consequences worth keeping:
     `IndexedStack`, so its state outlives the post it was written for and used to keep the last
     channel selected until an app restart — inherited silently by the next post, and noticed
     only after relaying to the wrong place.
+
+### The bucket is a second host, and it can fail on its own
+
+Media does not come from the API. The backend hands out **presigned URLs pointing at the
+bucket** — `STORAGE_PUBLIC_ENDPOINT_URL`, which locally is MinIO on **port 9000** and in
+production a Railway Bucket — so every avatar, post photo and poster frame is fetched from a
+different host and port than every JSON call. Two consequences that have each cost real time:
+
+- **"The app ignored my upload" is usually the bucket being unreachable from the device.** The
+  symptom is a profile picture that uploads fine (`PUT` returns 200), stores fine, comes back on
+  `GET /users/me` fine — and still renders as the monogram, on every restart, forever. That is
+  not stale state: `UserAvatar` shows `fallback` for *loading*, for *no picture* and for *failed
+  to fetch* alike, so an unreachable bucket is pixel-identical to having no picture. Check the
+  bucket port from the device itself (open `http://<lan-ip>:9000/minio/health/live` in the
+  phone's browser) before looking at any Dart. Things that break it while leaving the API
+  working: a host firewall rule that opens the API port and not 9000, a laptop whose LAN address
+  moved out from under `STORAGE_PUBLIC_ENDPOINT_URL`, a device on a different network.
+- **`NetworkMediaImage` says so now, in debug builds** (`media.load_failed`, host and path only —
+  never the query string, since a presigned URL's signature *is* the read capability). The
+  fallback stays silent on screen, which is the right call for a reader scrolling a feed; the
+  console is where the difference between the three cases belongs.
+
+Note the host is part of what gets **signed**, so a URL signed for one endpoint cannot be
+rewritten to another afterwards — which is why `STORAGE_PUBLIC_ENDPOINT_URL` exists separately
+from `STORAGE_ENDPOINT_URL` on the backend, and why "just point it at localhost" is not a fix
+for a phone.
 
 ### Waiting, and having nothing
 

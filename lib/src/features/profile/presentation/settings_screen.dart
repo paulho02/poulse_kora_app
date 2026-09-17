@@ -9,6 +9,7 @@ import '../../../core/settings/locale_settings.dart';
 import '../../../core/tips/application/tip_providers.dart';
 import '../../stats/application/stats_providers.dart';
 import '../application/profile_providers.dart';
+import 'data_export_tile.dart';
 import 'delete_account_dialog.dart';
 import 'google_link_tile.dart';
 
@@ -158,6 +159,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         context.push('/profile/settings/change-password'),
                   ),
                 GoogleLinkTile(profile: profile.data),
+                // Above the divider, not below it: this is an ordinary account
+                // action, and the row under the divider is the destructive one.
+                // It has to come *before* deleting, though, because the copy of
+                // your data is the thing you want while the account still
+                // exists.
+                const DataExportTile(),
                 const Divider(height: 32, indent: 16, endIndent: 16),
                 // Last row on the screen, and the only one drawn in the error
                 // colour: a destructive action should look like one before it

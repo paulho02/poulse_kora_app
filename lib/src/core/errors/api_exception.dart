@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 /// Why a request failed, at the level the UI actually cares about.
@@ -144,7 +146,8 @@ class RelayApiException implements Exception {
   /// The backend wraps every error as `{"detail": {"error": ..., ...}}`
   /// (see `app/core/errors.py`). Older/edge responses may still carry a string
   /// detail, so degrade rather than throwing while building an error.
-  static Map<String, dynamic> _extractDetail(dynamic data) {
+  static Map<String, dynamic> _extractDetail(dynamic rawData) {
+    final data = _decodedIfBytes(rawData);
     if (data is Map && data['detail'] is Map) {
       return Map<String, dynamic>.from(data['detail'] as Map);
     }
@@ -152,6 +155,30 @@ class RelayApiException implements Exception {
       return {'message': data['detail'] as String};
     }
     return const {};
+  }
+
+  /// JSON out of a response body that arrived as raw bytes.
+  ///
+  /// A request made with `ResponseType.bytes` — the data export, and anything
+  /// else that downloads a file — gets bytes back even when the server refused,
+  /// because Dio decides how to decode from the *request's* options and not from
+  /// the response. Without this the structured envelope would be invisible on
+  /// exactly those routes and every refusal would read as "something went
+  /// wrong", which is the failure this whole class exists to prevent.
+  ///
+  /// Only attempted on a plausible error body: an envelope is a few hundred
+  /// bytes, so anything larger is not one, and a body that is not JSON at all (a
+  /// proxy's HTML error page) is left alone rather than throwing while building
+  /// an exception.
+  static dynamic _decodedIfBytes(dynamic data) {
+    if (data is! List<int> || data.isEmpty || data.length > 64 * 1024) {
+      return data;
+    }
+    try {
+      return jsonDecode(utf8.decode(data));
+    } catch (_) {
+      return data;
+    }
   }
 
   static ApiErrorKind _kindForStatus(int status) {
