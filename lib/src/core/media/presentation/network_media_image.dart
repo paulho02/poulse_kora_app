@@ -60,7 +60,7 @@ class NetworkMediaImage extends ConsumerWidget {
   /// from having no picture at all. It cost an afternoon once.
   ///
   /// The commonest cause is not a bug in this app: the bucket is a *different
-  /// host and port* from the API (`STORAGE_PUBLIC_ENDPOINT_URL`, MinIO's 9000
+  /// host and port* from the API (`S3_PUBLIC_ENDPOINT_URL`, MinIO's 9000
   /// locally), so a phone can reach the backend and still have every image time
   /// out — a firewall rule that only opens the API port, a laptop whose LAN
   /// address moved, a device on another network. The API keeps working

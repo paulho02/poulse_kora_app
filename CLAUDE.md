@@ -708,7 +708,7 @@ that it has to earn a permanent row. Three consequences worth keeping:
 ### The bucket is a second host, and it can fail on its own
 
 Media does not come from the API. The backend hands out **presigned URLs pointing at the
-bucket** — `STORAGE_PUBLIC_ENDPOINT_URL`, which locally is MinIO on **port 9000** and in
+bucket** — `S3_PUBLIC_ENDPOINT_URL`, which locally is MinIO on **port 9000** and in
 production a Railway Bucket — so every avatar, post photo and poster frame is fetched from a
 different host and port than every JSON call. Two consequences that have each cost real time:
 
@@ -720,15 +720,15 @@ different host and port than every JSON call. Two consequences that have each co
   bucket port from the device itself (open `http://<lan-ip>:9000/minio/health/live` in the
   phone's browser) before looking at any Dart. Things that break it while leaving the API
   working: a host firewall rule that opens the API port and not 9000, a laptop whose LAN address
-  moved out from under `STORAGE_PUBLIC_ENDPOINT_URL`, a device on a different network.
+  moved out from under `S3_PUBLIC_ENDPOINT_URL`, a device on a different network.
 - **`NetworkMediaImage` says so now, in debug builds** (`media.load_failed`, host and path only —
   never the query string, since a presigned URL's signature *is* the read capability). The
   fallback stays silent on screen, which is the right call for a reader scrolling a feed; the
   console is where the difference between the three cases belongs.
 
 Note the host is part of what gets **signed**, so a URL signed for one endpoint cannot be
-rewritten to another afterwards — which is why `STORAGE_PUBLIC_ENDPOINT_URL` exists separately
-from `STORAGE_ENDPOINT_URL` on the backend, and why "just point it at localhost" is not a fix
+rewritten to another afterwards — which is why `S3_PUBLIC_ENDPOINT_URL` exists separately
+from `AWS_ENDPOINT_URL` on the backend, and why "just point it at localhost" is not a fix
 for a phone.
 
 ### Waiting, and having nothing
