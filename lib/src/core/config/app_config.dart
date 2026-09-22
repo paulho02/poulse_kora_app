@@ -60,4 +60,21 @@ class AppConfig {
     'BETA_DISCLAIMER_ENABLED',
     defaultValue: true,
   );
+
+  /// Whether the app offers pointing itself at a self-hosted backend
+  /// (`core/config/server_config.dart`, `ServerSettingsButton`).
+  ///
+  /// Off by default: for the MVP there is only the official server, and a
+  /// "which server?" choice on the login screen is a question nobody outside
+  /// a self-hosting deployment can answer. Turn it on with
+  /// `"CUSTOM_SERVER_ENABLED": true` in `env.json` once self-hosting is a
+  /// case worth supporting.
+  ///
+  /// Kept a `const` (not a runtime lookup) so the sheet, the persisted
+  /// override and everything behind them are dead-code-eliminated from a
+  /// build that has this off — same reasoning as the `kIsWeb` guards beside
+  /// it.
+  static const bool customServerEnabled = bool.fromEnvironment(
+    'CUSTOM_SERVER_ENABLED',
+  );
 }

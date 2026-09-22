@@ -7,6 +7,8 @@ import 'app_config.dart';
 
 /// Lets a self-hosted deployment point the app at its own backend instead of
 /// the official server (`AppConfig.apiBaseUrl`), with no rebuild required.
+/// Only when [AppConfig.customServerEnabled] is on — see
+/// [ServerConfigStore.isSupported].
 ///
 /// Read synchronously off the `SharedPreferences` instance warmed in `main()`
 /// — same reasoning as `AppSettingsStore` — so the very first
@@ -49,18 +51,28 @@ class ServerConfigStore {
 
   static const _customBaseUrlKey = 'server.customBaseUrl';
 
-  // Guarded here, not just in `ServerSettingsButton`: on web,
-  // `shared_preferences` sits on top of `window.localStorage`, which a user
-  // can edit directly from devtools. Ignoring/refusing the key on web means
-  // there's no way to make the web build talk to a custom backend, not just
-  // no UI for it.
+  /// Both guards are here, not just in `ServerSettingsButton`, because
+  /// hiding the UI is not the same as refusing the override:
+  ///
+  /// - on web, `shared_preferences` sits on top of `window.localStorage`,
+  ///   which a user can edit directly from devtools;
+  /// - with [AppConfig.customServerEnabled] turned off, an install that set
+  ///   a custom URL under an earlier build would otherwise keep talking to
+  ///   it forever, with no way left to get back to the official server.
+  ///
+  /// Ignoring the stored key covers both: the value stays in
+  /// `SharedPreferences` (so flipping the flag back on restores the previous
+  /// choice) but never reaches a `baseUrl`. Both operands are compile-time
+  /// constants, so a build with this off tree-shakes the branch away.
+  static const bool isSupported = !kIsWeb && AppConfig.customServerEnabled;
+
   ServerConfig read() {
-    if (kIsWeb) return const ServerConfig();
+    if (!isSupported) return const ServerConfig();
     return ServerConfig(customBaseUrl: _prefs.getString(_customBaseUrlKey));
   }
 
   Future<void> write(String? customBaseUrl) async {
-    if (kIsWeb) return;
+    if (!isSupported) return;
     if (customBaseUrl == null) {
       await _prefs.remove(_customBaseUrlKey);
     } else {

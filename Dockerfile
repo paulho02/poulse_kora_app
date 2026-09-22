@@ -40,11 +40,16 @@ ARG BETA_DISCLAIMER_ENABLED=true
 # Google OAuth *web* client ID. Empty (the default) hides the Google button;
 # the backend's own GOOGLE_OAUTH_ENABLED has to agree as well.
 ARG GOOGLE_SERVER_CLIENT_ID=
+# Self-hosted-backend picker on the login screen. The web build never offers
+# it regardless (see server_settings_sheet.dart); kept here so one variable
+# governs every target.
+ARG CUSTOM_SERVER_ENABLED=false
 
 RUN flutter build web --release \
     --dart-define=API_BASE_URL=${API_BASE_URL} \
     --dart-define=BETA_DISCLAIMER_ENABLED=${BETA_DISCLAIMER_ENABLED} \
-    --dart-define=GOOGLE_SERVER_CLIENT_ID=${GOOGLE_SERVER_CLIENT_ID}
+    --dart-define=GOOGLE_SERVER_CLIENT_ID=${GOOGLE_SERVER_CLIENT_ID} \
+    --dart-define=CUSTOM_SERVER_ENABLED=${CUSTOM_SERVER_ENABLED}
 
 FROM nginx:alpine
 

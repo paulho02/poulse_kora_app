@@ -160,8 +160,8 @@ Consent is a line above the button, not a disabled button — same rule as the c
 ### Onboarding and tutorial
 
 `OnboardingScreen` (`features/onboarding/`) is the router-forced post-registration flow
-(`intro → tutorial offer → [tutorial] → [username] → channels → disclaimer`); the deck in
-`features/tutorial/` is the long explanation, offered rather than imposed.
+(`intro → tutorial offer → [tutorial] → [username] → channels → languages → disclaimer`); the deck
+in `features/tutorial/` is the long explanation, offered rather than imposed.
 - **The offer is a question with two equal buttons** (`TutorialOfferStep`), not a "learn more"
   link — declining must be a decision, and the "start it anytime from Settings" hint sits on that
   screen because the person who most needs it just said no.
@@ -181,6 +181,15 @@ Consent is a line above the button, not a disabled button — same rule as the c
   mounts minutes later — one dropped connection there used to end the flow at a Retry button.
   `ChannelSelectionStep` re-asks only when the provider already holds an error when it mounts
   (`test/onboarding_channels_test.dart`).
+- **`ContentLanguagesStep` exists because the default is invisible.** The backend narrows a new
+  account to its registration locale, so a German phone yields a German-only reader whose feed just
+  fills slowly — indistinguishable from an empty platform. The step's third line is the whole
+  point: it says where the ticks came from, so one ticked box reads as a starting point rather than
+  as a choice already made. Unlike the channel step it **never blocks** — the set is guaranteed
+  non-empty, so Continue is always live and walking past is a legitimate answer. The list itself is
+  `ContentLanguageChecklist`, shared with the Filters tab (`features/feed_preferences/`): the
+  empty-set refusal and the save-on-toggle are both silent failures if a second copy drifts.
+  `test/onboarding_languages_test.dart`.
 Tests: illustrations and the intro icon badge repeat forever, so **`pumpAndSettle` never returns
 in this flow** — drive with `pump(duration)`. `test/tutorial_test.dart` is the reference.
 

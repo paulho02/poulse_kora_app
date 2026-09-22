@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/config/server_config.dart';
 import '../application/auth_providers.dart';
 
@@ -11,17 +11,20 @@ import '../application/auth_providers.dart';
 /// the form itself — the overwhelming majority of installs never touch this,
 /// and it must not read as "something you're supposed to fill in" to them.
 ///
-/// Native-app-only: a browser tab can't be trusted the way an installed app
-/// can (anyone can point a stock browser at a lookalike page), so the web
-/// build never offers this. `kIsWeb` is a compile-time constant, so this
-/// branch — and the sheet it would open — is dead-code-eliminated from the
-/// web bundle rather than merely hidden at runtime.
+/// Off unless [AppConfig.customServerEnabled] is set, and native-app-only:
+/// a browser tab can't be trusted the way an installed app can (anyone can
+/// point a stock browser at a lookalike page), so the web build never offers
+/// this. `ServerConfigStore.isSupported` folds both conditions and is a
+/// compile-time constant, so this branch — and the sheet it would open — is
+/// dead-code-eliminated from a build that has it off rather than merely
+/// hidden at runtime. The same constant makes the store ignore a stored
+/// override, so hiding the button can't strand anyone on a custom server.
 class ServerSettingsButton extends ConsumerWidget {
   const ServerSettingsButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (kIsWeb) return const SizedBox.shrink();
+    if (!ServerConfigStore.isSupported) return const SizedBox.shrink();
 
     final server = ref.watch(serverConfigProvider);
     final l10n = AppLocalizations.of(context);
