@@ -7,6 +7,7 @@ import '../../channels/application/channels_providers.dart';
 import '../../profile/application/profile_providers.dart';
 import '../../tutorial/presentation/tutorial_deck.dart';
 import 'channel_selection_step.dart';
+import 'content_languages_step.dart';
 import 'disclaimer_step.dart';
 import 'intro_slides.dart';
 import 'tutorial_offer_step.dart';
@@ -18,6 +19,7 @@ enum _OnboardingStep {
   tutorial,
   username,
   channels,
+  languages,
   disclaimer,
 }
 
@@ -28,7 +30,7 @@ enum _OnboardingStep {
 /// something that needs to survive a deep link or a back-button press
 /// independently.
 ///
-/// Two of the six steps are conditional:
+/// Two of the seven steps are conditional:
 ///
 /// - The **username** step is only reached by Google signups, because only
 ///   they never got asked for one (the register form asks; Google has no such
@@ -49,9 +51,10 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key, this.isReplay = false});
 
   /// True when reached from Settings rather than the mandatory post-
-  /// registration flow. Skips channel selection (those channels are already
-  /// chosen) and, on confirming the disclaimer, just pops back to Settings
-  /// instead of calling `completeOnboarding()` again.
+  /// registration flow. Skips channel and language selection (both are already
+  /// chosen, and both have a permanent home in the Filters tab) and, on
+  /// confirming the disclaimer, just pops back to Settings instead of calling
+  /// `completeOnboarding()` again.
   final bool isReplay;
 
   @override
@@ -85,9 +88,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   /// Where the intro hands off. A replay goes straight to the disclaimer
-  /// (channels are long since chosen, the username is not being re-confirmed,
-  /// and the tutorial has its own Settings row); a first run is offered the
-  /// tutorial.
+  /// (channels and languages are long since chosen, the username is not being
+  /// re-confirmed, and the tutorial has its own Settings row); a first run is
+  /// offered the tutorial.
   _OnboardingStep _stepAfterIntro() => widget.isReplay
       ? _OnboardingStep.disclaimer
       : _OnboardingStep.tutorialOffer;
@@ -144,6 +147,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           onContinue: () => setState(() => _step = _OnboardingStep.channels),
         ),
         _OnboardingStep.channels => ChannelSelectionStep(
+          onContinue: () => setState(() => _step = _OnboardingStep.languages),
+        ),
+        _OnboardingStep.languages => ContentLanguagesStep(
           onContinue: () => setState(() => _step = _OnboardingStep.disclaimer),
         ),
         _OnboardingStep.disclaimer => DisclaimerStep(

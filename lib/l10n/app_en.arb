@@ -705,6 +705,12 @@
       }
     }
   },
+  "onboardingLanguagesTitle": "Which languages do you read?",
+  "@onboardingLanguagesTitle": {},
+  "onboardingLanguagesSubtitle": "You'll only be sent posts written in a language you picked here — plus posts with no words at all, like photos.",
+  "@onboardingLanguagesSubtitle": {},
+  "onboardingLanguagesDefaultNote": "We started with the language your device is set to. Add any others you read, or leave it as it is — you can change this anytime under Filters.",
+  "@onboardingLanguagesDefaultNote": {},
   "onboardingDisclaimerTitle": "Before you dive in",
   "@onboardingDisclaimerTitle": {},
   "onboardingDisclaimerPoint1": "Posts are public — anything you publish can be forwarded on to any other user on the platform.",

@@ -35,9 +35,9 @@ dev server otherwise binds a random port the browser then blocks. `env.json` is 
 `Dockerfile` builds the web target and serves it via nginx (`nginx.conf.template` +
 `docker-entrypoint.sh`, which substitutes Railway's `$PORT` at container start); `railway.json`
 wires it as the Dockerfile builder with a `/` healthcheck. `API_BASE_URL`,
-`BETA_DISCLAIMER_ENABLED` and `GOOGLE_SERVER_CLIENT_ID` (`core/config/app_config.dart`) are
-**build-time** `--dart-define`s, declared as `ARG`s in the Dockerfile and auto-filled from
-same-named Railway service Variables. Bootstrapping order for a fresh pair of services: deploy
+`BETA_DISCLAIMER_ENABLED`, `GOOGLE_SERVER_CLIENT_ID` and `CUSTOM_SERVER_ENABLED`
+(`core/config/app_config.dart`) are **build-time** `--dart-define`s, declared as `ARG`s in the
+Dockerfile and auto-filled from same-named Railway service Variables. Bootstrapping order for a fresh pair of services: deploy
 the backend, put its domain in this service's `API_BASE_URL`, deploy this, then add this domain to
 the backend's `BACKEND_CORS_ORIGINS` and redeploy it. Details in the backend's `RAILWAY.md`.
 
@@ -52,6 +52,15 @@ Core plumbing:
 - `core/config/app_config.dart` — base URL: `API_BASE_URL` dart-define, else `10.0.2.2:8000` on
   the Android emulator (can't reach the host as `localhost`), `localhost:8000` elsewhere. Prefix
   `/api/v1` matches the backend's `API_PATH`.
+- `core/config/server_config.dart` — the login screen's self-hosted-backend picker
+  (`ServerSettingsButton`), persisted in `SharedPreferences` and read synchronously so the first
+  `dioClientProvider` build already has the right base URL. **Off unless
+  `CUSTOM_SERVER_ENABLED=true`** (off for the MVP: there is only the official server, and "which
+  server?" is a question nobody else can answer). `ServerConfigStore.isSupported` folds that flag
+  with `!kIsWeb` — both compile-time constants, so a build with it off tree-shakes the sheet away
+  — and gates the *store*, not just the button: an install that saved a custom URL under an
+  earlier build would otherwise keep talking to it with no UI left to undo it. The stored key
+  survives, so flipping the flag back on restores the previous choice.
 - `core/network/dio_client.dart` — one `Dio` (`dioClientProvider`); its interceptor sets
   `Authorization: Bearer` from `TokenStorage` and `Accept-Language` from the active locale. New
   repositories take this instance.
