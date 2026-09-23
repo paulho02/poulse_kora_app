@@ -37,6 +37,46 @@ flutter run --dart-define-from-file=env.json
 
 `env.json` is gitignored since the right IP is per-machine/per-network.
 
+## Profile mode on the web
+
+A debug web build is compiled by DDC with no optimizations, so scrolling, image decoding and route
+transitions are all misleadingly slow — never judge performance from one. A profile build goes
+through dart2js like a release build does, so what you measure is roughly what a user gets:
+
+```bash
+flutter run -d web-server --profile --web-port=3000
+```
+
+`-d web-server` compiles and serves but launches nothing: the tool prints
+
+```
+lib/main.dart is being served at http://localhost:3000
+```
+
+and you open that yourself, in whichever browser you want to profile in. (`-d chrome --profile`
+does the same and opens Chrome for you; `web-server` is the device to use when Chrome isn't the
+target, or when the browser is on another machine. It's hidden from `flutter devices` unless you
+pass `--show-web-server-device`, but `-d web-server` works regardless.)
+
+What's different from a debug run:
+
+- **No hot reload.** The run still prints the `r` key, but only debug web builds have a service
+  protocol; in profile mode `r` re-runs the whole dart2js compile and then asks you to refresh the
+  page. Treat a code change as stop (`q`) and rerun.
+- **No Flutter DevTools either** — same reason, so no `?uri=` line is printed. Profile the app with
+  the browser's own DevTools (the Performance tab), which is the supported path on web anyway.
+- The build is a full dart2js compile, so startup is around a minute rather than a few seconds.
+- `--dart-define`s work as usual, so a LAN run is
+  `flutter run -d web-server --profile --web-port=3000 --dart-define-from-file=env.json`.
+
+Keep `--web-port=3000` for the same CORS reason as a debug run. To open the app from a phone or a
+second machine, add `--web-hostname=0.0.0.0` — and note the browser's origin is then
+`http://<your-LAN-IP>:3000`, which has to be in the backend's `BACKEND_CORS_ORIGINS` as well, since
+CORS matches the whole origin string and not just the port.
+
+If you only want the artifacts rather than a server, `flutter build web --profile` writes them to
+`build/web/`.
+
 ## Commands
 
 ```bash
@@ -44,6 +84,7 @@ flutter analyze          # static analysis / lints
 flutter test              # widget & unit tests
 flutter test test/some_test.dart   # single test file
 flutter run                # run on a connected device/emulator/browser
+flutter run -d web-server --profile --web-port=3000   # profile build, open the printed URL yourself
 flutter devices            # list available targets
 ```
 
