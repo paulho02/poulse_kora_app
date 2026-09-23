@@ -37,8 +37,26 @@ class GoogleSignInService {
 
   /// Idempotent: the plugin must be initialized exactly once, but both auth
   /// screens and the settings row can each be the first to need it.
-  Future<void> ensureInitialized() {
-    return _initialization ??= _initialize();
+  ///
+  /// A *failed* initialization is deliberately not remembered. `initialize()`
+  /// reaches into Play services, which is exactly what is unreliable in the
+  /// minutes after an install, and memoizing the rejected future would leave
+  /// Google sign-in broken for the whole process lifetime — every later caller
+  /// would await the same stored failure without the plugin ever being asked
+  /// again. Only a success is worth keeping.
+  Future<void> ensureInitialized() async {
+    final pending = _initialization;
+    if (pending != null) return pending;
+    final attempt = _initialize();
+    _initialization = attempt;
+    try {
+      await attempt;
+    } catch (_) {
+      // Guard on identity: a concurrent caller may already have started a
+      // fresh attempt, and clearing unconditionally would discard that one.
+      if (identical(_initialization, attempt)) _initialization = null;
+      rethrow;
+    }
   }
 
   Future<void> _initialize() async {
@@ -71,16 +89,23 @@ class GoogleSignInService {
   /// Runs the native sign-in flow and returns the ID token.
   ///
   /// Returns null when the user backs out, which is not an error and must not
-  /// surface as one. Any other [GoogleSignInException] is rethrown.
-  Future<String?> signIn() async {
-    await ensureInitialized();
-    try {
-      final account = await _signIn.authenticate();
-      return account.authentication.idToken;
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) return null;
-      rethrow;
-    }
+  /// surface as one. Transient platform failures are retried (see
+  /// [isTransientGoogleSignInError]); anything else is rethrown.
+  Future<String?> signIn() {
+    return retryTransientGoogleSignIn(() async {
+      // Inside the retried body on purpose: initialization is the first thing
+      // that touches Play services, so it fails for the same reasons and
+      // deserves the same second chance. `ensureInitialized` no longer caches
+      // a failure, so this really does re-run it.
+      await ensureInitialized();
+      try {
+        final account = await _signIn.authenticate();
+        return account.authentication.idToken;
+      } on GoogleSignInException catch (e) {
+        if (e.code == GoogleSignInExceptionCode.canceled) return null;
+        rethrow;
+      }
+    });
   }
 
   /// Clears Google's own session.
@@ -92,5 +117,59 @@ class GoogleSignInService {
     if (!isConfigured) return;
     await ensureInitialized();
     await _signIn.signOut();
+  }
+}
+
+/// Whether [code] describes a platform hiccup rather than a verdict.
+///
+/// The two retryable codes are the ones that carry no information about the
+/// request itself:
+///
+/// - [GoogleSignInExceptionCode.interrupted] is the plugin's rendering of
+///   Credential Manager's `GetCredentialInterruptedException`, which Android
+///   documents as a transient error the caller is expected to retry;
+/// - [GoogleSignInExceptionCode.unknownError] is the catch-all the Android
+///   implementation falls back to for every `GetCredentialException` it has no
+///   specific case for, which includes Play services failing internally — an
+///   `ActivityManager: ... com.google.android.gms sent binder code 1 ... got
+///   error -32` in logcat is one of these reaching us.
+///
+/// Everything else is a decision, not a hiccup: `canceled` is the user saying
+/// no, and the configuration/UI codes describe a build or a moment that will
+/// fail again just as fast. Retrying those would only delay the error.
+///
+/// The enum is documented as open — new values are not a breaking change — so
+/// this is an allow-list, and an unrecognised code is treated as permanent.
+bool isTransientGoogleSignInError(GoogleSignInExceptionCode code) {
+  return code == GoogleSignInExceptionCode.interrupted ||
+      code == GoogleSignInExceptionCode.unknownError;
+}
+
+/// Runs [attempt] until it succeeds, fails permanently, or runs out of tries.
+///
+/// Exists because Google's own credential state for an app is rebuilt from
+/// scratch on install, and the first sign-ins afterwards fail for reasons that
+/// have nothing to do with the request — the same tap works seconds later. That
+/// was previously left to the user to discover by pressing the button again
+/// until it took; this does the pressing.
+///
+/// Only [GoogleSignInException]s are considered, and only the transient ones:
+/// see [isTransientGoogleSignInError]. The backoff is short because the whole
+/// budget is spent with the user watching a spinner, and bounded because a
+/// failure that survives it is worth showing.
+Future<T> retryTransientGoogleSignIn<T>(
+  Future<T> Function() attempt, {
+  int maxAttempts = 3,
+  Duration backoff = const Duration(milliseconds: 300),
+}) async {
+  for (var tries = 1; ; tries++) {
+    try {
+      return await attempt();
+    } on GoogleSignInException catch (e) {
+      if (tries >= maxAttempts || !isTransientGoogleSignInError(e.code)) {
+        rethrow;
+      }
+      await Future<void>.delayed(backoff * tries);
+    }
   }
 }
