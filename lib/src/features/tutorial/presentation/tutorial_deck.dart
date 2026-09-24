@@ -19,7 +19,7 @@ class _Chapter {
 /// ranking model is involved (2), so the decision is yours (3), which is
 /// worth something and therefore priced (4), and the result is a feed that is
 /// finite (5). Chapter 5 exists because a feed that runs dry is the single
-/// most confusing thing about Relay for anyone arriving from an infinite
+/// most confusing thing about Peerkola for anyone arriving from an infinite
 /// scroll — it looks broken, and it isn't.
 List<_Chapter> _chapters(AppLocalizations l10n) => [
   _Chapter(
@@ -48,7 +48,7 @@ List<_Chapter> _chapters(AppLocalizations l10n) => [
 /// building it.
 int tutorialChapterCount(AppLocalizations l10n) => _chapters(l10n).length;
 
-/// The "How Relay works" deck — the one place the concept is explained at
+/// The "How Peerkola works" deck — the one place the concept is explained at
 /// length, as opposed to the onboarding intro slides (three sentences, shown
 /// to everyone) and `showEconomyExplainerSheet` (the token model only, opened
 /// from a pill).
@@ -278,7 +278,7 @@ class _ChapterPage extends StatelessWidget {
 }
 
 /// The deck as a standalone route (`/tutorial`), reached from
-/// Settings → How Relay works. The app bar's back button is the way out, so
+/// Settings → How Peerkola works. The app bar's back button is the way out, so
 /// the deck gets no skip of its own.
 class TutorialScreen extends StatelessWidget {
   const TutorialScreen({super.key});

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
-import 'package:poulse_kora_app/src/features/history/application/history_providers.dart';
-import 'package:poulse_kora_app/src/features/history/data/history_repository.dart';
-import 'package:poulse_kora_app/src/features/history/data/reviewed_post.dart';
-import 'package:poulse_kora_app/src/features/history/presentation/post_history_screen.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/history/application/history_providers.dart';
+import 'package:peerkola/src/features/history/data/history_repository.dart';
+import 'package:peerkola/src/features/history/data/reviewed_post.dart';
+import 'package:peerkola/src/features/history/presentation/post_history_screen.dart';
 
 /// The two ways to ask for fresh history, on the two list shapes that used to
 /// swallow the gesture: an empty history (the message was rendered *instead of*

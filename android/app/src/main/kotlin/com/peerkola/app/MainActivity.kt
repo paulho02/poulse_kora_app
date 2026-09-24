@@ -1,4 +1,4 @@
-package com.poulsekora.poulse_kora_app
+package com.peerkola.app
 
 import io.flutter.embedding.android.FlutterActivity
 

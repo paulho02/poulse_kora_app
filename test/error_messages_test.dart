@@ -4,21 +4,21 @@ import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/errors/api_exception.dart';
-import 'package:poulse_kora_app/src/core/errors/error_messages.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/errors/api_exception.dart';
+import 'package:peerkola/src/core/errors/error_messages.dart';
 
 void main() {
   final req = RequestOptions(path: '/posts/feed');
   final en = lookupAppLocalizations(const Locale('en'));
   final de = lookupAppLocalizations(const Locale('de'));
 
-  group('asRelayException', () {
+  group('asPeerkolaException', () {
     test('unwraps the failure the interceptor tucked into DioException.error', () {
       // Regression: Dio rethrows its own type, so `AsyncValue.guard` hands the
-      // widget a DioException, not the RelayApiException inside it. Before this
+      // widget a DioException, not the PeerkolaApiException inside it. Before this
       // was unwrapped, every offline screen read "Something went wrong".
-      final inner = RelayApiException(
+      final inner = PeerkolaApiException(
         0,
         'offline',
         const {},
@@ -26,7 +26,7 @@ void main() {
       );
       final wrapped = DioException(requestOptions: req, error: inner);
 
-      final result = asRelayException(wrapped);
+      final result = asPeerkolaException(wrapped);
       expect(result.error, 'offline');
       expect(result.isConnectivityFailure, isTrue);
     });
@@ -36,7 +36,7 @@ void main() {
         requestOptions: req,
         type: DioExceptionType.connectionError,
       );
-      expect(asRelayException(e).kind, ApiErrorKind.offline);
+      expect(asPeerkolaException(e).kind, ApiErrorKind.offline);
     });
 
     test('treats a response-less unknown failure as offline', () {
@@ -45,7 +45,7 @@ void main() {
         requestOptions: req,
         type: DioExceptionType.unknown,
       );
-      expect(asRelayException(e).kind, ApiErrorKind.offline);
+      expect(asPeerkolaException(e).kind, ApiErrorKind.offline);
     });
 
     test('reads the structured error code out of a 4xx body', () {
@@ -64,7 +64,7 @@ void main() {
           },
         ),
       );
-      final result = asRelayException(e);
+      final result = asPeerkolaException(e);
       expect(result.error, 'insufficient_tokens');
       expect(result.kind, ApiErrorKind.api);
       expect(
@@ -91,7 +91,7 @@ void main() {
           ),
         ),
       );
-      final result = asRelayException(e);
+      final result = asPeerkolaException(e);
       expect(result.error, 'rate_limited');
       expect(result.detail['retry_after'], 86400);
     });
@@ -107,7 +107,7 @@ void main() {
           data: utf8.encode('<html>Bad Gateway</html>'),
         ),
       );
-      expect(asRelayException(e).error, 'internal_error');
+      expect(asPeerkolaException(e).error, 'internal_error');
     });
 
     test('maps 401 to unauthorized', () {
@@ -122,7 +122,7 @@ void main() {
           },
         ),
       );
-      expect(asRelayException(e).kind, ApiErrorKind.unauthorized);
+      expect(asPeerkolaException(e).kind, ApiErrorKind.unauthorized);
     });
   });
 
@@ -130,7 +130,7 @@ void main() {
     test('gives offline copy for a wrapped connection failure', () {
       final wrapped = DioException(
         requestOptions: req,
-        error: RelayApiException(
+        error: PeerkolaApiException(
           0,
           'offline',
           const {},
@@ -142,7 +142,7 @@ void main() {
     });
 
     test('renders the price and balance carried on insufficient_tokens', () {
-      final e = RelayApiException(402, 'insufficient_tokens', const {
+      final e = PeerkolaApiException(402, 'insufficient_tokens', const {
         'price': 5,
         'balance': 2,
       });
@@ -156,10 +156,10 @@ void main() {
       // step (it used to be an unhandled unique-constraint violation, i.e. a
       // 500). Falling through to the generic message would tell someone whose
       // only problem is a name clash that something went wrong on our side.
-      final taken = RelayApiException(409, 'username_taken', const {});
+      final taken = PeerkolaApiException(409, 'username_taken', const {});
 
       expect(messageFor(en, taken), contains('username'));
-      final unmapped = RelayApiException(400, 'something_new', const {});
+      final unmapped = PeerkolaApiException(400, 'something_new', const {});
       expect(messageFor(en, taken), isNot(messageFor(en, unmapped)));
       expect(messageFor(de, taken), contains('Benutzername'));
     });
@@ -167,12 +167,12 @@ void main() {
     test('maps the profile-picture rejections to their own copy', () {
       // Both are real answers from the backend's upload validation, so neither
       // may fall through to the generic "something went wrong".
-      final badType = RelayApiException(
+      final badType = PeerkolaApiException(
         400,
         'profile_picture_invalid_type',
         const {},
       );
-      final tooLarge = RelayApiException(
+      final tooLarge = PeerkolaApiException(
         400,
         'profile_picture_too_large',
         const {},
@@ -188,7 +188,7 @@ void main() {
 
     test('points a stale review at the fix rather than just failing', () {
       expect(
-        messageFor(en, RelayApiException(409, 'not_in_queue', const {})),
+        messageFor(en, PeerkolaApiException(409, 'not_in_queue', const {})),
         contains('refresh'),
       );
     });
@@ -196,7 +196,7 @@ void main() {
     test('tells a throttled user how long to wait', () {
       final msg = messageFor(
         en,
-        RelayApiException(429, 'rate_limited', const {'retry_after': 7}),
+        PeerkolaApiException(429, 'rate_limited', const {'retry_after': 7}),
       );
       expect(msg, contains('7 seconds'));
     });
@@ -205,7 +205,7 @@ void main() {
       expect(
         messageFor(
           en,
-          RelayApiException(429, 'rate_limited', const {'retry_after': 1}),
+          PeerkolaApiException(429, 'rate_limited', const {'retry_after': 1}),
         ),
         contains('1 second.'),
       );
@@ -214,7 +214,7 @@ void main() {
     test('stays readable when rate_limited carries no retry_after', () {
       final msg = messageFor(
         en,
-        RelayApiException(429, 'rate_limited', const {}),
+        PeerkolaApiException(429, 'rate_limited', const {}),
       );
       expect(msg, contains('going a bit fast'));
       expect(msg, isNot(contains('null')));
@@ -222,13 +222,13 @@ void main() {
 
     test('falls back to generic copy for an unrecognized code', () {
       expect(
-        messageFor(en, RelayApiException(400, 'some_new_code', const {})),
+        messageFor(en, PeerkolaApiException(400, 'some_new_code', const {})),
         'Something went wrong. Please try again.',
       );
     });
 
     test('formats the structured password-violation list from the backend', () {
-      final e = RelayApiException(400, 'register_invalid_password', {
+      final e = PeerkolaApiException(400, 'register_invalid_password', {
         'reason': [
           {
             'code': 'password_too_short',
@@ -242,7 +242,7 @@ void main() {
     test('renders in German when given the German localizations', () {
       final wrapped = DioException(
         requestOptions: req,
-        error: RelayApiException(
+        error: PeerkolaApiException(
           0,
           'offline',
           const {},
@@ -256,7 +256,7 @@ void main() {
     test(
       'renders the German password-violation sentence from the same code',
       () {
-        final e = RelayApiException(400, 'register_invalid_password', {
+        final e = PeerkolaApiException(400, 'register_invalid_password', {
           'reason': [
             {
               'code': 'password_too_short',
@@ -276,7 +276,7 @@ void main() {
         // The whole point of the dedicated code: the account's password was
         // destroyed by the upgrade, so "wrong credentials" would send the user
         // round in circles.
-        final e = RelayApiException(400, 'login_use_google', const {});
+        final e = PeerkolaApiException(400, 'login_use_google', const {});
         expect(messageFor(en, e), contains('signs in with Google'));
         expect(messageFor(de, e), contains('mit Google an'));
       },
@@ -298,7 +298,7 @@ void main() {
         'google_oauth_disabled',
       ];
       for (final code in codes) {
-        final e = RelayApiException(400, code, const {});
+        final e = PeerkolaApiException(400, code, const {});
         expect(
           messageFor(en, e),
           isNot(en.errorUnknown),
@@ -316,7 +316,7 @@ void main() {
       // It is a prompt, not a failure: GoogleAuthSection turns it into a
       // confirmation dialog, and it must never reach a snackbar. If someone
       // adds a case for it, that intent has been lost.
-      final e = RelayApiException(409, 'google_link_required', const {
+      final e = PeerkolaApiException(409, 'google_link_required', const {
         'email': 'a@b.com',
       });
       expect(messageFor(en, e), en.errorUnknown);

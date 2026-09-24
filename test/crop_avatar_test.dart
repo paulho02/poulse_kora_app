@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/media/presentation/crop_geometry.dart';
+import 'package:peerkola/src/core/media/presentation/crop_geometry.dart';
 
 void main() {
   group('cropSourceRect', () {

@@ -111,7 +111,7 @@ final authNotifierProvider = AsyncNotifierProvider<AuthNotifier, bool>(
 ///
 /// Distinct from `authNotifierProvider.isLoading`: that flag is *also* true
 /// during `login`/`register`, which sets `state = AsyncLoading()` again while
-/// a request is in flight. `PoulseKoraApp` used to gate its splash screen on
+/// a request is in flight. `PeerkolaApp` used to gate its splash screen on
 /// `isLoading` directly, which meant it swapped `MaterialApp.router` out for
 /// a bare splash `MaterialApp` on *every* login/register attempt, not just
 /// cold start — tearing down the whole route tree (and whatever screen the

@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy_repository.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
 
 /// A stand-in backend whose review queue the test moves around underneath the
 /// feed, the way the distribution worker does.

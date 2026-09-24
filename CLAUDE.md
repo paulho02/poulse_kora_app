@@ -4,10 +4,10 @@ Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 ## Project
 
-Flutter client for Poulse Kora (branded "Relay" in the UI). The backend is the sibling repo
+Flutter client for Peerkola. The backend is the sibling repo
 `poulse_kora_backend` (FastAPI, `fastapi-users` JWT auth, Postgres, Redis, S3 bucket) — its
 CLAUDE.md holds the API rationale this file refers to. Flutter 3.44.x stable / Dart 3.12, org
-`com.poulsekora`, applicationId `com.poulsekora.poulse_kora_app`. Targets: Android and Web
+`com.peerkola`, applicationId `com.peerkola.app`. Targets: Android and Web
 (add iOS with `flutter create --platforms=ios .` if ever needed).
 
 ## Commands
@@ -448,7 +448,7 @@ Loading, empty and broken are each a *designed* screen:
   (`AsyncValue.guard` hands widgets the wrapper); `messageFor` maps `detail.error` to copy. Never
   render `toString()`. After an await that may unmount the widget (an optimistic review unmounts
   its `PostCard`), capture the `ScaffoldMessenger` first and use `showErrorSnackBarOn`.
-- **Session boundaries are handled centrally** in `PoulseKoraApp`'s `authNotifierProvider`
+- **Session boundaries are handled centrally** in `PeerkolaApp`'s `authNotifierProvider`
   listener. Logout clears token, cache and local settings and invalidates the keep-alive data
   providers; sign-in warms `profileProvider`. Account-scoped providers are invalidated on the way
   **in** as well (`_invalidateSessionScoped`, `app.dart`): the router's permanent listener on
@@ -456,7 +456,7 @@ Loading, empty and broken are each a *designed* screen:
   next sign-in inherited "session expired".
 - **Riverpod's auto-retry is disabled for connectivity failures** (`_retryPolicy`, `main.dart`) —
   left on, an offline provider with no cache spins for minutes. `ConnectivityNotifier` owns
-  recovery: polls `/api/v1/health` on a backoff; `PoulseKoraApp` re-runs what failed on reconnect.
+  recovery: polls `/api/v1/health` on a backoff; `PeerkolaApp` re-runs what failed on reconnect.
 
 ### Auth
 

@@ -7,17 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart';
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channels_repository.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/feed_screen.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/post_card.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channels_repository.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy_repository.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/features/feed/presentation/feed_screen.dart';
+import 'package:peerkola/src/features/feed/presentation/post_card.dart';
 
 /// Reviewing a second post while the first is still playing its score-and-slide
 /// is ordinary use — the card takes ~1.1s to leave and a reader who already

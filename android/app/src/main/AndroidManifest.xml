@@ -3,7 +3,7 @@
          (debug/profile builds get this implicitly from Flutter tooling; release doesn't). -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="poulse_kora_app"
+        android:label="Peerkola"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

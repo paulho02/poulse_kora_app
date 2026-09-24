@@ -56,7 +56,7 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
           .markPushed(updated.settingsRevision);
       state = AsyncData(Cached.live(updated));
     } catch (e) {
-      final failure = asRelayException(e);
+      final failure = asPeerkolaException(e);
       if (!failure.isConnectivityFailure) rethrow;
     }
   }
@@ -177,7 +177,7 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
         } catch (e) {
           // Still offline, or the push failed. Stay dirty and retry on the next
           // reconnect — the local value keeps rendering in the meantime.
-          if (!asRelayException(e).isConnectivityFailure) rethrow;
+          if (!asPeerkolaException(e).isConnectivityFailure) rethrow;
         }
     }
   }
@@ -190,7 +190,7 @@ class ProfileNotifier extends AsyncNotifier<Cached<UserProfile>> {
       if (profile.isStale) return;
       await _reconcileSettings(profile.data);
       state = AsyncData(profile);
-    } on RelayApiException catch (_) {
+    } on PeerkolaApiException catch (_) {
       // Best-effort; the banner already tells the user what's going on.
     }
   }

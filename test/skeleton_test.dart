@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/presentation/empty_state.dart';
-import 'package:poulse_kora_app/src/core/presentation/skeleton.dart';
-import 'package:poulse_kora_app/src/core/theme/app_theme.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channels_skeleton.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/feed_skeleton.dart';
-import 'package:poulse_kora_app/src/features/history/presentation/history_skeleton.dart';
-import 'package:poulse_kora_app/src/features/profile/presentation/profile_skeleton.dart';
-import 'package:poulse_kora_app/src/features/stats/presentation/stats_skeleton.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/presentation/empty_state.dart';
+import 'package:peerkola/src/core/presentation/skeleton.dart';
+import 'package:peerkola/src/core/theme/app_theme.dart';
+import 'package:peerkola/src/features/channels/presentation/channels_skeleton.dart';
+import 'package:peerkola/src/features/feed/presentation/feed_skeleton.dart';
+import 'package:peerkola/src/features/history/presentation/history_skeleton.dart';
+import 'package:peerkola/src/features/profile/presentation/profile_skeleton.dart';
+import 'package:peerkola/src/features/stats/presentation/stats_skeleton.dart';
 
 /// The placeholder shapes that replaced the centred spinner on every cold
 /// load, plus the shared empty state they eventually resolve into.

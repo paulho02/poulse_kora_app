@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 Map<String, dynamic> json({Map<String, dynamic> overrides = const {}}) => {
   'id': 'ce1b6b1e-0000-4000-8000-000000000000',

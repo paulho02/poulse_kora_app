@@ -35,7 +35,7 @@ class EconomyNotifier extends Notifier<Cached<Economy>?> {
     try {
       state = await ref.read(economyRepositoryProvider).fetchEconomy();
     } catch (e) {
-      if (!asRelayException(e).isConnectivityFailure) rethrow;
+      if (!asPeerkolaException(e).isConnectivityFailure) rethrow;
     }
   }
 

@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/media/post_media_format.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/create_post/presentation/post_preview.dart';
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/media/post_media_format.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/create_post/presentation/post_preview.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 /// The composer's preview draws the post with the **reader's** widgets, from
 /// bytes that have not been uploaded yet. Two things could break silently and

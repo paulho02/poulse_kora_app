@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/core/config/app_config.dart';
-import 'package:poulse_kora_app/src/core/config/server_config.dart';
+import 'package:peerkola/src/core/config/app_config.dart';
+import 'package:peerkola/src/core/config/server_config.dart';
 
 /// `CUSTOM_SERVER_ENABLED` is a compile-time `--dart-define`, so these run
 /// against whatever the build under test was given — `flutter test` passes

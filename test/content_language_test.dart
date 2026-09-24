@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/app_config/data/public_app_config.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/create_post/presentation/language_picker_sheet.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/app_config/data/public_app_config.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/create_post/presentation/language_picker_sheet.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 /// Language routing, client side. Four things here fail *silently* rather than
 /// loudly, which is why each has a test:

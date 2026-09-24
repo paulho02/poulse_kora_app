@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/app.dart';
-import 'package:poulse_kora_app/src/core/announcements/application/announcement_providers.dart';
-import 'package:poulse_kora_app/src/core/announcements/data/announcement.dart';
-import 'package:poulse_kora_app/src/core/network/connectivity.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart';
-import 'package:poulse_kora_app/src/features/auth/application/auth_providers.dart';
+import 'package:peerkola/src/app.dart';
+import 'package:peerkola/src/core/announcements/application/announcement_providers.dart';
+import 'package:peerkola/src/core/announcements/data/announcement.dart';
+import 'package:peerkola/src/core/network/connectivity.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart';
+import 'package:peerkola/src/features/auth/application/auth_providers.dart';
 
 void main() {
   testWidgets('Unauthenticated app boots and redirects to the login screen', (
@@ -30,7 +30,7 @@ void main() {
           // and starts a probe timer; neither exists under flutter_test.
           connectivityProvider.overrideWith(_FakeConnectivityNotifier.new),
         ],
-        child: const PoulseKoraApp(),
+        child: const PeerkolaApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -54,7 +54,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           connectivityProvider.overrideWith(() => connectivity),
         ],
-        child: const PoulseKoraApp(),
+        child: const PeerkolaApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -97,7 +97,7 @@ void main() {
                 const Announcement(id: 'msg-1', message: 'Maintenance tonight'),
           ),
         ],
-        child: const PoulseKoraApp(),
+        child: const PeerkolaApp(),
       ),
     );
     await tester.pumpAndSettle();

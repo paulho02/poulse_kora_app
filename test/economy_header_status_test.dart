@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart'
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart'
     show sharedPreferencesProvider;
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/economy/presentation/economy_header_status.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/economy/presentation/economy_header_status.dart';
 
 /// The economy moved out of a full-width bar and into the app bar, which lays
 /// its actions out with `CrossAxisAlignment.stretch` — so "does it still look
@@ -278,7 +278,7 @@ void main() {
     ) async {
       // What the composer does after a channel and a language are picked: it
       // collapses the range onto the exact quote, which is also the number the
-      // Relay button is gated on.
+      // Publish button is gated on.
       await pumpPill(
         tester,
         variant: EconomyBarVariant.composer,

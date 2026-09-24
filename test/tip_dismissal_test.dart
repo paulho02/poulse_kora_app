@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart';
-import 'package:poulse_kora_app/src/core/tips/application/tip_providers.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart';
+import 'package:peerkola/src/core/tips/application/tip_providers.dart';
 
 /// Covers the generalized, multi-key version of the "dismiss forever" pattern
 /// already tested in `announcement_dismissal_test.dart` — same lifetime rules,

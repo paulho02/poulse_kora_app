@@ -28,7 +28,7 @@ Future<void> main() async {
               () => ref.read(authNotifierProvider.notifier).logout(),
         ),
       ],
-      child: const PoulseKoraApp(),
+      child: const PeerkolaApp(),
     ),
   );
 }
@@ -41,12 +41,12 @@ Future<void> main() async {
 /// gets no banner explanation, no message and no retry button, just a spinner.
 /// Recovery is already handled deliberately: `ConnectivityNotifier` probes
 /// `/health` on a backoff, and reconnecting refreshes the providers that failed
-/// (see `PoulseKoraApp`). So stop retrying and let the error surface.
+/// (see `PeerkolaApp`). So stop retrying and let the error surface.
 ///
 /// Non-connectivity errors keep a short bounded backoff, which covers a genuinely
 /// transient blip without hiding a persistent failure.
 Duration? _retryPolicy(int retryCount, Object error) {
-  if (asRelayException(error).isConnectivityFailure) return null;
+  if (asPeerkolaException(error).isConnectivityFailure) return null;
   if (retryCount >= 2) return null;
   return Duration(milliseconds: 200 * (1 << retryCount));
 }

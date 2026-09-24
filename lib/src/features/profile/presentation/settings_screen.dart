@@ -118,8 +118,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.hub_outlined),
-            title: Text(l10n.settingsHowRelayWorks),
-            subtitle: Text(l10n.settingsHowRelayWorksSubtitle),
+            title: Text(l10n.settingsHowPeerkolaWorks),
+            subtitle: Text(l10n.settingsHowPeerkolaWorksSubtitle),
             onTap: () => context.push('/tutorial'),
           ),
           ListTile(

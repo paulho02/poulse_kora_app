@@ -442,7 +442,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
         // The channel is cleared along with everything else: the composer is a
         // tab in the shell's IndexedStack, so its state outlives the post it
         // was written for, and a channel left selected is inherited silently by
-        // the next one - noticed only after relaying to the wrong place.
+        // the next one - noticed only after publishing to the wrong place.
         _selectedChannelId = null;
         // Cleared with the channel and for the same reason: the composer is a
         // tab in an IndexedStack, so a language left selected would be
@@ -479,7 +479,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   /// Runs the same "drop empty paragraphs, keep the order" walk `_submit` does,
   /// so what is previewed is what would be published — an author who left a
   /// blank block behind while rearranging sees the post without it, which is
-  /// what the reader gets. An empty post raises the same blocker line the Relay
+  /// what the reader gets. An empty post raises the same blocker line the Publish
   /// button would rather than opening a blank screen; a channel is *not*
   /// required, since previewing the writing is worth doing before that choice
   /// is made.
@@ -530,7 +530,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
     // route hands focus back to whatever held it, so picking a channel popped
     // the keyboard up over a post that was already written. Reopening it made
     // sense while the picker came *before* the editor; from the publish row,
-    // the next thing the author wants is the Relay button, not the keyboard.
+    // the next thing the author wants is the Publish button, not the keyboard.
     FocusManager.instance.primaryFocus?.unfocus();
     final selected = await showChannelPickerSheet(
       context,
@@ -722,7 +722,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   }
 
   /// Adding to the article can only make the "add something first" line stale,
-  /// so it clears with the edit rather than waiting for the next Relay press.
+  /// so it clears with the edit rather than waiting for the next Publish press.
   /// Call from inside a `setState`.
   void _clearEmptyPostBlocker() {
     if (_blocker == _PublishBlocker.emptyPost) _blocker = null;
@@ -808,7 +808,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                   // forever.
                   if (isOffline) {
                     return ErrorStateView(
-                      error: RelayApiException(
+                      error: PeerkolaApiException(
                         0,
                         'offline',
                         const {},
@@ -858,7 +858,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
               context,
               channels,
               // Everything the toolbar decides — the affordability hint, whether
-              // Relay is enabled — has to weigh the balance against the price
+              // Publish is enabled — has to weigh the balance against the price
               // that will actually be charged.
               _effectiveEconomy(economy.data, selectedChannel),
               selectedChannel,
@@ -880,7 +880,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   ///
   /// The exact route quote when both a channel and a language are chosen; the
   /// channel's cheapest route while only the channel is. The low end rather
-  /// than the high one, because this figure also gates the Relay button — and
+  /// than the high one, because this figure also gates the Publish button — and
   /// telling someone they cannot afford a post that a different language would
   /// in fact make affordable is a refusal they cannot act on. The exact number
   /// always arrives before they can publish, since a language is required.
@@ -894,7 +894,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   /// otherwise leaves the deployment-wide spread in place.
   ///
   /// Both halves matter. Collapsing when a price is known keeps the pill and
-  /// the Relay button reading the same number — the affordability getters use
+  /// the Publish button reading the same number — the affordability getters use
   /// the range's low end, so a leftover spread would let a cheap route in
   /// another channel vouch for this one, and the pill would read "Cost 4"
   /// beside an enabled button on a balance of 3. *Not* collapsing before then
@@ -915,7 +915,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
 
   /// Everything that is not the article being written: the block-adding
   /// buttons, and the three decisions made at the moment of publishing
-  /// (channel, anonymity, relay).
+  /// (channel, anonymity, publish).
   Widget _buildToolbar(
     BuildContext context,
     List<Channel> channels,
@@ -979,7 +979,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
             // interpolation or a stale channel figure.
             if (_routePrice != null) _ExactPriceLine(price: _routePrice!.price),
             // Only when it applies, and right above the button it explains —
-            // the disabled Relay button is otherwise the only thing saying no,
+            // the disabled Publish button is otherwise the only thing saying no,
             // and it can't say why.
             if (!economy.canAffordPost)
               _ShortOnTokensHint(
@@ -1052,7 +1052,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
                   onPressed: (_isSubmitting || !economy.canAffordPost)
                       ? null
                       : _submit,
-                  child: const Text('Relay'),
+                  child: Text(l10n.createPostPublish),
                 ),
               ],
             ),
@@ -1157,7 +1157,7 @@ class _ChannelSelectorChip extends StatelessWidget {
 
   final Channel? channel;
 
-  /// Relay was pressed with no channel picked - the chip turns error-coloured
+  /// Publish was pressed with no channel picked - the chip turns error-coloured
   /// so the hint line above it has something to point at.
   final bool hasError;
   final VoidCallback onTap;
@@ -1297,7 +1297,7 @@ class _ExactPriceLine extends StatelessWidget {
   }
 }
 
-/// The one case where the composer still owes an explanation: the Relay button
+/// The one case where the composer still owes an explanation: the Publish button
 /// is disabled and nothing else on screen says why.
 ///
 /// A line, not a panel — and only while it applies. The permanent "you need
@@ -1335,8 +1335,8 @@ class _ShortOnTokensHint extends StatelessWidget {
   }
 }
 
-/// The "one thing still missing before this can be relayed" line, in the row
-/// above the Relay button it explains.
+/// The "one thing still missing before this can be published" line, in the row
+/// above the Publish button it explains.
 ///
 /// A line rather than a snackbar, for the reason given on [_PublishBlocker]:
 /// a snackbar covers the toolbar, and the toolbar holds the very control the

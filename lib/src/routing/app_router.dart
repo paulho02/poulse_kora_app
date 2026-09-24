@@ -226,7 +226,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'onboardingReplay',
         builder: (context, state) => const OnboardingScreen(isReplay: true),
       ),
-      // "How Relay works", from Settings. Needs no exemption from the gate
+      // "How Peerkola works", from Settings. Needs no exemption from the gate
       // chain above: it is only ever pushed by an account that is signed in,
       // verified and onboarded, so every check has already passed by the time
       // it can be reached. Onboarding shows the same deck as an embedded step

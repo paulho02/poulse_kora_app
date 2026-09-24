@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/avatars/presentation/user_avatar.dart';
-import 'package:poulse_kora_app/src/core/media/application/media_reload.dart';
-import 'package:poulse_kora_app/src/core/media/presentation/network_media_image.dart';
+import 'package:peerkola/src/core/avatars/presentation/user_avatar.dart';
+import 'package:peerkola/src/core/media/application/media_reload.dart';
+import 'package:peerkola/src/core/media/presentation/network_media_image.dart';
 
 /// Replaces the old `authenticated_byte_cache_test.dart`. What that file
 /// protected — one fetch per URL, failures not retried into a storm, a replaced

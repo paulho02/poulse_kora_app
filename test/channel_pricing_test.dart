@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channel_price_chip.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/economy/presentation/economy_header_status.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/channels/presentation/channel_price_chip.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/economy/presentation/economy_header_status.dart';
 
 /// Posting is priced per channel, and two things about that would break
 /// quietly rather than loudly.
@@ -142,7 +142,7 @@ void main() {
       tester,
     ) async {
       // Affordable at the global rate, not at this channel's — the case that
-      // would let someone press Relay into a 402 if the override were dropped.
+      // would let someone press Publish into a 402 if the override were dropped.
       await pump(
         tester,
         const EconomyHeaderStatus(

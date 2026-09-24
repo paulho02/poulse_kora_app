@@ -32,7 +32,7 @@ const double kTokenSpendDropStart = 0.42;
 ///
 /// It is drawn over the composer rather than on the feed's token pill it
 /// ultimately changes, because the pill is chrome in the corner: an animation
-/// there is over before the eye that was on the Relay button finds it. This
+/// there is over before the eye that was on the Publish button finds it. This
 /// plays where the author is already looking.
 class TokenSpendBadge extends StatelessWidget {
   const TokenSpendBadge({

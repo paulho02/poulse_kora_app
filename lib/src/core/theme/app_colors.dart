@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Palette lifted from the Relay design prototype. Kept as plain constants
+/// Palette lifted from the Peerkola design prototype. Kept as plain constants
 /// (rather than a [ThemeExtension]) since the palette is small and MVP-sized.
 class AppColors {
   AppColors._();

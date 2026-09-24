@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:poulse_kora_app/src/core/languages/language_detector.dart';
+import 'package:peerkola/src/core/languages/language_detector.dart';
 
 void main() {
   const detector = StopwordLanguageDetector();

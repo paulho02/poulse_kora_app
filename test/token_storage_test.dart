@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/storage/token_storage.dart';
+import 'package:peerkola/src/core/storage/token_storage.dart';
 
 /// Counts keystore hits. Reads are delayed a tick so the concurrency test
 /// exercises the real overlap a cold start produces.

@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
 
 /// Captures the request `createPost` actually sends, and answers with a
 /// minimal-but-valid `PostCreateResult` body.

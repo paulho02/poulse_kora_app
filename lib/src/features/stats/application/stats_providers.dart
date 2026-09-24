@@ -63,7 +63,7 @@ class ReviewGateStatusNotifier extends Notifier<ReviewGateStatus?> {
         unlocked: stats.data.unlocked,
       );
     } catch (e) {
-      if (!asRelayException(e).isConnectivityFailure) rethrow;
+      if (!asPeerkolaException(e).isConnectivityFailure) rethrow;
     }
   }
 

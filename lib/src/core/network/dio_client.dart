@@ -11,7 +11,7 @@ import 'connectivity.dart';
 ///  1. attach the stored JWT bearer token,
 ///  2. report every outcome to [ConnectivityNotifier] so the offline banner
 ///     reflects reality rather than just link state,
-///  3. convert every [DioException] into a [RelayApiException], so no repository
+///  3. convert every [DioException] into a [PeerkolaApiException], so no repository
 ///     or screen ever sees a raw Dio type. This is centralized here because the
 ///     alternative — per-method try/catch — drifted: error shape used to depend
 ///     on which call you happened to make.
@@ -49,7 +49,7 @@ class DioClient {
           handler.next(response);
         },
         onError: (e, handler) async {
-          final failure = RelayApiException.fromDioException(e);
+          final failure = PeerkolaApiException.fromDioException(e);
 
           if (failure.isConnectivityFailure) {
             connectivity.reportFailure();

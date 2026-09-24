@@ -5,9 +5,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/media/post_media_format.dart';
-import 'package:poulse_kora_app/src/core/media/presentation/crop_media_screen.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/media/post_media_format.dart';
+import 'package:peerkola/src/core/media/presentation/crop_media_screen.dart';
 
 /// A plain red bitmap, big enough that the crop has something to sample.
 Future<ui.Image> _redImage(int width, int height) {

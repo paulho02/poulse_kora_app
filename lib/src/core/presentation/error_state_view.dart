@@ -21,8 +21,8 @@ class ErrorStateView extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final isOffline =
-        error is RelayApiException &&
-        (error as RelayApiException).isConnectivityFailure;
+        error is PeerkolaApiException &&
+        (error as PeerkolaApiException).isConnectivityFailure;
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(

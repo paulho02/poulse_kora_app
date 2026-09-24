@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'package:poulse_kora_app/src/features/auth/data/google_sign_in_service.dart';
+import 'package:peerkola/src/features/auth/data/google_sign_in_service.dart';
 
 /// Covers the two things that made a fresh install's first Google sign-in fail
 /// until the user had tapped the button a few times: transient Play-services

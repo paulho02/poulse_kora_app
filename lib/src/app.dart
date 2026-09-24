@@ -22,8 +22,8 @@ import 'features/profile/application/profile_providers.dart';
 import 'features/stats/application/stats_providers.dart';
 import 'routing/app_router.dart';
 
-class PoulseKoraApp extends ConsumerWidget {
-  const PoulseKoraApp({super.key});
+class PeerkolaApp extends ConsumerWidget {
+  const PeerkolaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -130,7 +130,7 @@ class PoulseKoraApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'Relay',
+      title: 'Peerkola',
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

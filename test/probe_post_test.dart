@@ -7,17 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/forward_score_badge.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/post_card.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/probe_marker.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/probe_result_badge.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy_repository.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/feed/presentation/forward_score_badge.dart';
+import 'package:peerkola/src/features/feed/presentation/post_card.dart';
+import 'package:peerkola/src/features/feed/presentation/probe_marker.dart';
+import 'package:peerkola/src/features/feed/presentation/probe_result_badge.dart';
 
 /// A trust check is a post that measures the reader, and the two things that
 /// makes non-negotiable are both covered here: the reader is *told* (the marker

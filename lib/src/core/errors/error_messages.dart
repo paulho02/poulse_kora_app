@@ -15,7 +15,7 @@ import 'api_exception.dart';
 String messageFor(AppLocalizations l10n, Object? rawError) {
   // Unwrap first: `AsyncValue.guard` hands widgets the raw `DioException` that
   // Dio rethrows, not the normalized failure inside it.
-  final error = asRelayException(rawError);
+  final error = asPeerkolaException(rawError);
 
   switch (error.error) {
     // ---- connectivity -------------------------------------------------------
@@ -266,7 +266,7 @@ String _violationMessage(AppLocalizations l10n, Map violation) {
 
 /// Short label for a full-screen error state — pairs with [messageFor] as the body.
 String titleFor(AppLocalizations l10n, Object? rawError) {
-  final error = asRelayException(rawError);
+  final error = asPeerkolaException(rawError);
   if (error.isConnectivityFailure) return l10n.errorTitleOffline;
   if (error.kind == ApiErrorKind.unauthorized) {
     return l10n.errorTitleSessionExpired;

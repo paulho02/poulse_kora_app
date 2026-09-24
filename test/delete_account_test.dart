@@ -7,12 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/profile_repository.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
-import 'package:poulse_kora_app/src/features/profile/presentation/delete_account_dialog.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/profile_repository.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/src/features/profile/presentation/delete_account_dialog.dart';
 
 /// Settings → Delete account, both slides.
 ///

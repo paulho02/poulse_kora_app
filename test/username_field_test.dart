@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/errors/api_exception.dart';
-import 'package:poulse_kora_app/src/core/presentation/field_info_icon.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/username_step.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/errors/api_exception.dart';
+import 'package:peerkola/src/core/presentation/field_info_icon.dart';
+import 'package:peerkola/src/features/onboarding/presentation/username_step.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 /// The username field's two pieces of feedback, on the onboarding step (the
 /// register form's field is built the same way).
@@ -123,6 +123,6 @@ class _FakeProfile extends ProfileNotifier {
   @override
   Future<void> updateUsername(String username) async {
     attempts++;
-    throw RelayApiException(409, 'username_taken', const {});
+    throw PeerkolaApiException(409, 'username_taken', const {});
   }
 }

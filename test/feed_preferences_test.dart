@@ -3,17 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart'
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart'
     show sharedPreferencesProvider;
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/feed_preferences/presentation/feed_preferences_screen.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/feed_preferences/presentation/feed_preferences_screen.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 /// Channels and accepted languages are the same kind of thing — filters applied
 /// before a post ever reaches your queue — so they live behind one screen. The

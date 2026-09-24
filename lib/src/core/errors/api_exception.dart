@@ -43,8 +43,8 @@ enum ApiErrorKind {
 /// `core/network/dio_client.dart`, so repositories and screens never handle raw
 /// Dio types. Map one to display copy with `messageFor` in `error_messages.dart`
 /// — don't build user-facing strings from [error] at the call site.
-class RelayApiException implements Exception {
-  RelayApiException(
+class PeerkolaApiException implements Exception {
+  PeerkolaApiException(
     this.statusCode,
     this.error,
     this.detail, {
@@ -69,13 +69,13 @@ class RelayApiException implements Exception {
       kind == ApiErrorKind.offline || kind == ApiErrorKind.timeout;
 
   @override
-  String toString() => 'RelayApiException($statusCode, $error, ${kind.name})';
+  String toString() => 'PeerkolaApiException($statusCode, $error, ${kind.name})';
 
-  factory RelayApiException.fromDioException(DioException e) {
+  factory PeerkolaApiException.fromDioException(DioException e) {
     switch (e.type) {
       case DioExceptionType.connectionError:
       case DioExceptionType.connectionTimeout:
-        return RelayApiException(
+        return PeerkolaApiException(
           0,
           'offline',
           const {},
@@ -83,21 +83,21 @@ class RelayApiException implements Exception {
         );
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return RelayApiException(
+        return PeerkolaApiException(
           0,
           'timeout',
           const {},
           kind: ApiErrorKind.timeout,
         );
       case DioExceptionType.badCertificate:
-        return RelayApiException(
+        return PeerkolaApiException(
           0,
           'bad_certificate',
           const {},
           kind: ApiErrorKind.unknown,
         );
       case DioExceptionType.cancel:
-        return RelayApiException(
+        return PeerkolaApiException(
           0,
           'cancelled',
           const {},
@@ -109,7 +109,7 @@ class RelayApiException implements Exception {
         // response-less unknown as offline: the alternative is showing a scary
         // generic error for the ordinary case of the server being unreachable.
         if (e.response == null) {
-          return RelayApiException(
+          return PeerkolaApiException(
             0,
             'offline',
             const {},
@@ -123,7 +123,7 @@ class RelayApiException implements Exception {
         // Newer Dio versions may add cases (e.g. transformTimeout); a
         // response-less failure is still, from the user's side, "didn't land".
         if (e.response == null) {
-          return RelayApiException(
+          return PeerkolaApiException(
             0,
             'offline',
             const {},
@@ -135,7 +135,7 @@ class RelayApiException implements Exception {
 
     final status = e.response?.statusCode ?? 0;
     final detail = _extractDetail(e.response?.data);
-    return RelayApiException(
+    return PeerkolaApiException(
       status,
       detail['error'] as String? ?? _fallbackCodeFor(status),
       detail,
@@ -197,19 +197,19 @@ class RelayApiException implements Exception {
   }
 }
 
-/// Unwraps whatever a failed call threw into a [RelayApiException].
+/// Unwraps whatever a failed call threw into a [PeerkolaApiException].
 ///
 /// The interceptor in `core/network/dio_client.dart` tucks the normalized
 /// failure into `DioException.error`, but Dio insists on rethrowing its own type
 /// — and `AsyncValue.guard` then hands that raw `DioException` to the widget. So
 /// anything that inspects an error must funnel through here first, or an offline
 /// failure reads as a generic "something went wrong".
-RelayApiException asRelayException(Object? error) {
-  if (error is RelayApiException) return error;
+PeerkolaApiException asPeerkolaException(Object? error) {
+  if (error is PeerkolaApiException) return error;
   if (error is DioException) {
     final inner = error.error;
-    if (inner is RelayApiException) return inner;
-    return RelayApiException.fromDioException(error);
+    if (inner is PeerkolaApiException) return inner;
+    return PeerkolaApiException.fromDioException(error);
   }
-  return RelayApiException(0, 'unknown', const {}, kind: ApiErrorKind.unknown);
+  return PeerkolaApiException(0, 'unknown', const {}, kind: ApiErrorKind.unknown);
 }

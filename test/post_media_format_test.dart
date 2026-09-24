@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/media/post_media_format.dart';
+import 'package:peerkola/src/core/media/post_media_format.dart';
 
 void main() {
   group('nearestPostOrientation', () {

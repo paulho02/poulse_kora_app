@@ -12,7 +12,7 @@ class AppConfig {
   ///   flutter run --dart-define=API_BASE_URL=https://api.example.com
   static const String _envApiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
-  /// Base URL of the Poulse Kora backend (no trailing slash, no [apiPath]).
+  /// Base URL of the Peerkola backend (no trailing slash, no [apiPath]).
   ///
   /// Defaults to the backend's docker-compose dev setup. Android emulators
   /// can't reach the host via `localhost`, hence the `10.0.2.2` alias.

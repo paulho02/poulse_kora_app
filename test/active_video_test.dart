@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/media/application/active_video.dart';
+import 'package:peerkola/src/core/media/application/active_video.dart';
 
 /// The rule `InlineMediaBlock` leans on: at most one clip is claimed at a time,
 /// and a block that has already lost the claim cannot revoke the newer one on

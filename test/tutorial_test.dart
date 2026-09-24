@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/tutorial_offer_step.dart';
-import 'package:poulse_kora_app/src/features/tutorial/presentation/tutorial_deck.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/features/onboarding/presentation/tutorial_offer_step.dart';
+import 'package:peerkola/src/features/tutorial/presentation/tutorial_deck.dart';
 
 /// The tutorial deck and the onboarding offer in front of it.
 ///

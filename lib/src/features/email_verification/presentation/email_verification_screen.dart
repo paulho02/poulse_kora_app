@@ -70,9 +70,9 @@ class _EmailVerificationScreenState
       _startCooldown(defaultCooldown ?? 60);
     } catch (error) {
       if (!mounted) return;
-      final relayError = asRelayException(error);
-      if (relayError.error == 'resend_cooldown') {
-        final retryAfter = relayError.detail['retry_after'];
+      final apiError = asPeerkolaException(error);
+      if (apiError.error == 'resend_cooldown') {
+        final retryAfter = apiError.detail['retry_after'];
         _startCooldown(
           retryAfter is int ? retryAfter : (defaultCooldown ?? 60),
         );
@@ -122,9 +122,9 @@ class _EmailVerificationScreenState
       );
     } catch (error) {
       if (!mounted) return;
-      final relayError = asRelayException(error);
-      if (relayError.error == 'resend_cooldown') {
-        final retryAfter = relayError.detail['retry_after'];
+      final apiError = asPeerkolaException(error);
+      if (apiError.error == 'resend_cooldown') {
+        final retryAfter = apiError.detail['retry_after'];
         if (retryAfter is int) _startCooldown(retryAfter);
       }
       final l10n = AppLocalizations.of(context);

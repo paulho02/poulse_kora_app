@@ -1,11 +1,11 @@
 {
-    "name": "poulse_kora_app",
-    "short_name": "poulse_kora_app",
+    "name": "Peerkola",
+    "short_name": "Peerkola",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#FFFFFF",
-    "description": "Poulse Kora mobile app",
+    "description": "Peerkola mobile app",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

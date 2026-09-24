@@ -4,19 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart'
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart'
     show sharedPreferencesProvider;
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/create_post/presentation/create_post_screen.dart';
-import 'package:poulse_kora_app/src/features/create_post/presentation/token_spend_badge.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/create_post/presentation/create_post_screen.dart';
+import 'package:peerkola/src/features/create_post/presentation/token_spend_badge.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
 
 /// Publishing costs tokens, and the balance simply being smaller afterwards
 /// says nothing about why. The composer replays the subtraction where the
@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Write a post and hit Relay, leaving the badge mid-play.
+  /// Write a post and hit Publish, leaving the badge mid-play.
   Future<void> publish(WidgetTester tester) async {
     await tester.enterText(
       find.byType(TextField).first,
@@ -81,7 +81,7 @@ void main() {
     await tester.tap(find.text('General').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Relay'));
+    await tester.tap(find.text('Publish'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -96,7 +96,7 @@ void main() {
 
     // Centred on the body — the position `ForwardScoreBadge` uses, and the
     // whole point of it not being a flash on the corner pill, which is over
-    // before an eye on the Relay button finds it.
+    // before an eye on the Publish button finds it.
     final screen = tester.getRect(find.byType(Scaffold).first);
     final badge = tester.getRect(find.byType(TokenSpendBadge));
     expect(

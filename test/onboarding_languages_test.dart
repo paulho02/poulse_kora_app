@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/languages/language_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/content_languages_step.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/user_profile.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/languages/language_providers.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/onboarding/presentation/content_languages_step.dart';
+import 'package:peerkola/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/user_profile.dart';
 
 /// The backend narrows a new account to the locale its registration request
 /// carried, so a German phone produces a German-only reader. That default is

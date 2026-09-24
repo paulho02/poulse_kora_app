@@ -7,13 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/core/media/presentation/network_media_image.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/profile_repository.dart';
-import 'package:poulse_kora_app/src/features/profile/presentation/editable_profile_avatar.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/core/media/presentation/network_media_image.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/profile_repository.dart';
+import 'package:peerkola/src/features/profile/presentation/editable_profile_avatar.dart';
 
 /// Stands in for the backend: answers `/users/me` with whatever picture URL it
 /// currently holds, and treats `PUT .../profile-picture` as having installed a

@@ -1,6 +1,6 @@
-# poulse_kora_app
+# Peerkola App
 
-Flutter client for Poulse Kora. Talks to the [poulse_kora_backend](../poulse_kora_backend) FastAPI
+Flutter client for Peerkola. Talks to the [poulse_kora_backend](../poulse_kora_backend) FastAPI
 service.
 
 ## Getting started

@@ -7,23 +7,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/src/app.dart';
-import 'package:poulse_kora_app/src/core/announcements/application/announcement_providers.dart';
-import 'package:poulse_kora_app/src/core/app_config/application/app_config_providers.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/core/network/connectivity.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart';
-import 'package:poulse_kora_app/src/features/auth/application/auth_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channels_repository.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/feed_screen.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/profile_repository.dart';
+import 'package:peerkola/src/app.dart';
+import 'package:peerkola/src/core/announcements/application/announcement_providers.dart';
+import 'package:peerkola/src/core/app_config/application/app_config_providers.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/core/network/connectivity.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart';
+import 'package:peerkola/src/features/auth/application/auth_providers.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channels_repository.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy_repository.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/features/feed/presentation/feed_screen.dart';
+import 'package:peerkola/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/profile_repository.dart';
 
 /// The post-registration route sequence, end to end: `/feed` mounts first
 /// (the profile fetch is still in flight, and the redirect deliberately fails
@@ -68,7 +68,7 @@ void main() {
           appConfigProvider.overrideWith((ref) async => null),
           announcementProvider.overrideWith((ref) async => null),
         ],
-        child: const PoulseKoraApp(),
+        child: const PeerkolaApp(),
       ),
     );
 

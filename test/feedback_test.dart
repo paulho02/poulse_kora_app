@@ -6,12 +6,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/media/image_content_type.dart';
-import 'package:poulse_kora_app/src/features/auth/application/auth_providers.dart';
-import 'package:poulse_kora_app/src/features/feedback/application/feedback_providers.dart';
-import 'package:poulse_kora_app/src/features/feedback/data/feedback_repository.dart';
-import 'package:poulse_kora_app/src/features/feedback/presentation/feedback_screen.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/media/image_content_type.dart';
+import 'package:peerkola/src/features/auth/application/auth_providers.dart';
+import 'package:peerkola/src/features/feedback/application/feedback_providers.dart';
+import 'package:peerkola/src/features/feedback/data/feedback_repository.dart';
+import 'package:peerkola/src/features/feedback/presentation/feedback_screen.dart';
 
 /// Captures what `submit` actually puts on the wire.
 class _CapturingAdapter implements HttpClientAdapter {

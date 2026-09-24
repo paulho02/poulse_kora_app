@@ -17,7 +17,7 @@ class DataExport {
   /// Used when the response carries no `Content-Disposition` a filename can be
   /// read out of - a proxy that strips it, or a future server that forgets it.
   /// Deliberately not dated: a wrong date would be worse than no date.
-  static const fallbackFilename = 'poulse-kora-export.zip';
+  static const fallbackFilename = 'peerkola-export.zip';
 
   /// The filename out of a `Content-Disposition` header, or [fallbackFilename].
   ///

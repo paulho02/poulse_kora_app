@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/core/theme/app_theme.dart';
+import 'package:peerkola/src/core/theme/app_theme.dart';
 
 // These run as `testWidgets` (not plain `test`) so theme construction happens
 // under the widget-test binding, which tolerates google_fonts' offline

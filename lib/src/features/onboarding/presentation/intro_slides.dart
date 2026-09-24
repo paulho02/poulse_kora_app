@@ -31,7 +31,7 @@ List<_Slide> _slides(AppLocalizations l10n) => [
 ];
 
 /// Skippable intro carousel — the first onboarding step. Three sentences on
-/// what Relay is, which is as much as anyone will read before they have seen
+/// what Peerkola is, which is as much as anyone will read before they have seen
 /// the app.
 ///
 /// It deliberately does **not** try to teach the model. That is what the

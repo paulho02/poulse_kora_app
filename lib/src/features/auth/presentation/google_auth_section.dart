@@ -96,7 +96,7 @@ class _GoogleAuthSectionState extends ConsumerState<GoogleAuthSection> {
             .read(authRepositoryProvider)
             .loginWithGoogle(idToken: idToken);
       } on Object catch (error) {
-        final failure = asRelayException(error);
+        final failure = asPeerkolaException(error);
         if (failure.error != 'google_link_required') rethrow;
         if (!mounted) return;
         final email = failure.detail['email'] as String? ?? '';

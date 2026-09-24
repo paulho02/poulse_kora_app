@@ -3,20 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/settings/app_settings.dart'
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/settings/app_settings.dart'
     show sharedPreferencesProvider;
-import 'package:poulse_kora_app/src/core/settings/price_display_settings.dart';
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channel_avatar.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channel_price_chip.dart';
-import 'package:poulse_kora_app/src/features/channels/presentation/channels_screen.dart';
-import 'package:poulse_kora_app/src/features/feed_preferences/presentation/feed_preferences_screen.dart';
-import 'package:poulse_kora_app/src/features/economy/application/economy_providers.dart';
-import 'package:poulse_kora_app/src/features/economy/data/economy.dart';
-import 'package:poulse_kora_app/src/features/economy/presentation/economy_explainer.dart';
+import 'package:peerkola/src/core/settings/price_display_settings.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/channels/presentation/channel_avatar.dart';
+import 'package:peerkola/src/features/channels/presentation/channel_price_chip.dart';
+import 'package:peerkola/src/features/channels/presentation/channels_screen.dart';
+import 'package:peerkola/src/features/feed_preferences/presentation/feed_preferences_screen.dart';
+import 'package:peerkola/src/features/economy/application/economy_providers.dart';
+import 'package:peerkola/src/features/economy/data/economy.dart';
+import 'package:peerkola/src/features/economy/presentation/economy_explainer.dart';
 
 /// The channel row stacks a price under the badge and sits in a card, and the
 /// explainer became a full-screen route. Both are layouts that fail by

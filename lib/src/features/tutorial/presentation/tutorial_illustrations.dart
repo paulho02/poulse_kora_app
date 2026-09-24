@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// The animated drawings for the "How Relay works" tutorial, one per chapter.
+/// The animated drawings for the "How Peerkola works" tutorial, one per chapter.
 ///
 /// Everything here is hand-drawn with [CustomPainter] over a single looping
 /// [AnimationController] per chapter — deliberately no Lottie/Rive dependency
@@ -547,7 +547,7 @@ class _BroadcastVersusRelay extends StatelessWidget {
               ),
               _Caption(
                 icon: Icons.hub_outlined,
-                text: l10n.tutorialChapter2LabelRelay,
+                text: l10n.tutorialChapter2LabelPeerkola,
                 color: palette.accent,
                 opacity: mode,
               ),

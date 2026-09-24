@@ -89,7 +89,7 @@ class _DataExportTileState extends ConsumerState<DataExportTile> {
   }
 
   String _messageFor(AppLocalizations l10n, Object error) {
-    final failure = asRelayException(error);
+    final failure = asPeerkolaException(error);
     return failure.error == 'rate_limited'
         ? l10n.settingsExportDataRateLimited
         : messageFor(l10n, error);

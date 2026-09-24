@@ -81,7 +81,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // A taken username is the one failure that points at a specific field,
         // so it is shown there instead of in a snackbar — the fields are still
         // filled in and the fix is to edit one of them.
-        if (asRelayException(next.error).error == 'username_taken') {
+        if (asPeerkolaException(next.error).error == 'username_taken') {
           setState(() => _takenUsername = _usernameController.text.trim());
           return;
         }

@@ -8,7 +8,7 @@ final appConfigRepositoryProvider = Provider<AppConfigRepository>(
   (ref) => AppConfigRepository(ref.watch(dioClientProvider).dio),
 );
 
-/// Fetched once at app start (see `PoulseKoraApp`'s warm-up `ref.listen`, same
+/// Fetched once at app start (see `PeerkolaApp`'s warm-up `ref.listen`, same
 /// pattern as `announcementProvider`). `null` covers both "nothing set" and
 /// "the fetch failed" - the router fails open (treats it as "verification not
 /// currently enforced") rather than blocking startup on this.

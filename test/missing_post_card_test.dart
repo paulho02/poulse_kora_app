@@ -7,12 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/features/feed/application/feed_providers.dart';
-import 'package:poulse_kora_app/src/features/feed/data/feed_repository.dart';
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
-import 'package:poulse_kora_app/src/features/feed/presentation/missing_post_card.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/features/feed/application/feed_providers.dart';
+import 'package:peerkola/src/features/feed/data/feed_repository.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/feed/presentation/missing_post_card.dart';
 
 /// The ghost card: a queue slot whose post has been erased by its author
 /// deleting their account (see the backend's `app/core/account_deletion.py`).

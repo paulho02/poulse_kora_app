@@ -71,7 +71,7 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
       // The derived name the backend pre-filled can have been claimed in the
       // meantime, and the user is free to type any name at all here, so this is
       // the expected failure of this screen rather than an exceptional one.
-      if (asRelayException(error).error == 'username_taken') {
+      if (asPeerkolaException(error).error == 'username_taken') {
         setState(() => _takenUsername = username);
       } else {
         showErrorSnackBar(context, error);

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/cached.dart';
-import 'package:poulse_kora_app/src/core/errors/api_exception.dart';
-import 'package:poulse_kora_app/src/core/presentation/error_state_view.dart';
-import 'package:poulse_kora_app/src/features/channels/application/channels_providers.dart';
-import 'package:poulse_kora_app/src/features/channels/data/channel.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/channel_selection_step.dart';
-import 'package:poulse_kora_app/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/cached.dart';
+import 'package:peerkola/src/core/errors/api_exception.dart';
+import 'package:peerkola/src/core/presentation/error_state_view.dart';
+import 'package:peerkola/src/features/channels/application/channels_providers.dart';
+import 'package:peerkola/src/features/channels/data/channel.dart';
+import 'package:peerkola/src/features/onboarding/presentation/channel_selection_step.dart';
+import 'package:peerkola/src/features/onboarding/presentation/onboarding_screen.dart';
 
 /// Onboarding cannot continue without the channel list, and a brand-new account
 /// has no cached copy to fall back on. One dropped connection therefore used to
@@ -165,7 +165,7 @@ class _FakeChannels extends ChannelsNotifier {
   Future<Cached<List<Channel>>> _fetch() async {
     fetches++;
     if (failAlways || (failFirst && fetches == 1)) {
-      throw RelayApiException(
+      throw PeerkolaApiException(
         0,
         'offline',
         const {},

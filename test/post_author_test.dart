@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
 
 Map<String, dynamic> _postJson({Map<String, dynamic> author = const {}}) => {
   'id': 1,

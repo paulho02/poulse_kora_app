@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:poulse_kora_app/src/features/feed/data/post.dart';
+import 'package:peerkola/src/features/feed/data/post.dart';
 
 Post _postCreatedAgo(Duration ago) => Post(
   id: 1,

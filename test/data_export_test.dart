@@ -8,14 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:poulse_kora_app/l10n/generated/app_localizations.dart';
-import 'package:poulse_kora_app/src/core/cache/json_cache.dart';
-import 'package:poulse_kora_app/src/core/files/file_delivery.dart';
-import 'package:poulse_kora_app/src/core/files/file_delivery_provider.dart';
-import 'package:poulse_kora_app/src/features/profile/data/data_export.dart';
-import 'package:poulse_kora_app/src/features/profile/application/profile_providers.dart';
-import 'package:poulse_kora_app/src/features/profile/data/profile_repository.dart';
-import 'package:poulse_kora_app/src/features/profile/presentation/data_export_tile.dart';
+import 'package:peerkola/l10n/generated/app_localizations.dart';
+import 'package:peerkola/src/core/cache/json_cache.dart';
+import 'package:peerkola/src/core/files/file_delivery.dart';
+import 'package:peerkola/src/core/files/file_delivery_provider.dart';
+import 'package:peerkola/src/features/profile/data/data_export.dart';
+import 'package:peerkola/src/features/profile/application/profile_providers.dart';
+import 'package:peerkola/src/features/profile/data/profile_repository.dart';
+import 'package:peerkola/src/features/profile/presentation/data_export_tile.dart';
 
 /// Settings → Download my data (GDPR Art. 15 / Art. 20).
 ///
@@ -35,7 +35,7 @@ void main() {
     await tester.tap(find.text(l10n.settingsExportData));
     await tester.pumpAndSettle();
 
-    expect(harness.delivered!.filename, 'poulse-kora-export-2026-09-16.zip');
+    expect(harness.delivered!.filename, 'peerkola-export-2026-09-16.zip');
     expect(harness.delivered!.bytes, _archiveBytes);
     expect(harness.delivered!.mimeType, 'application/zip');
     expect(find.text(l10n.settingsExportDataDone), findsOneWidget);
@@ -158,7 +158,7 @@ class _FakeBackend implements HttpClientAdapter {
   int status = 200;
   int requests = 0;
   String? contentDisposition =
-      'attachment; filename="poulse-kora-export-2026-09-16.zip"';
+      'attachment; filename="peerkola-export-2026-09-16.zip"';
 
   /// Keeps a request in flight so the "already running" state is observable.
   bool hold = false;

@@ -21,7 +21,7 @@ Future<Cached<T>> fetchCached<T>({
     await cache.write(key, json);
     return Cached.live(parse(json));
   } catch (e) {
-    final failure = asRelayException(e);
+    final failure = asPeerkolaException(e);
     if (!failure.isConnectivityFailure) rethrow;
     final cached = cache.read<T>(key, parse);
     if (cached == null) rethrow;
