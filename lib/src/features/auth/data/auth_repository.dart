@@ -51,10 +51,17 @@ class AuthRepository {
   }
 
   /// `POST /auth/google/link` — the same irreversible upgrade, for a user who is
-  /// already signed in (Profile → Settings). The Google address must match the
-  /// account's own.
-  Future<void> linkGoogle({required String idToken}) async {
-    await _dio.post<void>('/auth/google/link', data: {'id_token': idToken});
+  /// already signed in (Profile → Settings). The Google address may differ from
+  /// the account's own. Requires the current password: linking destroys it, so
+  /// a token alone must not be enough.
+  Future<void> linkGoogle({
+    required String idToken,
+    required String currentPassword,
+  }) async {
+    await _dio.post<void>(
+      '/auth/google/link',
+      data: {'id_token': idToken, 'current_password': currentPassword},
+    );
   }
 
   /// Requires the current password server-side — see

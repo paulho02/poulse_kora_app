@@ -70,6 +70,11 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorGoogleAccountInUse;
     case 'google_already_linked':
       return l10n.errorGoogleAlreadyLinked;
+    // `POST /auth/google/link` asks for the current password (it destroys it).
+    case 'google_link_wrong_password':
+      return l10n.errorGoogleLinkWrongPassword;
+    case 'google_link_password_required':
+      return l10n.errorGoogleLinkPasswordRequired;
     // Both are "not your fault, try again": an ID token that expired while the
     // user hesitated, and Google being unreachable from the backend.
     case 'google_invalid_id_token':

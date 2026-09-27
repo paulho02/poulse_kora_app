@@ -305,6 +305,8 @@ void main() {
         'google_account_in_use',
         'google_account_mismatch',
         'google_already_linked',
+        'google_link_wrong_password',
+        'google_link_password_required',
         'google_invalid_id_token',
         'google_verification_unavailable',
         'google_oauth_disabled',

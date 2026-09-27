@@ -480,12 +480,17 @@ interceptor forces logout via `onUnauthorizedProvider`; a 403 deliberately does 
   dialog and re-sends the same token — so it is deliberately absent from `error_messages.dart`. The
   login-screen and Settings entry points have separate copy: from login the Google address *is*
   the account address; from Settings any Google account may be linked and the account keeps its
-  own email.
+  own email. The Settings path also asks for the current password (`link_google_dialog.dart`,
+  required by `POST /auth/google/link`) and runs the Google picker from inside the dialog, so a
+  wrong password is shown under the field.
 - **A taken username is shown under the field** (`InputDecoration.errorText` in
   `register_screen.dart` and `username_step.dart`, cleared on the first keystroke), not as a
   `validator` rule (forms only re-validate on submit). While set, submit returns early. The field
   carries a `FieldInfoIcon` (`core/presentation/`) with `TooltipTriggerMode.tap`, because a
-  long-press tooltip is never found.
+  long-press tooltip is never found. Both fields share `core/username_policy.dart` (mirror of the
+  backend's `[a-z0-9_]`, 3–30): input formatters lowercase A–Z and drop everything else as it is
+  typed, with the rule as the helper line — so `username_invalid` is only reachable if the
+  server's bounds move ahead of the app.
 
 ### Localization (i18n)
 

@@ -67,6 +67,10 @@
   "@errorGoogleAccountInUse": {},
   "errorGoogleAlreadyLinked": "This account is already linked to Google.",
   "@errorGoogleAlreadyLinked": {},
+  "errorGoogleLinkWrongPassword": "That password isn't right.",
+  "@errorGoogleLinkWrongPassword": {},
+  "errorGoogleLinkPasswordRequired": "Enter your password to confirm.",
+  "@errorGoogleLinkPasswordRequired": {},
   "errorGoogleSignInFailed": "Signing in with Google didn't work. Please try again.",
   "@errorGoogleSignInFailed": {},
   "errorGoogleOauthDisabled": "Google sign-in isn't available right now.",
@@ -396,6 +400,10 @@
   },
   "authLinkGoogleConfirm": "Link with Google",
   "@authLinkGoogleConfirm": {},
+  "authLinkGooglePasswordLabel": "Your current password",
+  "@authLinkGooglePasswordLabel": {
+    "description": "Field in the Settings > Connect Google dialog. The backend requires the current password before linking, because linking destroys it."
+  },
   "authLinkGoogleSettingsBody": "From now on you'll sign in with Google instead of your password. Your password stops working, and this can't be undone. The Google account doesn't have to use the same address — {email} stays your contact address.",
   "@authLinkGoogleSettingsBody": {
     "placeholders": {
