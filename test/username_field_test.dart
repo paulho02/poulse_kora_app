@@ -6,6 +6,7 @@ import 'package:peerkola/l10n/generated/app_localizations.dart';
 import 'package:peerkola/src/core/cache/cached.dart';
 import 'package:peerkola/src/core/errors/api_exception.dart';
 import 'package:peerkola/src/core/presentation/field_info_icon.dart';
+import 'package:peerkola/src/core/username_policy.dart';
 import 'package:peerkola/src/features/onboarding/presentation/username_step.dart';
 import 'package:peerkola/src/features/profile/application/profile_providers.dart';
 import 'package:peerkola/src/features/profile/data/user_profile.dart';
@@ -35,7 +36,10 @@ void main() {
     contentLanguages: const ['en', 'de'],
   );
 
-  Future<_FakeProfile> pumpStep(WidgetTester tester, {bool continued = false}) async {
+  Future<_FakeProfile> pumpStep(
+    WidgetTester tester, {
+    bool continued = false,
+  }) async {
     final notifier = _FakeProfile(profile);
     await tester.pumpWidget(
       ProviderScope(
@@ -105,9 +109,41 @@ void main() {
     expect(find.text(l10n.errorUsernameTaken), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField), 'taken2');
-    await tester.pump();
+    // Settle, not a single pump: the decorator cross-fades from the error back
+    // to the helper line, so the error is still in the tree mid-fade.
+    await tester.pumpAndSettle();
 
     expect(find.text(l10n.errorUsernameTaken), findsNothing);
+  });
+
+  // The backend only stores lowercase [a-z0-9_] (see
+  // `app/core/username_policy.py`), so the field shapes input to match rather
+  // than letting someone type a name that will be refused.
+  testWidgets('capitals are lowercased and other characters never appear', (
+    tester,
+  ) async {
+    await pumpStep(tester);
+    await tester.enterText(find.byType(TextFormField), 'Ada Lové.lace_2!');
+    await tester.pump();
+
+    final field = tester.widget<EditableText>(find.byType(EditableText));
+    expect(field.controller.text, 'adalovlace_2');
+    expect(find.text(l10n.usernameRules), findsOneWidget);
+  });
+
+  testWidgets('a name below the minimum is refused before any request', (
+    tester,
+  ) async {
+    final notifier = await pumpStep(tester);
+    await tester.enterText(find.byType(TextFormField), 'ab');
+    await tester.tap(find.text(l10n.commonContinue));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(l10n.validationUsernameTooShort(UsernamePolicy.minLength)),
+      findsOneWidget,
+    );
+    expect(notifier.attempts, 0);
   });
 }
 

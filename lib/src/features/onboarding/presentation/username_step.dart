@@ -5,6 +5,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/presentation/field_info_icon.dart';
+import '../../../core/username_policy.dart';
 import '../../profile/application/profile_providers.dart';
 
 /// Onboarding step shown to Google signups only: confirm the username.
@@ -23,9 +24,6 @@ class UsernameStep extends ConsumerStatefulWidget {
 
   final String initialUsername;
   final VoidCallback onContinue;
-
-  static const minLength = 3;
-  static const maxLength = 20;
 
   @override
   ConsumerState<UsernameStep> createState() => _UsernameStepState();
@@ -81,15 +79,6 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
     }
   }
 
-  String? _validate(String? value, AppLocalizations l10n) {
-    final username = value?.trim() ?? '';
-    if (username.isEmpty) return l10n.validationUsernameRequired;
-    if (username.length < UsernameStep.minLength) {
-      return l10n.validationUsernameTooShort(UsernameStep.minLength);
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -121,6 +110,7 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
                 controller: _controller,
                 decoration: InputDecoration(
                   labelText: l10n.commonUsername,
+                  helperText: l10n.usernameRules,
                   counterText: '',
                   suffixIcon: FieldInfoIcon(
                     message: l10n.usernameVisibleToOthers,
@@ -132,7 +122,8 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
                       ? null
                       : l10n.errorUsernameTaken,
                 ),
-                maxLength: UsernameStep.maxLength,
+                maxLength: UsernamePolicy.maxLength,
+                inputFormatters: UsernamePolicy.inputFormatters,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 enableSuggestions: false,
@@ -142,7 +133,7 @@ class _UsernameStepState extends ConsumerState<UsernameStep> {
                   }
                 },
                 onFieldSubmitted: (_) => _submitting ? null : _submit(),
-                validator: (v) => _validate(v, l10n),
+                validator: (v) => UsernamePolicy.validate(v, l10n),
               ),
               const Spacer(),
               FilledButton(

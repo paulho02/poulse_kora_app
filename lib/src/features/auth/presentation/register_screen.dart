@@ -8,6 +8,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/field_info_icon.dart';
 import '../../../core/presentation/language_picker.dart';
+import '../../../core/username_policy.dart';
 import '../application/auth_providers.dart';
 import 'google_auth_section.dart';
 import 'server_settings_sheet.dart';
@@ -110,6 +111,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     controller: _usernameController,
                     decoration: InputDecoration(
                       labelText: l10n.commonUsername,
+                      helperText: l10n.usernameRules,
+                      counterText: '',
                       // Said here rather than as a `helperText` line: this is
                       // the one field on the form whose value other people see,
                       // and it is worth saying before someone types their real
@@ -124,6 +127,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ? null
                           : l10n.errorUsernameTaken,
                     ),
+                    maxLength: UsernamePolicy.maxLength,
+                    inputFormatters: UsernamePolicy.inputFormatters,
+                    autocorrect: false,
+                    enableSuggestions: false,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.newUsername],
                     onChanged: (_) {
@@ -131,9 +138,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         setState(() => _takenUsername = null);
                       }
                     },
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? l10n.validationUsernameRequired
-                        : null,
+                    validator: (v) => UsernamePolicy.validate(v, l10n),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

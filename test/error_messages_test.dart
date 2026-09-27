@@ -164,6 +164,18 @@ void main() {
       expect(messageFor(de, taken), contains('Benutzername'));
     });
 
+    test('an invalid username names the rule and its bounds', () {
+      final invalid = PeerkolaApiException(400, 'username_invalid', const {
+        'min_length': 3,
+        'max_length': 30,
+      });
+      expect(messageFor(en, invalid), contains('3 to 30'));
+      expect(messageFor(de, invalid), contains('3 bis 30'));
+      // Without the bounds it still says what the rule is.
+      final bare = PeerkolaApiException(400, 'username_invalid', const {});
+      expect(messageFor(en, bare), en.usernameRules);
+    });
+
     test('maps the profile-picture rejections to their own copy', () {
       // Both are real answers from the backend's upload validation, so neither
       // may fall through to the generic "something went wrong".

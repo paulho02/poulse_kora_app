@@ -75,6 +75,8 @@
   "validationEmailRequired": "E-Mail-Adresse erforderlich",
   "usernameVisibleToOthers": "Andere Leute können deinen Benutzernamen sehen.",
   "validationUsernameRequired": "Benutzername erforderlich",
+  "usernameRules": "Nur Kleinbuchstaben, Ziffern und _.",
+  "errorUsernameInvalid": "Benutzernamen haben {min} bis {max} Zeichen: Kleinbuchstaben, Ziffern und _.",
   "validationUsernameTooShort": "Der Benutzername muss mindestens {minLength} Zeichen lang sein.",
   "validationPasswordRequired": "Passwort erforderlich",
   "validationPasswordMinLength": "Das Passwort muss mindestens {minLength} Zeichen lang sein",

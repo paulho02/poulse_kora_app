@@ -36,6 +36,14 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     // fallback for anywhere that only has a snackbar.
     case 'username_taken':
       return l10n.errorUsernameTaken;
+    // The fields' input formatters keep this from being sent; this is for a
+    // server whose bounds moved ahead of the app.
+    case 'username_invalid':
+      final min = error.detail['min_length'];
+      final max = error.detail['max_length'];
+      return min is int && max is int
+          ? l10n.errorUsernameInvalid(min, max)
+          : l10n.usernameRules;
     case 'register_invalid_password':
     case 'update_user_invalid_password':
     case 'change_password_invalid_password':

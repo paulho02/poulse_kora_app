@@ -40,6 +40,17 @@
   "@errorEmailAlreadyExists": {},
   "errorUsernameTaken": "That username is already taken. Try another one.",
   "@errorUsernameTaken": {},
+  "errorUsernameInvalid": "Usernames are {min} to {max} characters: lowercase letters, numbers and _.",
+  "@errorUsernameInvalid": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
   "errorInvalidPasswordGeneric": "That password isn't strong enough. Try a longer one with a mix of letters, numbers, and symbols.",
   "@errorInvalidPasswordGeneric": {},
   "errorChangePasswordWrongCurrentPassword": "That's not your current password.",
@@ -193,6 +204,10 @@
   "@validationEmailRequired": {},
   "usernameVisibleToOthers": "Other people can see your username.",
   "@usernameVisibleToOthers": {},
+  "usernameRules": "Lowercase letters, numbers and _ only.",
+  "@usernameRules": {
+    "description": "Helper line under both username fields. Mirrors the backend rule [a-z0-9_]."
+  },
   "validationUsernameRequired": "Username is required",
   "@validationUsernameRequired": {},
   "validationUsernameTooShort": "Username must be at least {minLength} characters long.",
