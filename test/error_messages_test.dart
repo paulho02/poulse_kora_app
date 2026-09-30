@@ -336,4 +336,61 @@ void main() {
       expect(messageFor(en, e), en.errorUnknown);
     });
   });
+
+  group('forgot / reset password', () {
+    test('every code POST /auth/reset-password/confirm can emit has copy', () {
+      // A missing case falls through to errorUnknown, which is a silent
+      // failure - this catches one before it ships. forgot-password itself
+      // never fails from here (see AuthRepository.forgotPassword), so only
+      // the confirm step's codes are covered.
+      const codes = [
+        'password_reset_invalid_or_expired_code',
+        'too_many_password_reset_attempts',
+        'reset_password_invalid_password',
+      ];
+      for (final code in codes) {
+        final e = PeerkolaApiException(400, code, const {});
+        expect(
+          messageFor(en, e),
+          isNot(en.errorUnknown),
+          reason: 'no English copy for "$code"',
+        );
+        expect(
+          messageFor(de, e),
+          isNot(de.errorUnknown),
+          reason: 'no German copy for "$code"',
+        );
+      }
+    });
+
+    test('an invalid-or-expired code reports remaining tries like a wrong '
+        'verification code does', () {
+      final withRemaining = PeerkolaApiException(
+        400,
+        'password_reset_invalid_or_expired_code',
+        const {'attempts_remaining': 2},
+      );
+      expect(messageFor(en, withRemaining), contains('2 tries left'));
+
+      final exhausted = PeerkolaApiException(
+        400,
+        'password_reset_invalid_or_expired_code',
+        const {'attempts_remaining': 0},
+      );
+      expect(messageFor(en, exhausted), contains('out of tries'));
+    });
+
+    test('a rejected new password formats the same violation list as '
+        'change-password', () {
+      final e = PeerkolaApiException(400, 'reset_password_invalid_password', {
+        'reason': [
+          {
+            'code': 'password_too_short',
+            'params': {'min_length': 10},
+          },
+        ],
+      });
+      expect(messageFor(en, e), contains('at least 10 characters long'));
+    });
+  });
 }

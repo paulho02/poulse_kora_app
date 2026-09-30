@@ -76,4 +76,29 @@ class AuthRepository {
       data: {'current_password': currentPassword, 'new_password': newPassword},
     );
   }
+
+  /// `POST /auth/forgot-password` — always succeeds from here: the backend
+  /// answers the same 200 whether or not `email` belongs to an account, so it
+  /// must never be revealed either way (see
+  /// `backend/app/api/password_reset.py`). The only failure worth showing is
+  /// `rate_limited`, which `messageFor` already handles generically.
+  Future<void> forgotPassword({required String email}) async {
+    await _dio.post<void>('/auth/forgot-password', data: {'email': email});
+  }
+
+  /// `POST /auth/reset-password/confirm` — redeems a code from
+  /// [forgotPassword] for a new password. Throws
+  /// `password_reset_invalid_or_expired_code` (with `attempts_remaining`),
+  /// `too_many_password_reset_attempts` or `reset_password_invalid_password`
+  /// (with `reason`) on failure — see error_messages.dart.
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await _dio.post<void>(
+      '/auth/reset-password/confirm',
+      data: {'email': email, 'code': code, 'new_password': newPassword},
+    );
+  }
 }

@@ -51,6 +51,27 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
     case 'change_password_wrong_current_password':
       return l10n.errorChangePasswordWrongCurrentPassword;
 
+    // ---- forgot / reset password ---------------------------------------------
+    // `forgot-password` itself never fails from the client's point of view (see
+    // AuthRepository.forgotPassword) - these three only come from
+    // `/auth/reset-password/confirm`. The backend deliberately collapses "no
+    // such account", "that's a Google account" and "expired" into the same
+    // code as a wrong code (see backend/app/api/password_reset.py), so this
+    // reuses the email-verification copy rather than implying the reset step
+    // could tell those apart.
+    case 'password_reset_invalid_or_expired_code':
+      final remaining = error.detail['attempts_remaining'];
+      if (remaining is int) {
+        return remaining > 0
+            ? l10n.errorInvalidCodeRemaining(remaining)
+            : l10n.errorInvalidCodeExhausted;
+      }
+      return l10n.errorInvalidCodeGeneric;
+    case 'too_many_password_reset_attempts':
+      return l10n.errorTooManyVerificationAttempts;
+    case 'reset_password_invalid_password':
+      return _passwordErrorMessage(l10n, error.detail['reason']);
+
     // ---- google sign-in ------------------------------------------------------
     // `google_link_required` is deliberately absent: it is a prompt, not a
     // failure, and `GoogleAuthSection` turns it into a confirmation dialog

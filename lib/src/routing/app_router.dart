@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/app_config/application/app_config_providers.dart';
 import '../features/auth/application/auth_providers.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/feed_preferences/presentation/feed_preferences_screen.dart';
@@ -22,7 +23,7 @@ import '../features/stats/presentation/stats_screen.dart';
 import '../features/tutorial/presentation/tutorial_deck.dart';
 import 'app_shell.dart';
 
-const _authRoutes = {'/login', '/register'};
+const _authRoutes = {'/login', '/register', '/forgot-password'};
 const _verifyEmailRoute = '/verify-email';
 const _onboardingRoute = '/onboarding';
 
@@ -202,6 +203,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
+        path: '/forgot-password',
+        name: 'forgotPassword',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
         path: _feedbackRoute,
         name: 'feedback',
         builder: (context, state) => const FeedbackScreen(),
@@ -294,7 +300,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                         builder: (context, state) =>
                             const ChangePasswordScreen(),
                       ),
-
                     ],
                   ),
                   GoRoute(
