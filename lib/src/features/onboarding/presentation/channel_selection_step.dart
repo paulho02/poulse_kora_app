@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/error_state_view.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../channels/application/channels_providers.dart';
 import '../../channels/data/channel.dart';
+import '../../channels/presentation/channel_avatar.dart';
 
 /// The onboarding flow's mandatory channel step: pick 1-3 channels so the Feed
 /// tab has something in it the moment onboarding finishes.
@@ -161,16 +161,9 @@ class _SelectableChannelTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = AppColors.channelColor(channel.name);
     return ListTile(
       onTap: () => _toggle(context, ref),
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.15),
-        child: Text(
-          channel.name.isNotEmpty ? channel.name[0] : '?',
-          style: TextStyle(color: color, fontWeight: FontWeight.bold),
-        ),
-      ),
+      leading: ChannelAvatar(name: channel.name, radius: 20),
       title: Text(
         channel.name,
         style: const TextStyle(fontWeight: FontWeight.w600),
