@@ -8,6 +8,7 @@ import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 import 'forward_score_badge.dart';
+import 'forward_split_button.dart';
 import 'probe_result_badge.dart';
 import 'post_detail_scaffold.dart';
 
@@ -61,7 +62,7 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
   /// page stays up until the server confirms, which also means a *failed*
   /// review now leaves the reader on the post they were trying to act on
   /// instead of dropping them back on the feed with a snackbar.
-  Future<void> _review(String kind) async {
+  Future<void> _review(String kind, {bool giftToken = false}) async {
     if (_leaving) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -73,7 +74,7 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
     try {
       result = await ref
           .read(feedNotifierProvider.notifier)
-          .reviewPost(widget.post.id, kind);
+          .reviewPost(widget.post.id, kind, giftToken: giftToken);
     } catch (error) {
       showErrorSnackBarOn(messenger, l10n, error);
       if (!mounted) return;
@@ -81,6 +82,9 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
       return;
     }
 
+    if (result.gifted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.postGiftSent)));
+    }
     if (!mounted) return;
     setState(() {
       _wasProbe = result.isProbe;
@@ -133,10 +137,11 @@ class _PostDetailPageState extends ConsumerState<_PostDetailPage>
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _leaving ? null : () => _review('forward'),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text(l10n.postForward),
+                  child: ForwardSplitButton(
+                    onForward: _leaving ? null : () => _review('forward'),
+                    onForwardAndGift: post.isProbe
+                        ? null
+                        : () => _review('forward', giftToken: true),
                   ),
                 ),
               ],

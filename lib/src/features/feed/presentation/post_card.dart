@@ -9,6 +9,7 @@ import '../application/feed_providers.dart';
 import '../data/feed_repository.dart' show PostReviewResult;
 import '../data/post.dart';
 import 'forward_score_badge.dart';
+import 'forward_split_button.dart';
 import 'probe_marker.dart';
 import 'probe_result_badge.dart';
 import 'post_author_avatar.dart';
@@ -79,7 +80,7 @@ class _PostCardState extends ConsumerState<PostCard>
     super.dispose();
   }
 
-  Future<void> _review(String kind) async {
+  Future<void> _review(String kind, {bool giftToken = false}) async {
     if (_leaving) return;
     // Captured up front: once the review succeeds, the provider drops this
     // post and this card can end up unmounted before the snackbar would be
@@ -98,7 +99,7 @@ class _PostCardState extends ConsumerState<PostCard>
     try {
       result = await ref
           .read(feedNotifierProvider.notifier)
-          .reviewPost(widget.post.id, kind);
+          .reviewPost(widget.post.id, kind, giftToken: giftToken);
     } catch (error) {
       showErrorSnackBarOn(messenger, l10n, error);
       if (!mounted) return;
@@ -106,6 +107,9 @@ class _PostCardState extends ConsumerState<PostCard>
       return;
     }
 
+    if (result.gifted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.postGiftSent)));
+    }
     if (!mounted) return;
     // Confirmed. The score comes back with that confirmation and is shown
     // first, on the card the reader has just judged — a beat of payoff while
@@ -303,13 +307,15 @@ class _PostCardState extends ConsumerState<PostCard>
                     // FilledButton below the Drop button's 40px.
                     child: SizedBox(
                       height: _actionButtonHeight,
-                      child: FilledButton.tonalIcon(
-                        style: FilledButton.styleFrom(
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: _leaving ? null : () => _review('forward'),
-                        icon: const Icon(Icons.arrow_forward, size: 16),
-                        label: Text(l10n.postForward),
+                      child: ForwardSplitButton(
+                        tonal: true,
+                        compact: true,
+                        onForward: _leaving ? null : () => _review('forward'),
+                        // A trust check's author is the system: nobody to
+                        // reward, and the backend would refuse it.
+                        onForwardAndGift: post.isProbe
+                            ? null
+                            : () => _review('forward', giftToken: true),
                       ),
                     ),
                   ),

@@ -116,7 +116,9 @@ class _DataExportTileState extends ConsumerState<DataExportTile> {
       leading: const Icon(Icons.download_outlined),
       title: Text(l10n.settingsExportData),
       subtitle: Text(
-        _running ? l10n.settingsExportDataRunning : l10n.settingsExportDataSubtitle,
+        _running
+            ? l10n.settingsExportDataRunning
+            : l10n.settingsExportDataSubtitle,
       ),
       trailing: _running
           ? SizedBox(

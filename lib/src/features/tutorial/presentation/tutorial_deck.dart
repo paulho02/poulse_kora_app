@@ -22,26 +22,11 @@ class _Chapter {
 /// most confusing thing about Peerkola for anyone arriving from an infinite
 /// scroll — it looks broken, and it isn't.
 List<_Chapter> _chapters(AppLocalizations l10n) => [
-  _Chapter(
-    title: l10n.tutorialChapter1Title,
-    body: l10n.tutorialChapter1Body,
-  ),
-  _Chapter(
-    title: l10n.tutorialChapter2Title,
-    body: l10n.tutorialChapter2Body,
-  ),
-  _Chapter(
-    title: l10n.tutorialChapter3Title,
-    body: l10n.tutorialChapter3Body,
-  ),
-  _Chapter(
-    title: l10n.tutorialChapter4Title,
-    body: l10n.tutorialChapter4Body,
-  ),
-  _Chapter(
-    title: l10n.tutorialChapter5Title,
-    body: l10n.tutorialChapter5Body,
-  ),
+  _Chapter(title: l10n.tutorialChapter1Title, body: l10n.tutorialChapter1Body),
+  _Chapter(title: l10n.tutorialChapter2Title, body: l10n.tutorialChapter2Body),
+  _Chapter(title: l10n.tutorialChapter3Title, body: l10n.tutorialChapter3Body),
+  _Chapter(title: l10n.tutorialChapter4Title, body: l10n.tutorialChapter4Body),
+  _Chapter(title: l10n.tutorialChapter5Title, body: l10n.tutorialChapter5Body),
 ];
 
 /// How many chapters the deck has, for anything that wants to say so before
@@ -167,7 +152,9 @@ class _TutorialDeckState extends State<TutorialDeck> {
                 width: i == _index ? 22 : 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: i == _index ? accent : theme.colorScheme.outlineVariant,
+                  color: i == _index
+                      ? accent
+                      : theme.colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -203,9 +190,7 @@ class _TutorialDeckState extends State<TutorialDeck> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () => _go(1, chapters.length),
-                    child: Text(
-                      isLast ? l10n.tutorialDone : l10n.tutorialNext,
-                    ),
+                    child: Text(isLast ? l10n.tutorialDone : l10n.tutorialNext),
                   ),
                 ),
                 const SizedBox(width: 88),

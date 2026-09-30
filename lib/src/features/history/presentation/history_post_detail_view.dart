@@ -4,6 +4,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../core/presentation/slide_up_route.dart';
 import '../../feed/data/post.dart';
 import '../../feed/presentation/post_detail_scaffold.dart';
+import 'gifted_tokens_badge.dart';
 
 /// Read-only counterpart of the feed's post view (see
 /// `feed/presentation/post_detail_view.dart`) for posts shown in a history
@@ -67,6 +68,12 @@ class _HistoryPostDetailPage extends StatelessWidget {
       );
     }
 
-    return PostDetailScaffold(post: post, metaLine: meta.toString());
+    return PostDetailScaffold(
+      post: post,
+      metaLine: meta.toString(),
+      // Renders nothing unless this is the viewer's own post with gifts: the
+      // server sends the count to the author only.
+      metaTrailing: GiftedTokensBadge(count: post.giftedCount),
+    );
   }
 }

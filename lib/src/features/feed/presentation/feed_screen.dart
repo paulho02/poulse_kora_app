@@ -304,7 +304,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                 // again and good for nothing but a 409. Which
                                 // is exactly what reviewing a second post while
                                 // the first was still animating did.
-                                findChildIndexCallback: (key) => key is ValueKey<int>
+                                findChildIndexCallback: (key) =>
+                                    key is ValueKey<int>
                                     ? rowOfPostId[key.value]
                                     : null,
                                 // One past the end for the footer: scrolling off

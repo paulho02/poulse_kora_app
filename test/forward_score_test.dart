@@ -100,6 +100,85 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('the forward dropdown gifts the token to the author', (
+    tester,
+  ) async {
+    // The split button's main face is still a plain forward; the gift is one
+    // menu away and sent as a flag on the same review, not a second request.
+    final backend = _FakeBackend(forwardedCount: 4);
+    await _pumpCard(tester, backend);
+
+    await tester.tap(find.byIcon(Icons.expand_more));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forward & gift'));
+    await _pumpToReveal(tester);
+
+    expect(backend.reviewedKinds, ['forward']);
+    expect(backend.giftFlags, [true]);
+    expect(find.text('4'), findsOneWidget, reason: 'still reveals the score');
+    expect(find.text('You gifted the author a token'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await _pumpPastExit(tester);
+  });
+
+  testWidgets('tapping elsewhere folds the extension back in', (tester) async {
+    final backend = _FakeBackend(forwardedCount: 1);
+    await _pumpCard(tester, backend);
+
+    await tester.tap(find.byIcon(Icons.expand_more));
+    await tester.pumpAndSettle();
+    expect(find.text('Forward & gift'), findsOneWidget);
+
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Forward & gift'), findsNothing);
+    expect(backend.reviewedKinds, isEmpty, reason: 'folding is not a review');
+  });
+
+  testWidgets('a plain forward with the extension open folds it away', (
+    tester,
+  ) async {
+    // The main face sits in the extension's tap region, so tapping it is not
+    // an outside tap; the review going in flight is what has to close it.
+    final backend = _FakeBackend(forwardedCount: 1);
+    await _pumpCard(tester, backend);
+
+    await tester.tap(find.byIcon(Icons.expand_more));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forward'));
+    await _pumpToReveal(tester);
+
+    expect(backend.giftFlags, [false]);
+    expect(find.text('Forward & gift'), findsNothing);
+    await _pumpPastExit(tester);
+  });
+
+  testWidgets('the about row explains forwarding and reviews nothing', (
+    tester,
+  ) async {
+    final backend = _FakeBackend(forwardedCount: 1);
+    await _pumpCard(tester, backend);
+
+    await tester.tap(find.byIcon(Icons.expand_more));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About forwarding'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('How forwarding works'), findsOneWidget);
+    expect(backend.reviewedKinds, isEmpty);
+  });
+
+  testWidgets('a plain forward sends no gift', (tester) async {
+    final backend = _FakeBackend(forwardedCount: 2);
+    await _pumpCard(tester, backend);
+
+    await tester.tap(find.text('Forward'));
+    await _pumpToReveal(tester);
+
+    expect(backend.giftFlags, [false]);
+  });
+
   group('ForwardScoreBadge.heatFor', () {
     test('a first forward is cold', () {
       // At 1 the reader *is* the score - nothing to be impressed by yet.
@@ -208,6 +287,7 @@ class _FakeBackend implements HttpClientAdapter {
   final int forwardedCount;
   final int reviewStatus;
   final List<String> reviewedKinds = [];
+  final List<bool> giftFlags = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -233,8 +313,11 @@ class _FakeBackend implements HttpClientAdapter {
           'detail': {'error': 'not_in_queue'},
         }, status: reviewStatus);
       }
-      final kind = (options.data as Map)['kind'] as String;
+      final body = options.data as Map;
+      final kind = body['kind'] as String;
+      final gift = body['gift_token'] == true;
       reviewedKinds.add(kind);
+      giftFlags.add(gift);
       return _json({
         'post_id': 1,
         'kind': kind,
@@ -244,6 +327,7 @@ class _FakeBackend implements HttpClientAdapter {
         'token_balance': 5,
         'post_forwarded_count': forwardedCount,
         'post_reviewed_count': forwardedCount + 1,
+        'gifted': gift,
       });
     }
     throw StateError('unexpected request: $path');

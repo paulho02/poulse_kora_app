@@ -12,6 +12,7 @@ import '../../../core/presentation/error_state_view.dart';
 import '../../feed/data/post.dart';
 import '../application/history_providers.dart';
 import '../data/reviewed_post.dart';
+import 'gifted_tokens_badge.dart';
 import 'history_post_detail_view.dart';
 import 'history_skeleton.dart';
 
@@ -50,9 +51,11 @@ List<_Entry> _entriesFromReviewed(
       (r) => _Entry(
         post: r.post,
         date: r.reviewedAt,
-        kindLabel: r.isForward
-            ? l10n.historyReviewKindForward
-            : l10n.historyReviewKindDrop,
+        kindLabel: !r.isForward
+            ? l10n.historyReviewKindDrop
+            : r.gifted
+            ? l10n.historyReviewKindForwardGifted
+            : l10n.historyReviewKindForward,
       ),
     )
     .toList();
@@ -604,6 +607,12 @@ class _HistoryTile extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Own posts only: the count is null on anyone else's.
+                  if (entry.kindLabel == null &&
+                      (entry.post.giftedCount ?? 0) > 0) ...[
+                    GiftedTokensBadge(count: entry.post.giftedCount),
+                    const SizedBox(width: 8),
+                  ],
                   if (entry.kindLabel != null) ...[
                     Text(
                       entry.kindLabel!,

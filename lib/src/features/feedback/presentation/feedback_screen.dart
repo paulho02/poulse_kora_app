@@ -72,7 +72,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   /// Signed out there is no identity to withhold and no address to reply to, so
   /// the effective values are fixed regardless of what the switches last held.
   bool get _effectiveAnonymous => _loggedIn ? _isAnonymous : true;
-  bool get _effectiveAllowContact => _effectiveAnonymous ? false : _allowContact;
+  bool get _effectiveAllowContact =>
+      _effectiveAnonymous ? false : _allowContact;
 
   int get _remainingSlots => _kMaxAttachments - _attachments.length;
 
@@ -366,7 +367,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                 Expanded(
                   child: Text(
                     switch (_blocker!) {
-                      _SubmitBlocker.emptyMessage => l10n.feedbackBlockerMessage,
+                      _SubmitBlocker.emptyMessage =>
+                        l10n.feedbackBlockerMessage,
                       _SubmitBlocker.noConsent => l10n.feedbackBlockerConsent,
                     },
                     style: theme.textTheme.bodySmall?.copyWith(

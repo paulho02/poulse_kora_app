@@ -39,9 +39,7 @@ class TutorialOfferStep extends StatelessWidget {
               builder: (context, constraints) => SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

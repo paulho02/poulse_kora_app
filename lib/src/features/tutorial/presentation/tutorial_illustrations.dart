@@ -126,7 +126,8 @@ class _Palette {
       other.danger == danger;
 
   @override
-  int get hashCode => Object.hash(accent, onAccent, ink, muted, faint, card, danger);
+  int get hashCode =>
+      Object.hash(accent, onAccent, ink, muted, faint, card, danger);
 }
 
 /// Runs one illustration's clock. See [TutorialIllustration] for why `active`
@@ -387,7 +388,13 @@ Offset _arcPoint(Offset a, Offset b, double u) {
 
 /// A "done" badge: the accent knocked out of a light disc, so it stays legible
 /// on the accent-tinted card it sits on.
-void _checkBadge(Canvas canvas, Offset centre, double r, _Palette palette, double progress) {
+void _checkBadge(
+  Canvas canvas,
+  Offset centre,
+  double r,
+  _Palette palette,
+  double progress,
+) {
   if (progress <= 0.02) return;
   final rr = r * Curves.easeOutBack.transform(progress.clamp(0.0, 1.0));
   if (rr <= 0.5) return;
@@ -676,10 +683,11 @@ class _BroadcastRelayPainter extends CustomPainter {
       final hop = travel.floor().clamp(0, path.length - 2);
       _postCard(
         canvas,
-        Offset.lerp(path[hop], path[hop + 1], _ease(travel - hop))!.translate(
-          0,
-          -r * 1.5,
-        ),
+        Offset.lerp(
+          path[hop],
+          path[hop + 1],
+          _ease(travel - hop),
+        )!.translate(0, -r * 1.5),
         r * 1.05,
         palette,
         opacity: mode,
@@ -714,7 +722,10 @@ class _ForwardOrDrop extends StatelessWidget {
         final local = (forwarding ? t : t - 0.5) / 0.5;
         // Fade the caption at both ends of its half so the swap reads as one
         // label replacing the other rather than as a jump cut.
-        final opacity = math.min(_seg(local, 0.0, 0.10), 1 - _seg(local, 0.92, 1.0));
+        final opacity = math.min(
+          _seg(local, 0.0, 0.10),
+          1 - _seg(local, 0.92, 1.0),
+        );
         return _captioned(
           art: _canvas(_ForwardOrDropPainter(t: t, palette: palette)),
           caption: Stack(
@@ -893,7 +904,12 @@ class _EarnAndSpendPainter extends CustomPainter {
     final barY = size.height * 0.76;
     final barHeight = math.max(8.0, size.height * 0.085);
     final barRect = RRect.fromRectAndRadius(
-      Rect.fromLTRB(barLeft, barY - barHeight / 2, barRight, barY + barHeight / 2),
+      Rect.fromLTRB(
+        barLeft,
+        barY - barHeight / 2,
+        barRight,
+        barY + barHeight / 2,
+      ),
       Radius.circular(barHeight / 2),
     );
 
@@ -906,7 +922,10 @@ class _EarnAndSpendPainter extends CustomPainter {
     }
     fill *= 1 - spend;
 
-    canvas.drawRRect(barRect, Paint()..color = palette.faint.withValues(alpha: 0.4));
+    canvas.drawRRect(
+      barRect,
+      Paint()..color = palette.faint.withValues(alpha: 0.4),
+    );
     if (fill > 0.001) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -1011,8 +1030,7 @@ class _QueueThatEnds extends StatelessWidget {
       // The empty queue — the state this chapter exists to make sense of, and
       // the one a still frame of a full queue would completely fail to show.
       staticValue: 0.72,
-      builder: (context, t) =>
-          _canvas(_QueuePainter(t: t, palette: palette)),
+      builder: (context, t) => _canvas(_QueuePainter(t: t, palette: palette)),
     );
   }
 }

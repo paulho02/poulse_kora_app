@@ -51,7 +51,8 @@ class UserStats {
     trustScore: json['trust_score'] as int,
     trustBand: json['trust_band'] as String? ?? 'normal',
     trustFanout: json['trust_fanout'] as int? ?? 0,
-    trustReachMultiplier: (json['trust_reach_multiplier'] as num?)?.toDouble() ?? 1,
+    trustReachMultiplier:
+        (json['trust_reach_multiplier'] as num?)?.toDouble() ?? 1,
     trustWindowDays: json['trust_window_days'] as int? ?? 30,
     avgHops: (json['avg_hops'] as num).toDouble(),
     weeklyActivity: (json['weekly_activity'] as List<dynamic>)
@@ -68,6 +69,7 @@ class UserStats {
   final int forwardedCount;
   final int droppedCount;
   final int createdPostCount;
+
   /// Reviewer Trust, 0-100 — how carefully this account has been reading
   /// *recently* (see [trustWindowDays]), not a lifetime record.
   final int trustScore;

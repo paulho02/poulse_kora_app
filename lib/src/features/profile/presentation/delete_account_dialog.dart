@@ -127,7 +127,9 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
-          child: _confirming ? _buildConfirmSlide(l10n) : _buildChoiceSlide(l10n),
+          child: _confirming
+              ? _buildConfirmSlide(l10n)
+              : _buildChoiceSlide(l10n),
         ),
       ),
       actions: _confirming
@@ -199,10 +201,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          l10n.deleteAccountConfirmBody,
-          style: theme.textTheme.bodyMedium,
-        ),
+        Text(l10n.deleteAccountConfirmBody, style: theme.textTheme.bodyMedium),
         const SizedBox(height: 12),
         // Repeats the choice rather than trusting the user to remember which of
         // two similar-sounding options they picked one tap ago.

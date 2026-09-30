@@ -178,9 +178,7 @@ class _IntroSlidesState extends State<IntroSlides> {
                 // to the tutorial offer rather than into the app, and a button
                 // that promises the feed and delivers another question is a
                 // small lie the very first screen does not need.
-                child: Text(
-                  isLast ? l10n.commonContinue : l10n.onboardingNext,
-                ),
+                child: Text(isLast ? l10n.commonContinue : l10n.onboardingNext),
               ),
             ),
           ),

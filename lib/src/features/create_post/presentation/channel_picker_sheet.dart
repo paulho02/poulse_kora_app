@@ -33,7 +33,8 @@ class _ChannelPickerSheet extends ConsumerStatefulWidget {
   final int? selectedId;
 
   @override
-  ConsumerState<_ChannelPickerSheet> createState() => _ChannelPickerSheetState();
+  ConsumerState<_ChannelPickerSheet> createState() =>
+      _ChannelPickerSheetState();
 }
 
 class _ChannelPickerSheetState extends ConsumerState<_ChannelPickerSheet> {

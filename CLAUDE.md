@@ -220,6 +220,29 @@ hold, exit: `FeedNotifier.reviewPost` doesn't touch the list; the caller commits
 glyph and numeral; the localized string is the screen-reader announcement
 (`postForwardScoreAnnouncement`). `test/forward_score_test.dart`.
 
+**Forward is a split button** (`forward_split_button.dart`, card and detail footer alike), modelled
+on VS Code's commit button: the main face is a plain forward, a chevron opens the variants. The only
+one so far is *forward & gift a token* — the backend's `gift_token`, which hands the review's earned
+token to the author. Passing `onForwardAndGift: null` removes the chevron rather than showing a
+menu with a dead entry; that is done for trust checks, whose author is the system. New forward
+variants belong in that menu, not as more footer buttons. The label never wraps: on a narrow
+card "Weiterleiten" doesn't fit beside the arrow, so `_ForwardLabel` measures and drops the icon,
+scaling down only as a last resort. That `LayoutBuilder` is also why the pair has a fixed 40px
+height rather than `IntrinsicHeight` (which throws on it). The options are not a menu: the
+chevron *extends the button* by a segment in the same fill and exact width, joined by the same
+1px seam, corners on the joined side squared, down on the card and up where there's no room
+(detail footer). Hence an `OverlayPortal` + `CompositedTransformFollower`, not `MenuAnchor`
+(which always draws its own surface); neutral, tinted and bordered popups were all tried and
+read as a banner laid over the card. Segments are one line each, icon kept (the label scales
+before an icon drops): "Forward & gift" (German "Token schenken": "Weiterleiten & schenken" doesn't
+fit half a card), and always last, a shorter, fainter "About forwarding" row opening
+`forwarding_explainer.dart` (same shape as the trust/economy explainers). New variants go above
+that row and get a point in the explainer. The author's side is `GiftedTokensBadge` in their own post history (list tile, and the opened post via
+`PostDetailScaffold.metaTrailing`): a
+green pill with the count (`Post.giftedCount`, which the server sends to the author only), its
+sentence in a tap-or-hover tooltip — the tap is the badge's, so it explains rather than opens the
+post.
+
 **Preview** (`features/create_post/presentation/post_preview.dart`) opens the same
 `PostDetailScaffold` via the same `slideUpRoute` — the opened post, not the card, since that is
 where forwarding is decided. `buildPreviewPost` assembles a real `Post` locally with placeholder

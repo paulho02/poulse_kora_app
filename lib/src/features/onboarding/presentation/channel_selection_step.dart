@@ -97,8 +97,7 @@ class _ChannelSelectionStepState extends ConsumerState<ChannelSelectionStep> {
                 itemCount: cached.data.length,
                 itemBuilder: (context, i) => _SelectableChannelTile(
                   channel: cached.data[i],
-                  atMax:
-                      selectedCount >= ChannelSelectionStep._maxSelectable,
+                  atMax: selectedCount >= ChannelSelectionStep._maxSelectable,
                 ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),

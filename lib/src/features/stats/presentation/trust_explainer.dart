@@ -24,9 +24,9 @@ import '../application/stats_providers.dart';
 /// unactionable. "Your forwards reach 4 people instead of 3" is a sentence
 /// someone can do something about; "your trust is 78" is trivia.
 Future<void> showTrustExplainer(BuildContext context) {
-  return Navigator.of(context).push<void>(
-    slideUpRoute(builder: (context) => const _TrustExplainerPage()),
-  );
+  return Navigator.of(
+    context,
+  ).push<void>(slideUpRoute(builder: (context) => const _TrustExplainerPage()));
 }
 
 /// The small round "i" that opens it, for the trust figure to sit next to.
@@ -68,7 +68,10 @@ class _TrustExplainerPage extends ConsumerWidget {
     // second, number-free wording rather than a placeholder digit.
     final windowDays = ref
         .watch(statsProvider)
-        .maybeWhen(data: (cached) => cached.data.trustWindowDays, orElse: () => null);
+        .maybeWhen(
+          data: (cached) => cached.data.trustWindowDays,
+          orElse: () => null,
+        );
 
     return Scaffold(
       body: SafeArea(
@@ -178,10 +181,7 @@ class _LiveFigures extends ConsumerWidget {
 
             return Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(12),
@@ -196,10 +196,7 @@ class _LiveFigures extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          l10n.trustExplainerScore(
-                            stats.trustScore,
-                            bandLabel,
-                          ),
+                          l10n.trustExplainerScore(stats.trustScore, bandLabel),
                           style: theme.textTheme.titleSmall,
                         ),
                         // The consequence, in people. A reader can act on this

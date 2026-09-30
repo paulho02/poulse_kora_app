@@ -135,6 +135,8 @@ String messageFor(AppLocalizations l10n, Object? rawError) {
       return l10n.errorNotInQueue;
     case 'already_reviewed':
       return l10n.errorAlreadyReviewed;
+    case 'gift_not_allowed':
+      return l10n.errorGiftNotAllowed;
     case 'post_not_found':
       return l10n.errorPostNotFound;
     // Answered by `DELETE /posts/feed/{id}` when the post is in fact still

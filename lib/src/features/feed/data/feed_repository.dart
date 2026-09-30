@@ -107,6 +107,7 @@ class PostReviewResult {
     required this.postReviewedCount,
     this.isProbe = false,
     this.probeCorrect,
+    this.gifted = false,
   });
 
   factory PostReviewResult.fromJson(Map<String, dynamic> json) =>
@@ -121,6 +122,7 @@ class PostReviewResult {
         postReviewedCount: json['post_reviewed_count'] as int,
         isProbe: json['is_probe'] as bool? ?? false,
         probeCorrect: json['probe_correct'] as bool?,
+        gifted: json['gifted'] as bool? ?? false,
       );
 
   final int postId;
@@ -129,8 +131,12 @@ class PostReviewResult {
   final int reviewGate;
   final bool unlocked;
 
-  /// Spendable balance after earning one token for this review.
+  /// Spendable balance after earning one token for this review — or unchanged
+  /// when the review [gifted] that token to the author.
   final int tokenBalance;
+
+  /// Whether this forward handed its earned token to the post's author.
+  final bool gifted;
 
   /// How the post itself has fared, counting this review. Deliberately absent
   /// from [Post]: the server discloses it only here, once the reader has
@@ -274,10 +280,18 @@ class FeedRepository {
     return FeedQueueStatus.fromJson(response.data!);
   }
 
-  Future<PostReviewResult> reviewPost(int postId, String kind) async {
+  /// [giftToken] (forward only) hands the token this review earns to the
+  /// post's author instead of keeping it. The backend refuses it with 409
+  /// `gift_not_allowed` for a trust check, one's own post or a deleted author,
+  /// before touching the queue — so the post stays reviewable.
+  Future<PostReviewResult> reviewPost(
+    int postId,
+    String kind, {
+    bool giftToken = false,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/posts/$postId/review',
-      data: {'kind': kind},
+      data: {'kind': kind, if (giftToken) 'gift_token': true},
     );
     return PostReviewResult.fromJson(response.data!);
   }

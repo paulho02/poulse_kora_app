@@ -331,10 +331,14 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
   ///
   /// The confirmation is remembered until they do, so that a caller which never
   /// gets to finish cannot strand the post here. See [pendingRemoval].
-  Future<PostReviewResult> reviewPost(int postId, String kind) async {
+  Future<PostReviewResult> reviewPost(
+    int postId,
+    String kind, {
+    bool giftToken = false,
+  }) async {
     final result = await ref
         .read(feedRepositoryProvider)
-        .reviewPost(postId, kind);
+        .reviewPost(postId, kind, giftToken: giftToken);
     _confirmed[postId] = result;
     return result;
   }
@@ -363,7 +367,9 @@ class FeedNotifier extends AsyncNotifier<Cached<List<FeedEntry>>> {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
-      current.map((entries) => entries.where((e) => e.postId != postId).toList()),
+      current.map(
+        (entries) => entries.where((e) => e.postId != postId).toList(),
+      ),
     );
     // The list and the status describe the same queue, so they have to move
     // together. The list is what this screen renders; the status is what the

@@ -197,6 +197,7 @@ class Post {
     required this.subscriptionKind,
     required this.created,
     this.isProbe = false,
+    this.giftedCount,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) => Post(
@@ -211,6 +212,7 @@ class Post {
     subscriptionKind: json['subscription_kind'] as String?,
     created: DateTime.parse(json['created'] as String),
     isProbe: json['is_probe'] as bool? ?? false,
+    giftedCount: json['gifted_count'] as int?,
   );
 
   final int id;
@@ -242,6 +244,13 @@ class Post {
   /// trace: it does not count as a review, never reaches anyone else, and never
   /// appears in history.
   final bool isProbe;
+
+  /// How many readers forwarded this post *and* gifted its author their token.
+  /// Sent only to the author (null for everyone else), and so only ever shown
+  /// in their own post history (`GiftedTokensBadge`) — the one count the server
+  /// discloses outside a review result, because it is the author's income
+  /// rather than a verdict a reader could vote along with.
+  final int? giftedCount;
 
   /// All the post's text blocks, joined into one string — used for the feed
   /// card's 2-line preview and for history search/highlighting

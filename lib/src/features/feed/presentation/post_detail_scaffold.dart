@@ -33,6 +33,7 @@ class PostDetailScaffold extends StatelessWidget {
     required this.metaLine,
     this.footer,
     this.progress,
+    this.metaTrailing,
   });
 
   final Post post;
@@ -47,6 +48,10 @@ class PostDetailScaffold extends StatelessWidget {
 
   /// Optional 0..1 bar drawn just above [footer].
   final double? progress;
+
+  /// A small marker after [metaLine] that only one caller has reason to show —
+  /// the history's gift counter on the author's own post.
+  final Widget? metaTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +112,10 @@ class PostDetailScaffold extends StatelessWidget {
                             if (post.isProbe) ...[
                               const SizedBox(width: 6),
                               const ProbeMarker(),
+                            ],
+                            if (metaTrailing != null) ...[
+                              const SizedBox(width: 8),
+                              metaTrailing!,
                             ],
                           ],
                         ),

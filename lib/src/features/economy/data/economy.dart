@@ -43,10 +43,8 @@ class Economy {
 
   /// The range to display, with the base price standing in for either end that
   /// is unknown. Never null, so the pill always has something to draw.
-  (int, int) get priceRange => (
-    postPriceMin ?? postPrice,
-    postPriceMax ?? postPrice,
-  );
+  (int, int) get priceRange =>
+      (postPriceMin ?? postPrice, postPriceMax ?? postPrice);
 
   /// True when the range is one number, so the UI renders "4" and not "4–4".
   bool get hasSinglePrice => priceRange.$1 == priceRange.$2;
