@@ -1,0 +1,77 @@
+# Dependabot version updates.
+#
+# One rule for every entry: once a week, against main, at most ONE open PR per
+# entry, with every update for that entry grouped into it. While that PR sits
+# unmerged, next week's run refreshes it in place (or closes it as superseded)
+# instead of opening a second one - PRs never stack.
+#
+# Security updates ignore open-pull-requests-limit and schedule (enable them
+# under Settings -> Code security). Note that pub has no Dependabot security
+# updates at all - only these weekly version updates.
+#
+# cooldown holds a freshly published release back a few days before proposing
+# it - most hijacked-package releases are yanked within that window.
+#
+# Not covered: FLUTTER_VERSION in the Dockerfile is an ARG pointing at Google's
+# release archive, not an image tag, so no ecosystem can see it. Bump it by hand
+# alongside the local SDK.
+
+version: 2
+
+updates:
+  # pubspec.yaml + pubspec.lock
+  - package-ecosystem: "pub"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: "deps(pub)"
+    groups:
+      pub:
+        patterns: ["*"]
+
+  # AGP / Kotlin plugin versions (settings.gradle.kts), app build.gradle.kts and
+  # the Gradle wrapper. These have to stay within what the installed Flutter SDK
+  # supports, so let CI (or a local `flutter build apk`) decide before merging.
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: "deps(android)"
+    groups:
+      android:
+        patterns: ["*"]
+      android-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # Base images in the web Dockerfile (debian build stage, nginx).
+  - package-ecosystem: "docker"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "deps(docker)"
+    groups:
+      docker:
+        patterns: ["*"]
