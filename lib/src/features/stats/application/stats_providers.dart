@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/cache/cached.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
-import '../data/global_stats.dart';
+import '../../feed/data/post.dart';
+import '../data/post_stats.dart';
 import '../data/stats_repository.dart';
 import '../data/user_stats.dart';
 
@@ -18,11 +19,25 @@ final statsProvider = FutureProvider.autoDispose<Cached<UserStats>>((ref) {
   return ref.watch(statsRepositoryProvider).fetchStats();
 });
 
-final globalStatsProvider = FutureProvider.autoDispose<Cached<GlobalStats>>((
+/// The viewer's newest posts with their view counts. Loads independently of
+/// [statsProvider], so a failure here doesn't blank out the personal stats.
+final ownPostViewsProvider =
+    FutureProvider.autoDispose<Cached<List<OwnPostViews>>>((ref) {
+      return ref.watch(statsRepositoryProvider).fetchOwnPostViews();
+    });
+
+/// The top posts across every channel, best first.
+final trendingPostsProvider = FutureProvider.autoDispose<Cached<List<Post>>>((
   ref,
 ) {
-  return ref.watch(statsRepositoryProvider).fetchGlobalStats();
+  return ref.watch(statsRepositoryProvider).fetchTrendingPosts();
 });
+
+/// The same ranking cut per channel — backs the "by channel" trending screen.
+final trendingChannelsProvider =
+    FutureProvider.autoDispose<Cached<List<TrendingChannel>>>((ref) {
+      return ref.watch(statsRepositoryProvider).fetchTrendingChannels();
+    });
 
 class ReviewGateStatus {
   const ReviewGateStatus({

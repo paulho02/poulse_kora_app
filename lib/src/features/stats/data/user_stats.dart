@@ -1,28 +1,28 @@
-class WeeklyActivityBucket {
-  WeeklyActivityBucket({required this.date, required this.count});
+/// The four review numbers over one span — all time, or the last 7 days. The
+/// stats screen's Total / 7 days switch flips between two of these.
+class ReviewTotals {
+  const ReviewTotals({
+    required this.reviewedCount,
+    required this.forwardedCount,
+    required this.droppedCount,
+    required this.forwardRate,
+  });
 
-  factory WeeklyActivityBucket.fromJson(Map<String, dynamic> json) =>
-      WeeklyActivityBucket(
-        date: DateTime.parse(json['date'] as String),
-        count: json['count'] as int,
-      );
-
-  final DateTime date;
-  final int count;
-}
-
-class Badge {
-  Badge({required this.code, required this.label, required this.earned});
-
-  factory Badge.fromJson(Map<String, dynamic> json) => Badge(
-    code: json['code'] as String,
-    label: json['label'] as String,
-    earned: json['earned'] as bool,
+  /// Tolerates a missing block: an offline start can parse a stats payload
+  /// cached before `this_week` existed, and zeros beat failing the screen.
+  factory ReviewTotals.fromJson(Map<String, dynamic>? json) => ReviewTotals(
+    reviewedCount: json?['reviewed_count'] as int? ?? 0,
+    forwardedCount: json?['forwarded_count'] as int? ?? 0,
+    droppedCount: json?['dropped_count'] as int? ?? 0,
+    forwardRate: (json?['forward_rate'] as num?)?.toDouble() ?? 0,
   );
 
-  final String code;
-  final String label;
-  final bool earned;
+  final int reviewedCount;
+  final int forwardedCount;
+  final int droppedCount;
+
+  /// Share of reviews that were forwards, 0.0–1.0.
+  final double forwardRate;
 }
 
 class UserStats {
@@ -36,9 +36,8 @@ class UserStats {
     required this.trustFanout,
     required this.trustReachMultiplier,
     required this.trustWindowDays,
-    required this.avgHops,
-    required this.weeklyActivity,
-    required this.badges,
+    required this.forwardRate,
+    required this.thisWeek,
     required this.reviewGate,
     required this.unlocked,
   });
@@ -54,17 +53,16 @@ class UserStats {
     trustReachMultiplier:
         (json['trust_reach_multiplier'] as num?)?.toDouble() ?? 1,
     trustWindowDays: json['trust_window_days'] as int? ?? 30,
-    avgHops: (json['avg_hops'] as num).toDouble(),
-    weeklyActivity: (json['weekly_activity'] as List<dynamic>)
-        .map((j) => WeeklyActivityBucket.fromJson(j as Map<String, dynamic>))
-        .toList(),
-    badges: (json['badges'] as List<dynamic>)
-        .map((j) => Badge.fromJson(j as Map<String, dynamic>))
-        .toList(),
+    // `avg_hops` is the same number under its old name, still in caches
+    // written before the rename.
+    forwardRate:
+        ((json['forward_rate'] ?? json['avg_hops']) as num?)?.toDouble() ?? 0,
+    thisWeek: ReviewTotals.fromJson(json['this_week'] as Map<String, dynamic>?),
     reviewGate: json['review_gate'] as int,
     unlocked: json['unlocked'] as bool,
   );
 
+  /// All-time; [thisWeek] holds the same numbers for the last 7 days.
   final int reviewedCount;
   final int forwardedCount;
   final int droppedCount;
@@ -90,9 +88,16 @@ class UserStats {
   /// is why a bad stretch heals and a good one has to be kept up.
   final int trustWindowDays;
 
-  final double avgHops;
-  final List<WeeklyActivityBucket> weeklyActivity;
-  final List<Badge> badges;
+  final double forwardRate;
+  final ReviewTotals thisWeek;
   final int reviewGate;
   final bool unlocked;
+
+  /// The all-time numbers in the same shape as [thisWeek].
+  ReviewTotals get allTime => ReviewTotals(
+    reviewedCount: reviewedCount,
+    forwardedCount: forwardedCount,
+    droppedCount: droppedCount,
+    forwardRate: forwardRate,
+  );
 }

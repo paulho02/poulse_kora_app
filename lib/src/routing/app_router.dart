@@ -20,6 +20,7 @@ import '../features/profile/presentation/change_password_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/profile/presentation/settings_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
+import '../features/stats/presentation/trending_screen.dart';
 import '../features/tutorial/presentation/tutorial_deck.dart';
 import 'app_shell.dart';
 
@@ -279,6 +280,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/stats',
                 name: 'stats',
                 builder: (context, state) => const StatsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'trending',
+                    name: 'stats-trending',
+                    builder: (context, state) => const TrendingScreen(),
+                  ),
+                ],
               ),
             ],
           ),

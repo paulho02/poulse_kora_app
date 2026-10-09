@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../core/cache/cached.dart';
 import '../../../core/errors/error_messages.dart';
 import '../../../core/presentation/error_state_view.dart';
 import '../../../core/tips/presentation/view_tip.dart';
+import '../../feed/data/post.dart';
 import '../application/stats_providers.dart';
-import '../data/global_stats.dart';
+import '../data/post_stats.dart';
 import '../data/user_stats.dart';
-import 'forwarding_distribution_chart.dart';
+import 'stats_post_tile.dart';
 import 'stats_skeleton.dart';
 import 'trust_explainer.dart';
-import 'weekly_activity_chart.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
@@ -32,7 +35,8 @@ class StatsScreen extends ConsumerWidget {
             return RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(statsProvider);
-                ref.invalidate(globalStatsProvider);
+                ref.invalidate(ownPostViewsProvider);
+                ref.invalidate(trendingPostsProvider);
               },
               child: ListView(
                 padding: const EdgeInsets.all(16),
@@ -43,65 +47,11 @@ class StatsScreen extends ConsumerWidget {
                   ],
                   _TrustScoreCard(stats: stats),
                   const SizedBox(height: 12),
-                  _MetricsGrid(stats: stats),
+                  _ReviewScores(stats: stats),
                   const SizedBox(height: 12),
-                  const _GlobalStatsCard(),
+                  const _OwnPostViewsCard(),
                   const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.statsThisWeek,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(height: 16),
-                          WeeklyActivityChart(buckets: stats.weeklyActivity),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.statsBadges,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final badge in stats.badges)
-                                Chip(
-                                  label: Text(badge.label),
-                                  backgroundColor: badge.earned
-                                      ? Theme.of(
-                                          context,
-                                        ).colorScheme.primaryContainer
-                                      : null,
-                                  side: badge.earned
-                                      ? null
-                                      : BorderSide(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.outlineVariant,
-                                          style: BorderStyle.solid,
-                                        ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  const _TrendingCard(),
                 ],
               ),
             );
@@ -175,48 +125,158 @@ class _TrustScoreCard extends StatelessWidget {
   }
 }
 
-/// App-wide stats (not tied to the current user). Loads independently so a
-/// failure here doesn't blank out the personal stats above it.
-class _GlobalStatsCard extends ConsumerWidget {
-  const _GlobalStatsCard();
+/// The viewer's newest posts and how many people have viewed each. Loads
+/// independently so a failure here doesn't blank out the personal stats above.
+class _OwnPostViewsCard extends ConsumerWidget {
+  const _OwnPostViewsCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return _AsyncSectionCard<List<OwnPostViews>>(
+      label: l10n.statsYourRecentPosts,
+      value: ref.watch(ownPostViewsProvider),
+      isEmpty: (entries) => entries.isEmpty,
+      emptyMessage: l10n.statsNoOwnPosts,
+      builder: (entries) => Column(
+        children: [
+          for (final entry in entries)
+            StatsPostTile(
+              post: entry.post,
+              trailing: _ViewCount(count: entry.viewCount),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "12 views", with the sentence that says what a view is behind a tap — a
+/// review is the only reading the server can count, so the word needs the
+/// footnote.
+class _ViewCount extends StatelessWidget {
+  const _ViewCount({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final globalAsync = ref.watch(globalStatsProvider);
+    return Tooltip(
+      message: l10n.statsViewsExplained,
+      triggerMode: TooltipTriggerMode.tap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.visibility_outlined,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.statsViews(count),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The top posts across Peerkola, with a way into the per-channel view. In
+/// order only — the server sends no counts, so a reader is never handed a
+/// score to vote along with.
+class _TrendingCard extends ConsumerWidget {
+  const _TrendingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return _AsyncSectionCard<List<Post>>(
+      label: l10n.statsTrending,
+      subtitle: l10n.statsTrendingSubtitle,
+      action: TextButton(
+        onPressed: () => context.push('/stats/trending'),
+        child: Text(l10n.statsTrendingByChannel),
+      ),
+      value: ref.watch(trendingPostsProvider),
+      isEmpty: (posts) => posts.isEmpty,
+      emptyMessage: l10n.statsTrendingEmpty,
+      builder: (posts) => Column(
+        children: [for (final post in posts) StatsPostTile(post: post)],
+      ),
+    );
+  }
+}
+
+/// A card on this screen whose content loads on its own: a small-caps label,
+/// an optional subtitle and header action, then [builder]'s content, an empty
+/// line, a spinner, or a quiet error line.
+class _AsyncSectionCard<T> extends StatelessWidget {
+  const _AsyncSectionCard({
+    required this.label,
+    required this.value,
+    required this.isEmpty,
+    required this.emptyMessage,
+    required this.builder,
+    this.subtitle,
+    this.action,
+  });
+
+  final String label;
+  final String? subtitle;
+  final Widget? action;
+  final AsyncValue<Cached<T>> value;
+  final bool Function(T data) isEmpty;
+  final String emptyMessage;
+  final Widget Function(T data) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    Widget quietLine(String text) => SizedBox(
+      height: 60,
+      child: Center(
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall,
+        ),
+      ),
+    );
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.statsAcrossApp, style: theme.textTheme.labelSmall),
-            const SizedBox(height: 4),
-            Text(
-              l10n.statsForwardingDistribution,
-              style: theme.textTheme.titleSmall,
+            Row(
+              children: [
+                Expanded(child: Text(label, style: theme.textTheme.labelSmall)),
+                ?action,
+              ],
             ),
-            const SizedBox(height: 16),
-            globalAsync.when(
-              data: (cached) => _GlobalStatsBody(global: cached.data),
+            if (subtitle != null)
+              Text(subtitle!, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            value.when(
+              data: (cached) => isEmpty(cached.data)
+                  ? quietLine(emptyMessage)
+                  : builder(cached.data),
               loading: () => const SizedBox(
                 height: 100,
                 child: Center(child: CircularProgressIndicator()),
               ),
               // One card inside a working screen — a full error state would be
               // out of proportion, so it degrades to a quiet line.
-              error: (error, _) => SizedBox(
-                height: 60,
-                child: Center(
-                  child: Text(
-                    messageFor(l10n, error),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-              ),
+              error: (error, _) => quietLine(messageFor(l10n, error)),
             ),
           ],
         ),
@@ -225,78 +285,114 @@ class _GlobalStatsCard extends ConsumerWidget {
   }
 }
 
-class _GlobalStatsBody extends StatelessWidget {
-  const _GlobalStatsBody({required this.global});
+/// Which span the review scores show.
+enum _ScoreSpan { total, week }
 
-  final GlobalStats global;
+/// The viewer's own four review numbers, switchable between all time and the
+/// last 7 days. Labelled "your reviews" because the bare grid read as if it
+/// might be deployment-wide; each tile explains itself in a tap tooltip.
+class _ReviewScores extends StatefulWidget {
+  const _ReviewScores({required this.stats});
+
+  final UserStats stats;
+
+  @override
+  State<_ReviewScores> createState() => _ReviewScoresState();
+}
+
+class _ReviewScoresState extends State<_ReviewScores> {
+  var _span = _ScoreSpan.total;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    if (global.totalPosts == 0) {
-      return SizedBox(
-        height: 60,
-        child: Center(child: Text(l10n.statsNoPostsYet)),
-      );
-    }
+    final totals = _span == _ScoreSpan.total
+        ? widget.stats.allTime
+        : widget.stats.thisWeek;
+    final percent = NumberFormat.percentPattern(
+      Localizations.localeOf(context).toString(),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ForwardingDistributionChart(buckets: global.forwardingDistribution),
-        const SizedBox(height: 12),
-        Text(
-          l10n.statsTotalPosts(global.totalPosts),
-          style: theme.textTheme.labelSmall,
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.statsYourReviews,
+                  style: theme.textTheme.labelSmall,
+                ),
+              ),
+              SegmentedButton<_ScoreSpan>(
+                segments: [
+                  ButtonSegment(
+                    value: _ScoreSpan.total,
+                    label: Text(l10n.statsSpanTotal),
+                  ),
+                  ButtonSegment(
+                    value: _ScoreSpan.week,
+                    label: Text(l10n.statsSpanWeek),
+                  ),
+                ],
+                selected: {_span},
+                showSelectedIcon: false,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onSelectionChanged: (selection) =>
+                    setState(() => _span = selection.first),
+              ),
+            ],
+          ),
         ),
-      ],
-    );
-  }
-}
-
-class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid({required this.stats});
-
-  final UserStats stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 2,
-      // Each tile carries the icon its verb already has elsewhere in the app —
-      // the forward arrow off the feed card's Forward button, the cross off
-      // Drop — so the grid can be read at a glance instead of by parsing four
-      // identical number-over-label stacks. Forwarded and dropped are also the
-      // only two that are *coloured*, because they are the pair a reader
-      // compares; colouring all four would make none of them stand out.
-      children: [
-        _MetricTile(
-          icon: Icons.visibility_outlined,
-          label: l10n.statsReviewed,
-          value: stats.reviewedCount,
-        ),
-        _MetricTile(
-          icon: Icons.arrow_forward,
-          label: l10n.statsForwarded,
-          value: stats.forwardedCount,
-          tone: _MetricTone.forward,
-        ),
-        _MetricTile(
-          icon: Icons.close,
-          label: l10n.statsDropped,
-          value: stats.droppedCount,
-          tone: _MetricTone.drop,
-        ),
-        _MetricTile(
-          icon: Icons.route_outlined,
-          label: l10n.statsAvgHops,
-          value: stats.avgHops,
+        const SizedBox(height: 8),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 2,
+          // Each tile carries the icon its verb already has elsewhere in the
+          // app — the forward arrow off the feed card's Forward button, the
+          // cross off Drop — so the grid can be read at a glance instead of by
+          // parsing four identical number-over-label stacks. Forwarded and
+          // dropped are also the only two that are *coloured*, because they
+          // are the pair a reader compares; colouring all four would make none
+          // of them stand out.
+          children: [
+            _MetricTile(
+              icon: Icons.visibility_outlined,
+              label: l10n.statsReviewed,
+              tooltip: l10n.statsReviewedTooltip,
+              value: '${totals.reviewedCount}',
+            ),
+            _MetricTile(
+              icon: Icons.arrow_forward,
+              label: l10n.statsForwarded,
+              tooltip: l10n.statsForwardedTooltip,
+              value: '${totals.forwardedCount}',
+              tone: _MetricTone.forward,
+            ),
+            _MetricTile(
+              icon: Icons.close,
+              label: l10n.statsDropped,
+              tooltip: l10n.statsDroppedTooltip,
+              value: '${totals.droppedCount}',
+              tone: _MetricTone.drop,
+            ),
+            _MetricTile(
+              icon: Icons.percent,
+              label: l10n.statsForwardRate,
+              tooltip: l10n.statsForwardRateTooltip,
+              value: percent.format(totals.forwardRate),
+            ),
+          ],
         ),
       ],
     );
@@ -313,13 +409,18 @@ class _MetricTile extends StatelessWidget {
   const _MetricTile({
     required this.icon,
     required this.label,
+    required this.tooltip,
     required this.value,
     this.tone = _MetricTone.neutral,
   });
 
   final IconData icon;
   final String label;
-  final num value;
+
+  /// What the number counts, in one sentence. Opened by a tap as well as a
+  /// hover, so it works on a phone.
+  final String tooltip;
+  final String value;
   final _MetricTone tone;
 
   @override
@@ -331,45 +432,49 @@ class _MetricTile extends StatelessWidget {
       _MetricTone.neutral => theme.colorScheme.onSurfaceVariant,
     };
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // A tinted disc rather than a bare glyph, matching the empty
-            // states (`core/presentation/empty_state.dart`) so the app has one
-            // way of framing an icon rather than two.
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.12),
+    return Tooltip(
+      message: tooltip,
+      triggerMode: TooltipTriggerMode.tap,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // A tinted disc rather than a bare glyph, matching the empty
+              // states (`core/presentation/empty_state.dart`) so the app has
+              // one way of framing an icon rather than two.
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.12),
+                ),
+                child: Icon(icon, size: 16, color: color),
               ),
-              child: Icon(icon, size: 16, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '$value',
-                    style: theme.textTheme.headlineSmall,
-                    maxLines: 1,
-                  ),
-                  Text(
-                    label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      value,
+                      style: theme.textTheme.headlineSmall,
+                      maxLines: 1,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                    Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

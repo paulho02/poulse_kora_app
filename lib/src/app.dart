@@ -102,8 +102,14 @@ class PeerkolaApp extends ConsumerWidget {
         ref.invalidate(channelsNotifierProvider);
       }
       if (ref.read(statsProvider).hasError) ref.invalidate(statsProvider);
-      if (ref.read(globalStatsProvider).hasError) {
-        ref.invalidate(globalStatsProvider);
+      if (ref.read(ownPostViewsProvider).hasError) {
+        ref.invalidate(ownPostViewsProvider);
+      }
+      if (ref.read(trendingPostsProvider).hasError) {
+        ref.invalidate(trendingPostsProvider);
+      }
+      if (ref.read(trendingChannelsProvider).hasError) {
+        ref.invalidate(trendingChannelsProvider);
       }
     });
 
@@ -185,5 +191,7 @@ void _invalidateSessionScoped(WidgetRef ref) {
   ref.invalidate(economyProvider);
   ref.invalidate(reviewGateStatusProvider);
   ref.invalidate(statsProvider);
-  ref.invalidate(globalStatsProvider);
+  ref.invalidate(ownPostViewsProvider);
+  ref.invalidate(trendingPostsProvider);
+  ref.invalidate(trendingChannelsProvider);
 }

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/presentation/skeleton.dart';
 
 /// What the stats screen shows on a cold load: the trust card, the 2x2 metric
-/// grid and the two chart cards, in their real proportions.
+/// grid under its Total / 7 days switch, and the recent-posts list, in their
+/// real proportions.
 ///
 /// Stats is the screen where a spinner cost the most. Every one of these cards
 /// is a fixed, known shape — the layout is the *same* every time, only the
@@ -32,6 +33,14 @@ class StatsSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SkeletonBox(width: 90, height: 10),
+              SkeletonBox(width: 132, height: 32, radius: 16),
+            ],
+          ),
+          const SizedBox(height: 8),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -42,9 +51,7 @@ class StatsSkeleton extends StatelessWidget {
             children: List.filled(4, const _MetricTileSkeleton()),
           ),
           const SizedBox(height: 12),
-          const _CardSkeleton(child: _ChartSkeleton()),
-          const SizedBox(height: 12),
-          const _CardSkeleton(child: _ChartSkeleton()),
+          const _CardSkeleton(child: _PostListSkeleton()),
         ],
       ),
     );
@@ -96,33 +103,40 @@ class _MetricTileSkeleton extends StatelessWidget {
   }
 }
 
-/// A label line over a row of bars — close enough to both charts on this
-/// screen (`WeeklyActivityChart`, `ForwardingDistributionChart`) that either
-/// can land into it without the card resizing.
-class _ChartSkeleton extends StatelessWidget {
-  const _ChartSkeleton();
+/// A label line over a few post rows — the shape of the recent-posts and
+/// trending cards (`StatsPostTile`): thumbnail, two text lines, a count.
+class _PostListSkeleton extends StatelessWidget {
+  const _PostListSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    // Uneven heights, so it reads as a chart rather than as a loading bar.
-    const heights = [34.0, 58.0, 26.0, 70.0, 44.0, 62.0, 30.0];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SkeletonBox(width: 92, height: 10),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 80,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (final height in heights) ...[
-                Expanded(child: SkeletonBox(height: height, radius: 4)),
-                if (height != heights.last) const SizedBox(width: 8),
+        const SkeletonBox(width: 110, height: 10),
+        const SizedBox(height: 12),
+        for (var i = 0; i < 3; i++)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                SkeletonBox(width: 44, height: 44, radius: 8),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBox(width: 60, height: 9),
+                      SizedBox(height: 6),
+                      SkeletonBox(height: 12),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 12),
+                SkeletonBox(width: 48, height: 12),
               ],
-            ],
+            ),
           ),
-        ),
       ],
     );
   }
