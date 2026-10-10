@@ -123,7 +123,7 @@ class CreatePostScreen extends ConsumerStatefulWidget {
 }
 
 class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int? _selectedChannelId;
   _PublishBlocker? _blocker;
   bool _isAnonymous = false;
@@ -169,9 +169,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
   int? _spentAmount;
   int _balanceBeforeSpend = 0;
 
+  /// The keyboard's height at the last metrics change, to spot it closing.
+  double _keyboardInset = 0;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _spendPop = AnimationController(vsync: this, duration: kTokenSpendPlay);
     // Refresh so the price reflects current congestion when opening the composer.
     Future.microtask(() => ref.read(economyProvider.notifier).refresh());
@@ -179,6 +183,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _spendPop.dispose();
     _detectDebounce?.cancel();
     for (final block in _blocks) {
@@ -189,6 +194,23 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen>
       }
     }
     super.dispose();
+  }
+
+  /// Dropping focus when the keyboard goes away. A text block is multiline, so
+  /// its keyboard has no "done" action: the author closes it with the system
+  /// back gesture or the keyboard's own hide key, and Flutter keeps the field
+  /// focused through either, caret still blinking. Only while this route is on
+  /// top, so a sheet's own field closing its keyboard is left alone.
+  @override
+  void didChangeMetrics() {
+    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+    if (view == null) return;
+    final inset = view.viewInsets.bottom;
+    final closed = _keyboardInset > 0 && inset == 0;
+    _keyboardInset = inset;
+    if (closed && mounted && (ModalRoute.of(context)?.isCurrent ?? true)) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
   }
 
   /// Every text block is created through here so exactly one place has to

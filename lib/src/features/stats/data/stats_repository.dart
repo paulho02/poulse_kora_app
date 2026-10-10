@@ -3,7 +3,8 @@ import 'package:dio/dio.dart';
 import '../../../core/cache/cached.dart';
 import '../../../core/cache/cached_fetch.dart';
 import '../../../core/cache/json_cache.dart';
-import 'global_stats.dart';
+import '../../feed/data/post.dart';
+import 'post_stats.dart';
 import 'user_stats.dart';
 
 class StatsRepository {
@@ -24,15 +25,47 @@ class StatsRepository {
     );
   }
 
-  Future<Cached<GlobalStats>> fetchGlobalStats() {
-    return fetchCached<GlobalStats>(
+  Future<Cached<List<OwnPostViews>>> fetchOwnPostViews() {
+    return fetchCached<List<OwnPostViews>>(
       cache: _cache,
-      key: CacheKeys.globalStats,
+      key: CacheKeys.ownPostViews,
       fetchJson: () async {
-        final response = await _dio.get<Map<String, dynamic>>('/stats/global');
+        final response = await _dio.get<List<dynamic>>('/stats/posts');
         return response.data!;
       },
-      parse: (json) => GlobalStats.fromJson(json as Map<String, dynamic>),
+      parse: (json) => (json as List<dynamic>)
+          .map((j) => OwnPostViews.fromJson(j as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<Cached<List<Post>>> fetchTrendingPosts() {
+    return fetchCached<List<Post>>(
+      cache: _cache,
+      key: CacheKeys.trendingPosts,
+      fetchJson: () async {
+        final response = await _dio.get<List<dynamic>>('/stats/trending');
+        return response.data!;
+      },
+      parse: (json) => (json as List<dynamic>)
+          .map((j) => Post.fromJson(j as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<Cached<List<TrendingChannel>>> fetchTrendingChannels() {
+    return fetchCached<List<TrendingChannel>>(
+      cache: _cache,
+      key: CacheKeys.trendingChannels,
+      fetchJson: () async {
+        final response = await _dio.get<List<dynamic>>(
+          '/stats/trending/channels',
+        );
+        return response.data!;
+      },
+      parse: (json) => (json as List<dynamic>)
+          .map((j) => TrendingChannel.fromJson(j as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

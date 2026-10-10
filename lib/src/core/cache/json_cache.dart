@@ -78,6 +78,8 @@ class CacheKeys {
   static const channels = 'channels';
   static const profile = 'profile';
   static const userStats = 'stats:user';
-  static const globalStats = 'stats:global';
+  static const ownPostViews = 'stats:posts';
+  static const trendingPosts = 'stats:trending';
+  static const trendingChannels = 'stats:trending:channels';
   static const economy = 'economy';
 }
